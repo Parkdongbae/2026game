@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:14:19.512Z",
+  "updatedAt": "2026-11-24T05:16:29.680Z",
   "skipped": [
     {
       "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
@@ -40,6 +40,13 @@
       "sourceName": "seashell-game (4) - 3303김성민.html",
       "driveId": "1gEUwPmaK8-vssvEhK8yz9QDAN6PxLCvv",
       "reason": "새 버전으로 교체됨 (옛 파일)",
+      "studentNo": "3303",
+      "name": "김성민"
+    },
+    {
+      "sourceName": "seashell-game (6) - 3303김성민.html",
+      "driveId": "1zpcg7Co-hCqeJPG2UF9opO65wB8rHdwr",
+      "reason": "같은 파일을 두 번 올림 (한 번만 게시)",
       "studentNo": "3303",
       "name": "김성민"
     }
