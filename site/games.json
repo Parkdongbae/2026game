@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:13:29.653Z",
+  "updatedAt": "2026-11-24T05:14:19.512Z",
   "games": [
     {
       "id": "2105",
@@ -201,6 +201,19 @@
       "updatedAt": "2026-11-24T05:13:29.653Z"
     },
     {
+      "id": "3309",
+      "studentNo": "3309",
+      "name": "이이든",
+      "title": "전지적 독자 시점: 99개의 시나리오 - 2D 셀 셰이딩 액션 RPG",
+      "file": "3309.html",
+      "driveId": "1Aknp0PkZXIhi8gHtDacrAYBffJBIIsJr",
+      "sourceName": "2d_rpg (24) - 3309이이든.html",
+      "hash": "ff965f96a7df1d09",
+      "size": 96236,
+      "addedAt": "2026-11-24T05:14:19.512Z",
+      "updatedAt": "2026-11-24T05:14:19.512Z"
+    },
+    {
       "id": "3311",
       "studentNo": "3311",
       "name": "이대겸",
@@ -280,11 +293,6 @@
     }
   ],
   "rejected": [
-    {
-      "who": "2d_rpg (24) - 이이든.html",
-      "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
-    },
     {
       "who": "3114 이주형",
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
