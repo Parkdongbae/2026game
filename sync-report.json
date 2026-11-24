@@ -1,33 +1,17 @@
 {
-  "updatedAt": "2026-11-24T05:16:29.680Z",
+  "updatedAt": "2026-11-24T11:32:56.572Z",
   "skipped": [
-    {
-      "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
-      "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3114",
-      "name": "이주형"
-    },
-    {
-      "sourceName": "주술회전 철권 스타일 대전 게임 제작 - Google Gemini - 3109오예준.html",
-      "driveId": "1wZTLcVTa_euSvOI2m_wn4h4OyoawnJBo",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3109",
-      "name": "오예준"
-    },
-    {
-      "sourceName": "철권 스타일 격투 게임 제작 - Google Gemini - 3103김재훈.html",
-      "driveId": "140hd6hYYp1eH16gmnvfI2gQiHKBYmP-K",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3103",
-      "name": "김재훈"
-    },
     {
       "sourceName": "midnight-hunter (1) - 3308윤시현.html",
       "driveId": "1NV9ZTq7mJlr99zWN3XDfDiEDeqr42Jq-",
       "reason": "같은 파일을 두 번 올림 (한 번만 게시)",
       "studentNo": "3308",
       "name": "윤시현"
+    },
+    {
+      "sourceName": "neon_geometry_dash (3) - 이이든.html",
+      "driveId": "15I8FMrMnG6KlCxQVIhuIid130IV0cM-U",
+      "reason": "파일명에서 학번·이름을 찾지 못함"
     },
     {
       "sourceName": "seashell-game (3) - 3303김성민.html",
@@ -49,6 +33,27 @@
       "reason": "같은 파일을 두 번 올림 (한 번만 게시)",
       "studentNo": "3303",
       "name": "김성민"
+    },
+    {
+      "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
+      "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
+      "studentNo": "3114",
+      "name": "이주형"
+    },
+    {
+      "sourceName": "주술회전 철권 스타일 대전 게임 제작 - Google Gemini - 3109오예준.html",
+      "driveId": "1wZTLcVTa_euSvOI2m_wn4h4OyoawnJBo",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
+      "studentNo": "3109",
+      "name": "오예준"
+    },
+    {
+      "sourceName": "철권 스타일 격투 게임 제작 - Google Gemini - 3103김재훈.html",
+      "driveId": "140hd6hYYp1eH16gmnvfI2gQiHKBYmP-K",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
+      "studentNo": "3103",
+      "name": "김재훈"
     }
   ]
 }

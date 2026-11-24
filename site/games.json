@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T05:14:19.512Z",
+  "updatedAt": "2026-11-24T11:32:56.572Z",
   "games": [
     {
       "id": "2105",
@@ -201,6 +201,19 @@
       "updatedAt": "2026-11-24T05:13:29.653Z"
     },
     {
+      "id": "3308-3",
+      "studentNo": "3308",
+      "name": "윤시현",
+      "title": "캐릭터 메이커 & 배틀 아레나",
+      "file": "3308-3.html",
+      "driveId": "1bLdRQnV7qRa3stBl851zwSKTYzjfImlA",
+      "sourceName": "윤시현 그림그리기 - 3308윤시현.html",
+      "hash": "bb5b97ffbffafdb9",
+      "size": 232517,
+      "addedAt": "2026-11-24T11:32:56.572Z",
+      "updatedAt": "2026-11-24T11:32:56.572Z"
+    },
+    {
       "id": "3309",
       "studentNo": "3309",
       "name": "이이든",
@@ -253,6 +266,19 @@
       "updatedAt": "2026-11-24T04:32:47.884Z"
     },
     {
+      "id": "3311-4",
+      "studentNo": "3311",
+      "name": "이대겸",
+      "title": "럭키 슬롯 & 클리커 타이쿤",
+      "file": "3311-4.html",
+      "driveId": "1rzOarUxTPskcOSUXjZ8VJZYcgUoR2mZE",
+      "sourceName": "SLOT - 3311이대겸.html",
+      "hash": "1d26d94f7d8379d0",
+      "size": 34437,
+      "addedAt": "2026-11-24T11:32:56.572Z",
+      "updatedAt": "2026-11-24T11:32:56.572Z"
+    },
+    {
       "id": "3313",
       "studentNo": "3313",
       "name": "정세영",
@@ -293,6 +319,11 @@
     }
   ],
   "rejected": [
+    {
+      "who": "neon_geometry_dash (3) - 이이든.html",
+      "reason": "파일명에서 학번·이름을 찾지 못함",
+      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
+    },
     {
       "who": "3114 이주형",
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
