@@ -17,6 +17,7 @@ const NAME_RE = /(\d{4})\s*([가-힣][가-힣\s]*[가-힣])\s*\.html$/i;
 const ID_RE = /^\d{4}(-\d+)?$/;
 const AI_CHAT_HOSTS = ["gemini.google.com", "chatgpt.com", "chat.openai.com", "claude.ai"];
 const REASON_AI = "AI 대화 화면 저장본 (게임 파일 아님)";
+const REASON_DUP = "같은 파일을 두 번 올림 (한 번만 게시)";
 const FIXES = {
   [REASON_AI]: "AI와 대화한 화면을 저장한 파일이에요. AI가 만들어 준 게임 코드를 HTML 파일로 내려받아(또는 복사해서 .html로 저장해) 다시 올려 주세요.",
   "파일명에서 학번·이름을 찾지 못함": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
@@ -215,6 +216,11 @@ async function main() {
     else fresh.push(c);
   }
   for (const c of fresh) {
+    // 같은 학생이 똑같은 파일을 두 번 올린 경우: 한 번만 게시 (서로 다른 게임은 몇 개든 허용)
+    if (results.some((r) => r.studentNo === c.studentNo && r.hash === c.hash)) {
+      skipped.push({ sourceName: c.sourceName, driveId: c.driveId, reason: REASON_DUP, studentNo: c.studentNo, name: c.name });
+      continue;
+    }
     const candidates = prev
       .filter((g) => g.studentNo === c.studentNo && !presentDriveIds.has(g.driveId) && !inherited.has(g.id) && !usedIds.has(g.id) && ID_RE.test(g.id))
       .sort((a, b) => a.id.length - b.id.length || (a.id < b.id ? -1 : 1));
@@ -271,7 +277,7 @@ async function main() {
   const clean = games.map(({ buf, isNew, isChanged, ...g }) => g);
   // 갤러리에 보여 줄 "다시 제출이 필요해요" 목록 (교사가 숨긴 게임은 제외)
   const rejected = skipped
-    .filter((s) => s.reason !== "교사가 숨김")
+    .filter((s) => s.reason !== "교사가 숨김" && s.reason !== REASON_DUP)
     .map((s) => ({
       who: s.studentNo ? `${s.studentNo} ${s.name}` : s.sourceName,
       reason: s.reason,

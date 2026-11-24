@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUMP KING - AIM & JUMP EDITION</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@500;700;900&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+  }
+
+  body {
+    background-color: #0b0d13;
+    color: #f1f5f9;
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .game-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .canvas-container {
+    position: relative;
+    width: 600px;
+    height: 750px;
+    border: 4px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15);
+    background: #0f172a;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hud-top {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .badge {
+    background: rgba(15, 23, 42, 0.82);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stage-badge {
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.4);
+  }
+
+  .side-panel {
+    width: 295px;
+    background: #131824;
+    border: 1px solid #263044;
+    border-radius: 12px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+  }
+
+  .title-box h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    line-height: 1.5;
+    color: #fbbf24;
+    text-shadow: 2px 2px 0 #78350f;
+    margin-bottom: 6px;
+  }
+
+  .title-box p {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .rule-card {
+    background: #1b2232;
+    border-radius: 8px;
+    padding: 14px;
+    border-left: 3px solid #6366f1;
+  }
+
+  .rule-card h3 {
+    font-size: 13px;
+    color: #e2e8f0;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .rule-card ul {
+    list-style: none;
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.65;
+  }
+
+  .rule-card li {
+    margin-bottom: 5px;
+  }
+
+  .key-cap {
+    display: inline-block;
+    background: #334155;
+    color: #f8fafc;
+    border: 1px solid #64748b;
+    border-bottom-width: 3px;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-box {
+    background: #0f141e;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #1e293b;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+
+  .stat-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: #f8fafc;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    flex: 1;
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  button:hover {
+    background: #1d4ed8;
+  }
+
+  button:active {
+    transform: translateY(1px);
+  }
+
+  button.secondary {
+    background: #334155;
+  }
+
+  button.secondary:hover {
+    background: #475569;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 23, 0.86);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 32px;
+    z-index: 20;
+    backdrop-filter: blur(5px);
+  }
+
+  .overlay.hidden {
+    display: none;
+  }
+
+  .overlay h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: #fbbf24;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .overlay p {
+    font-size: 14px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    margin-bottom: 24px;
+    max-width: 440px;
+  }
+
+  .start-btn {
+    flex: none;
+    padding: 14px 32px;
+    font-size: 15px;
+    background: #f59e0b;
+    color: #0f172a;
+    box-shadow: 0 4px 0 #b45309;
+  }
+
+  .start-btn:hover {
+    background: #fbbf24;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-wrapper">
+  <div class="canvas-container">
+    <div class="hud-top">
+      <div class="badge stage-badge" id="hudStage">STAGE 1 / 10 : 시작의 숲</div>
+      <div class="badge" id="hudTime">00:00.0</div>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="750"></canvas>
+
+    <div class="overlay" id="startOverlay">
+      <h2>JUMP KING<br><span style="font-size:13px; color:#93c5fd;">AIM & JUMP EDITION</span></h2>
+      <p>
+        정교한 조준과 점프만으로 정상(10층)까지 오르세요!<br><br>
+        1. <span class="key-cap">←</span> <span class="key-cap">→</span> 키로 <b>점프할 방향만</b> 정합니다. (걷기 이동 없음)<br>
+        2. <span class="key-cap">SPACE</span> 키를 누른 시간에 비례해 점프 높이와 거리가 결정됩니다.<br>
+        3. <b>최대 충전 후 2초가 지나면</b> 자동으로 최대 점프가 발사됩니다!
+      </p>
+      <button class="start-btn" id="startBtn">도전 시작하기 (SPACE)</button>
+    </div>
+
+    <div class="overlay hidden" id="winOverlay">
+      <h2>VICTORY!</h2>
+      <p id="winSummary">마침내 10층 정상에 도달하여 왕관을 차지했습니다!</p>
+      <button class="start-btn" id="restartWinBtn">다시 도전하기</button>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="title-box">
+      <h1>JUMP KING</h1>
+      <p>10개의 시련을 넘어 정상으로</p>
+    </div>
+
+    <div class="rule-card">
+      <h3>🎮 조작 방법</h3>
+      <ul>
+        <li>• <b>방향 설정:</b> <span class="key-cap">←</span> (왼쪽) / <span class="key-cap">→</span> (오른쪽)<br><span style="color:#94a3b8; font-size:11px;">※ 방향키로는 걷지 않고 조준 방향만 고정됩니다.</span></li>
+        <li>• <b>파워 충전:</b> <span class="key-cap">SPACE</span> 꾹 누르기</li>
+        <li>• <b>도약:</b> <span class="key-cap">SPACE</span> 떼기 (오래 누를수록 멀리·높이 점프)</li>
+        <li>• <b>자동 발사:</b> 최대 충전(100%) 후 <b>2초 경과 시 자동 최대 점프!</b></li>
+      </ul>
+    </div>
+
+    <div class="rule-card" style="border-left-color: #f59e0b;">
+      <h3>🧱 지형 구조</h3>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="swatch" style="background: #475569; border-top: 4px solid #22c55e;"></div>
+          <span><b>평지 발판:</b> 착지 후 다음 점프를 조준할 수 있는 안전 지대</span>
+        </div>
+        <div class="legend-item">
+          <div class="swatch" style="background: linear-gradient(135deg, #38bdf8 50%, #0284c7 50%);"></div>
+          <span><b>경사 지형:</b> 발판 끝단·절벽·지붕에 연결된 구조물. 닿으면 경사를 따라 미끄러짐!</span>
+        </div>
+        <div class="legend-item">
+          <div class="swatch" style="background: #fbbf24; border-radius: 50%;"></div>
+          <span><b>정상 왕관:</b> 10층 꼭대기 클리어 목표</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">점프 횟수</div>
+        <div class="stat-val" id="statJumps">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">최고 도달</div>
+        <div class="stat-val" id="statMaxStage">1층</div>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="secondary" id="soundToggleBtn">🔊 효과음 ON</button>
+      <button class="secondary" id="resetBtn">처음부터</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const W = 600;
+  const H = 750;
+  const TOTAL_STAGES = 10;
+
+  // HUD & UI Elements
+  const hudStage = document.getElementById('hudStage');
+  const hudTime = document.getElementById('hudTime');
+  const statJumps = document.getElementById('statJumps');
+  const statMaxStage = document.getElementById('statMaxStage');
+  const startOverlay = document.getElementById('startOverlay');
+  const winOverlay = document.getElementById('winOverlay');
+  const winSummary = document.getElementById('winSummary');
+  const startBtn = document.getElementById('startBtn');
+  const restartWinBtn = document.getElementById('restartWinBtn');
+  const soundToggleBtn = document.getElementById('soundToggleBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // Web Audio API Synthesizer
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function playSound(type, ratio = 0.5) {
+    if (!soundEnabled) return;
+    initAudio();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    if (type === 'aim') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(560, now + 0.04);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+      osc.start(now);
+      osc.stop(now + 0.045);
+    } else if (type === 'jump') {
+      osc.type = 'square';
+      const baseFreq = 180 + ratio * 220;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.1, now + 0.16);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } else if (type === 'land') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(55, now + 0.09);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'bump') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } else if (type === 'slide') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.linearRampToValueAtTime(340, now + 0.12);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } else if (type === 'win') {
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.frequency.setValueAtTime(freq, now + i * 0.12);
+        g.gain.setValueAtTime(0.09, now + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+        o.start(now + i * 0.12);
+        o.stop(now + i * 0.12 + 0.3);
+      });
+    }
+  }
+
+  soundToggleBtn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    soundToggleBtn.textContent = soundEnabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
+  });
+
+  // Physics Constants
+  const GRAVITY = 0.52;
+  const MAX_FALL_SPEED = 15.5;
+  const MAX_CHARGE_TIME = 0.85;  // Time to reach 100% power
+  const MAX_HOLD_AFTER_FULL = 2.0; // Auto-release 2.0s after reaching full charge
+  const MIN_JUMP_VY = -5.2;
+  const MAX_JUMP_VY = -15.6;
+  const MIN_JUMP_VX = 2.6;
+  const MAX_JUMP_VX = 8.4;
+
+  const STAGE_THEMES = [
+    { name: '시작의 숲', bgTop: '#0f292e', bgBot: '#183a37', platTop: '#22c55e', platBody: '#334155' },
+    { name: '이끼 낀 성벽', bgTop: '#132a3a', bgBot: '#1e3a4c', platTop: '#4ade80', platBody: '#3b4254' },
+    { name: '바람 부는 능선', bgTop: '#172554', bgBot: '#1e3a8a', platTop: '#38bdf8', platBody: '#334155' },
+    { name: '거짓 왕의 성채', bgTop: '#0c4a6e', bgBot: '#164e63', platTop: '#7dd3fc', platBody: '#1e293b' },
+    { name: '고대의 시계탑', bgTop: '#1e1b4b', bgBot: '#312e81', platTop: '#a78bfa', platBody: '#2e294e' },
+    { name: '황혼의 현수교', bgTop: '#3b0764', bgBot: '#581c87', platTop: '#e879f9', platBody: '#3b284e' },
+    { name: '붉은 협곡', bgTop: '#450a0a', bgBot: '#7f1d1d', platTop: '#fb923c', platBody: '#3f2323' },
+    { name: '폭풍의 첨탑', bgTop: '#18181b', bgBot: '#27272a', platTop: '#facc15', platBody: '#3f3f46' },
+    { name: '천공의 유적', bgTop: '#090d16', bgBot: '#1e1b4b', platTop: '#2dd4bf', platBody: '#1e293b' },
+    { name: '왕좌의 정상', bgTop: '#05070c', bgBot: '#17153b', platTop: '#fbbf24', platBody: '#292524' }
+  ];
+
+  // Trajectory-verified 10-Stage Layout modeled after Jump King's vertical progression
+  const STAGES = [
+    // STAGE 1: 시작의 숲 (Forest Floor -> Gentle Ledges)
+    {
+      rects: [
+        { x: 0, y: 710, w: 600, h: 40 },
+        { x: 330, y: 580, w: 200, h: 28 },
+        { x: 70, y: 450, w: 190, h: 28 },
+        { x: 330, y: 315, w: 180, h: 28 },
+        { x: 90, y: 180, w: 180, h: 28 },
+        { x: 330, y: 65, w: 180, h: 28 }
+      ],
+      slopes: [
+        { x: 530, y: 520, w: 70, h: 88, dir: 'left' }
+      ]
+    },
+    // STAGE 2: 이끼 낀 성벽 (Mossy Ramparts - Flush Edge Bevels)
+    {
+      rects: [
+        { x: 85, y: 640, w: 170, h: 28 },
+        { x: 380, y: 505, w: 145, h: 28 },
+        { x: 75, y: 365, w: 150, h: 28 },
+        { x: 370, y: 220, w: 145, h: 28 },
+        { x: 110, y: 80, w: 160, h: 28 }
+      ],
+      slopes: [
+        { x: 285, y: 505, w: 95, h: 85, dir: 'left' },
+        { x: 225, y: 365, w: 95, h: 80, dir: 'right' }
+      ]
+    },
+    // STAGE 3: 바람 부는 능선 (Windy Ridge - Wall Buttresses & Zig-Zag Climb to Stage 4 Bastion)
+    {
+      rects: [
+        { x: 340, y: 655, w: 150, h: 26 },
+        { x: 95, y: 520, w: 145, h: 26 },
+        { x: 365, y: 380, w: 140, h: 26 },
+        { x: 100, y: 235, w: 140, h: 26 },
+        { x: 350, y: 95, w: 145, h: 26 }
+      ],
+      slopes: [
+        { x: 0, y: 445, w: 95, h: 101, dir: 'right' },
+        { x: 505, y: 305, w: 95, h: 101, dir: 'left' }
+      ]
+    },
+    // STAGE 4: 거짓 왕의 성채 (False Kings' Keep - Left Bastion Entry + Central Sloped Keep Archway)
+    {
+      rects: [
+        { x: 85, y: 650, w: 155, h: 26 },
+        { x: 395, y: 525, w: 135, h: 26 },
+        { x: 245, y: 405, w: 110, h: 24 },
+        { x: 65, y: 365, w: 125, h: 26 },
+        { x: 405, y: 225, w: 125, h: 26 },
+        { x: 115, y: 85, w: 140, h: 26 }
+      ],
+      slopes: [
+        { x: 530, y: 445, w: 70, h: 106, dir: 'left' },
+        { x: 245, y: 345, w: 55, h: 60, dir: 'left' },
+        { x: 300, y: 345, w: 55, h: 60, dir: 'right' },
+        { x: 325, y: 225, w: 80, h: 75, dir: 'left' }
+      ]
+    },
+    // STAGE 5: 고대의 시계탑 (Ancient Clocktower)
+    {
+      rects: [
+        { x: 365, y: 655, w: 130, h: 26 },
+        { x: 95, y: 520, w: 125, h: 26 },
+        { x: 260, y: 405, w: 80, h: 24 },
+        { x: 385, y: 370, w: 120, h: 26 },
+        { x: 90, y: 230, w: 120, h: 26 },
+        { x: 360, y: 90, w: 125, h: 26 }
+      ],
+      slopes: [
+        { x: 215, y: 335, w: 85, h: 70, dir: 'left' },
+        { x: 300, y: 335, w: 85, h: 70, dir: 'right' }
+      ]
+    },
+    // STAGE 6: 황혼의 현수교 (Twilight Suspension)
+    {
+      rects: [
+        { x: 105, y: 660, w: 120, h: 24 },
+        { x: 385, y: 525, w: 115, h: 24 },
+        { x: 95, y: 385, w: 115, h: 24 },
+        { x: 395, y: 240, w: 110, h: 24 },
+        { x: 115, y: 95, w: 115, h: 24 }
+      ],
+      slopes: [
+        { x: 290, y: 525, w: 95, h: 85, dir: 'left' },
+        { x: 210, y: 385, w: 95, h: 85, dir: 'right' },
+        { x: 505, y: 160, w: 95, h: 104, dir: 'left' }
+      ]
+    },
+    // STAGE 7: 붉은 협곡 (Crimson Canyon)
+    {
+      rects: [
+        { x: 365, y: 665, w: 115, h: 24 },
+        { x: 95, y: 530, w: 110, h: 24 },
+        { x: 255, y: 415, w: 90, h: 24 },
+        { x: 405, y: 265, w: 105, h: 24 },
+        { x: 100, y: 110, w: 110, h: 24 }
+      ],
+      slopes: [
+        { x: 170, y: 415, w: 85, h: 85, dir: 'left' },
+        { x: 345, y: 415, w: 85, h: 85, dir: 'right' },
+        { x: 210, y: 110, w: 85, h: 80, dir: 'right' }
+      ]
+    },
+    // STAGE 8: 폭풍의 첨탑 (Storm Spire)
+    {
+      rects: [
+        { x: 370, y: 665, w: 110, h: 24 },
+        { x: 85, y: 520, w: 105, h: 24 },
+        { x: 415, y: 370, w: 105, h: 24 },
+        { x: 95, y: 225, w: 105, h: 24 },
+        { x: 375, y: 85, w: 105, h: 24 }
+      ],
+      slopes: [
+        { x: 0, y: 440, w: 85, h: 104, dir: 'right' },
+        { x: 520, y: 290, w: 80, h: 104, dir: 'left' },
+        { x: 200, y: 225, w: 90, h: 80, dir: 'right' }
+      ]
+    },
+    // STAGE 9: 천공의 유적 (Sky Ruins)
+    {
+      rects: [
+        { x: 110, y: 670, w: 100, h: 22 },
+        { x: 400, y: 520, w: 95, h: 22 },
+        { x: 255, y: 380, w: 90, h: 22 },
+        { x: 80, y: 230, w: 95, h: 22 },
+        { x: 410, y: 85, w: 95, h: 22 }
+      ],
+      slopes: [
+        { x: 175, y: 380, w: 80, h: 85, dir: 'left' },
+        { x: 345, y: 380, w: 80, h: 85, dir: 'right' },
+        { x: 0, y: 145, w: 80, h: 107, dir: 'right' },
+        { x: 325, y: 85, w: 85, h: 80, dir: 'left' }
+      ]
+    },
+    // STAGE 10: 왕좌의 정상 (Summit of the Throne)
+    {
+      rects: [
+        { x: 120, y: 675, w: 95, h: 22 },
+        { x: 405, y: 530, w: 90, h: 22 },
+        { x: 90, y: 385, w: 90, h: 22 },
+        { x: 410, y: 240, w: 90, h: 22 },
+        { x: 225, y: 110, w: 150, h: 28 }
+      ],
+      slopes: [
+        { x: 510, y: 450, w: 90, h: 102, dir: 'left' },
+        { x: 0, y: 305, w: 90, h: 102, dir: 'right' },
+        { x: 135, y: 110, w: 90, h: 88, dir: 'left' },
+        { x: 375, y: 110, w: 90, h: 88, dir: 'right' }
+      ],
+      crown: { x: 300, y: 76 }
+    }
+  ];
+
+  // Player State
+  const player = {
+    x: 120,
+    y: 674,
+    w: 28,
+    h: 36,
+    vx: 0,
+    vy: 0,
+    stage: 0,
+    grounded: true,
+    sliding: false,
+    slideDir: 0,
+    facing: 1, // -1 (left) or 1 (right)
+    charging: false,
+    chargeTime: 0,
+    fullHoldTime: 0,
+    squishX: 1,
+    squishY: 1
+  };
+
+  // Game Stats & Particles
+  let gameState = 'START';
+  let jumps = 0;
+  let maxStageReached = 1;
+  let elapsedTime = 0;
+  let lastTimestamp = 0;
+  let particles = [];
+  let slideSoundCooldown = 0;
+
+  const bgParticles = Array.from({ length: 45 }, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: Math.random() * 2 + 0.8,
+    speed: Math.random() * 0.4 + 0.15,
+    alpha: Math.random() * 0.6 + 0.2
+  }));
+
+  function resetGame(autoStart = false) {
+    player.x = 120;
+    player.y = 710 - player.h;
+    player.vx = 0;
+    player.vy = 0;
+    player.stage = 0;
+    player.grounded = true;
+    player.sliding = false;
+    player.facing = 1;
+    player.charging = false;
+    player.chargeTime = 0;
+    player.fullHoldTime = 0;
+    player.squishX = 1;
+    player.squishY = 1;
+
+    jumps = 0;
+    maxStageReached = 1;
+    elapsedTime = 0;
+    particles = [];
+
+    statJumps.textContent = '0';
+    statMaxStage.textContent = '1층';
+    updateStageHUD();
+
+    if (autoStart) {
+      gameState = 'PLAYING';
+      startOverlay.classList.add('hidden');
+      winOverlay.classList.add('hidden');
+    } else {
+      gameState = 'START';
+      startOverlay.classList.remove('hidden');
+      winOverlay.classList.add('hidden');
+    }
+  }
+
+  function updateStageHUD() {
+    const theme = STAGE_THEMES[player.stage];
+    hudStage.textContent = `STAGE ${player.stage + 1} / ${TOTAL_STAGES} : ${theme.name}`;
+    if (player.stage + 1 > maxStageReached) {
+      maxStageReached = player.stage + 1;
+      statMaxStage.textContent = `${maxStageReached}층`;
+    }
+  }
+
+  function spawnDust(x, y, color = '#cbd5e1', count = 8) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 4.5,
+        vy: (Math.random() - 0.8) * 3.5,
+        life: 1,
+        decay: Math.random() * 0.04 + 0.025,
+        size: Math.random() * 4 + 2,
+        color
+      });
+    }
+  }
+
+  // Input Handling:
+  // ArrowLeft / ArrowRight ONLY sets aiming direction (never walks).
+  // Spacebar charges & executes the jump.
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      e.preventDefault();
+      if (gameState === 'PLAYING' && player.grounded && !player.sliding) {
+        if (player.facing !== -1) {
+          player.facing = -1;
+          playSound('aim');
+        }
+      }
+    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      e.preventDefault();
+      if (gameState === 'PLAYING' && player.grounded && !player.sliding) {
+        if (player.facing !== 1) {
+          player.facing = 1;
+          playSound('aim');
+        }
+      }
+    } else if (e.code === 'Space') {
+      e.preventDefault();
+      if (gameState === 'START') {
+        initAudio();
+        resetGame(true);
+        return;
+      }
+      if (gameState === 'WIN') {
+        resetGame(true);
+        return;
+      }
+      if (gameState === 'PLAYING' && player.grounded && !player.sliding && !player.charging && !e.repeat) {
+        initAudio();
+        player.charging = true;
+        player.chargeTime = 0;
+        player.fullHoldTime = 0;
+        player.vx = 0;
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (gameState === 'PLAYING' && player.charging) {
+        executeJump();
+      }
+    }
+  });
+
+  startBtn.addEventListener('click', () => {
+    initAudio();
+    resetGame(true);
+  });
+
+  restartWinBtn.addEventListener('click', () => {
+    resetGame(true);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    resetGame(true);
+  });
+
+  function executeJump() {
+    const ratio = Math.min(player.chargeTime / MAX_CHARGE_TIME, 1);
+    const power = Math.pow(ratio, 0.88);
+    const dir = player.facing;
+
+    player.vy = MIN_JUMP_VY + (MAX_JUMP_VY - MIN_JUMP_VY) * power;
+    player.vx = dir * (MIN_JUMP_VX + (MAX_JUMP_VX - MIN_JUMP_VX) * power);
+
+    player.grounded = false;
+    player.sliding = false;
+    player.charging = false;
+    player.chargeTime = 0;
+    player.fullHoldTime = 0;
+    player.squishX = 0.76;
+    player.squishY = 1.28;
+
+    jumps++;
+    statJumps.textContent = jumps;
+    playSound('jump', ratio);
+    spawnDust(player.x + player.w / 2, player.y + player.h, '#94a3b8', 10);
+  }
+
+  function formatTime(sec) {
+    const mins = Math.floor(sec / 60);
+    const secs = Math.floor(sec % 60);
+    const tenths = Math.floor((sec * 10) % 10);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+  }
+
+  function update(dt) {
+    if (gameState !== 'PLAYING') return;
+
+    elapsedTime += dt;
+    hudTime.textContent = formatTime(elapsedTime);
+    if (slideSoundCooldown > 0) slideSoundCooldown -= dt;
+
+    player.squishX += (1 - player.squishX) * 12 * dt;
+    player.squishY += (1 - player.squishY) * 12 * dt;
+
+    const stageData = STAGES[player.stage];
+
+    if (player.grounded && !player.sliding) {
+      player.vx = 0;
+
+      if (player.charging) {
+        if (player.chargeTime < MAX_CHARGE_TIME) {
+          player.chargeTime = Math.min(player.chargeTime + dt, MAX_CHARGE_TIME);
+        } else {
+          player.fullHoldTime += dt;
+          if (player.fullHoldTime >= MAX_HOLD_AFTER_FULL) {
+            executeJump();
+          }
+        }
+
+        if (player.charging) {
+          const ratio = player.chargeTime / MAX_CHARGE_TIME;
+          const shake = player.fullHoldTime > 0 ? Math.sin(performance.now() * 0.06) * 0.04 : 0;
+          player.squishX = 1 + ratio * 0.34 + shake;
+          player.squishY = 1 - ratio * 0.32 - shake;
+        }
+      }
+    }
+
+    if (!player.grounded || player.sliding) {
+      const prevX = player.x;
+      const prevY = player.y;
+
+      if (player.sliding) {
+        player.vx = player.slideDir * 4.2;
+        player.vy = 4.6;
+        if (slideSoundCooldown <= 0) {
+          playSound('slide');
+          slideSoundCooldown = 0.16;
+          spawnDust(player.x + player.w / 2, player.y + player.h, '#7dd3fc', 2);
+        }
+      } else {
+        player.vy = Math.min(player.vy + GRAVITY, MAX_FALL_SPEED);
+      }
+
+      player.x += player.vx;
+      player.y += player.vy;
+
+      // Wall Bounce
+      if (player.x < 0) {
+        player.x = 0;
+        player.vx = Math.abs(player.vx) * 0.65;
+        player.facing = 1;
+        playSound('bump');
+        spawnDust(0, player.y + player.h / 2, '#cbd5e1', 5);
+      } else if (player.x + player.w > W) {
+        player.x = W - player.w;
+        player.vx = -Math.abs(player.vx) * 0.65;
+        player.facing = -1;
+        playSound('bump');
+        spawnDust(W, player.y + player.h / 2, '#cbd5e1', 5);
+      }
+
+      // Stage Transitions
+      if (player.y + player.h / 2 < 0) {
+        if (player.stage < TOTAL_STAGES - 1) {
+          player.stage++;
+          player.y += H;
+          updateStageHUD();
+        } else {
+          player.y = 0;
+          player.vy = 1;
+        }
+      } else if (player.y + player.h / 2 > H) {
+        if (player.stage > 0) {
+          player.stage--;
+          player.y -= H;
+          updateStageHUD();
+        }
+      }
+
+      const currentStage = STAGES[player.stage];
+      let onSlopeNow = false;
+
+      // 1. Slopes
+      for (const s of currentStage.slopes) {
+        if (player.x + player.w > s.x && player.x < s.x + s.w &&
+            player.y + player.h > s.y && player.y < s.y + s.h) {
+          const footX = Math.max(s.x, Math.min(s.x + s.w, player.x + player.w / 2));
+          const t = (footX - s.x) / s.w;
+          const slopeSurfaceY = s.dir === 'right'
+            ? s.y + t * s.h
+            : s.y + (1 - t) * s.h;
+
+          if (player.y + player.h >= slopeSurfaceY - 4) {
+            player.y = slopeSurfaceY - player.h;
+            player.grounded = false;
+            player.sliding = true;
+            player.slideDir = s.dir === 'right' ? 1 : -1;
+            player.facing = player.slideDir;
+            onSlopeNow = true;
+            break;
+          }
+        }
+      }
+
+      if (!onSlopeNow && player.sliding) {
+        player.sliding = false;
+        player.grounded = false;
+        player.vx = player.slideDir * 3.4;
+        player.vy = 2.5;
+      }
+
+      // 2. Rectangular Platforms
+      if (!onSlopeNow) {
+        for (const r of currentStage.rects) {
+          if (player.x + player.w > r.x && player.x < r.x + r.w &&
+              player.y + player.h > r.y && player.y < r.y + r.h) {
+
+            const wasAbove = prevY + player.h <= r.y + 8;
+            const wasBelow = prevY >= r.y + r.h - 8;
+            const wasLeft = prevX + player.w <= r.x + 8;
+            const wasRight = prevX >= r.x + r.w - 8;
+
+            if (wasAbove && player.vy >= 0) {
+              player.y = r.y - player.h;
+              player.vy = 0;
+              player.vx = 0;
+              player.grounded = true;
+              player.sliding = false;
+              player.squishX = 1.26;
+              player.squishY = 0.76;
+              playSound('land');
+              spawnDust(player.x + player.w / 2, player.y + player.h, '#e2e8f0', 8);
+              break;
+            } else if (wasBelow && player.vy < 0) {
+              player.y = r.y + r.h;
+              player.vy = Math.abs(player.vy) * 0.45;
+              playSound('bump');
+              spawnDust(player.x + player.w / 2, player.y, '#94a3b8', 5);
+            } else if (wasLeft && player.vx > 0) {
+              player.x = r.x - player.w;
+              player.vx = -player.vx * 0.55;
+              player.facing = -1;
+              playSound('bump');
+            } else if (wasRight && player.vx < 0) {
+              player.x = r.x + r.w;
+              player.vx = -player.vx * 0.55;
+              player.facing = 1;
+              playSound('bump');
+            }
+          }
+        }
+      }
+    }
+
+    // Crown Victory Check
+    if (player.stage === TOTAL_STAGES - 1 && stageData.crown) {
+      const c = stageData.crown;
+      const dist = Math.hypot((player.x + player.w / 2) - c.x, (player.y + player.h / 2) - c.y);
+      if (dist < 38) {
+        gameState = 'WIN';
+        playSound('win');
+        winSummary.innerHTML = `총 <b>${jumps}회</b>의 점프와 <b>${formatTime(elapsedTime)}</b>의 기록으로<br>10층 정상 왕관을 차지했습니다!`;
+        winOverlay.classList.remove('hidden');
+      }
+    }
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.12;
+      p.life -= p.decay;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function draw() {
+    const theme = STAGE_THEMES[player.stage];
+    const stageData = STAGES[player.stage];
+
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, theme.bgTop);
+    grad.addColorStop(1, theme.bgBot);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.font = '900 180px "Noto Sans KR", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${player.stage + 1}F`, W / 2, H / 2);
+    ctx.restore();
+
+    for (const bp of bgParticles) {
+      bp.y -= bp.speed;
+      if (bp.y < 0) bp.y = H;
+      ctx.fillStyle = `rgba(255, 255, 255, ${bp.alpha})`;
+      ctx.beginPath();
+      ctx.arc(bp.x, bp.y, bp.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Slopes
+    for (const s of stageData.slopes) {
+      ctx.save();
+      ctx.beginPath();
+      if (s.dir === 'right') {
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x + s.w, s.y + s.h);
+        ctx.lineTo(s.x, s.y + s.h);
+      } else {
+        ctx.moveTo(s.x + s.w, s.y);
+        ctx.lineTo(s.x + s.w, s.y + s.h);
+        ctx.lineTo(s.x, s.y + s.h);
+      }
+      ctx.closePath();
+
+      const slopeGrad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
+      slopeGrad.addColorStop(0, '#38bdf8');
+      slopeGrad.addColorStop(1, '#0369a1');
+      ctx.fillStyle = slopeGrad;
+      ctx.fill();
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.strokeStyle = '#bae6fd';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      if (s.dir === 'right') {
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x + s.w, s.y + s.h);
+      } else {
+        ctx.moveTo(s.x + s.w, s.y);
+        ctx.lineTo(s.x, s.y + s.h);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      const arrow = s.dir === 'right' ? '↘' : '↙';
+      const labelX = s.dir === 'right' ? s.x + s.w * 0.35 : s.x + s.w * 0.65;
+      ctx.fillText(arrow, labelX, s.y + s.h * 0.75);
+      ctx.restore();
+    }
+
+    // Solid Platforms
+    for (const r of stageData.rects) {
+      ctx.fillStyle = theme.platBody;
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+
+      ctx.fillStyle = theme.platTop;
+      ctx.fillRect(r.x, r.y, r.w, 6);
+    }
+
+    // Crown on Stage 10
+    if (stageData.crown) {
+      const c = stageData.crown;
+      const bob = Math.sin(performance.now() / 240) * 5;
+      ctx.save();
+      ctx.translate(c.x, c.y + bob);
+
+      const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 36);
+      glow.addColorStop(0, 'rgba(251, 191, 36, 0.55)');
+      glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(0, 0, 36, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-16, 10);
+      ctx.lineTo(-18, -8);
+      ctx.lineTo(-7, 0);
+      ctx.lineTo(0, -14);
+      ctx.lineTo(7, 0);
+      ctx.lineTo(18, -8);
+      ctx.lineTo(16, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, 2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Aim Indicator & Charge Gauge
+    if (player.grounded && !player.sliding && gameState === 'PLAYING') {
+      const centerX = player.x + player.w / 2;
+      const centerY = player.y + player.h / 2;
+      const dir = player.facing;
+
+      const arrowX = centerX + dir * 24;
+      const arrowY = player.y - 16;
+
+      ctx.save();
+      ctx.fillStyle = player.charging ? '#fbbf24' : '#38bdf8';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (dir === 1) {
+        ctx.moveTo(arrowX + 10, arrowY);
+        ctx.lineTo(arrowX - 4, arrowY - 7);
+        ctx.lineTo(arrowX - 4, arrowY + 7);
+      } else {
+        ctx.moveTo(arrowX - 10, arrowY);
+        ctx.lineTo(arrowX + 4, arrowY - 7);
+        ctx.lineTo(arrowX + 4, arrowY + 7);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      if (player.charging) {
+        const ratio = Math.min(player.chargeTime / MAX_CHARGE_TIME, 1);
+        const power = Math.pow(ratio, 0.88);
+        const simVy = MIN_JUMP_VY + (MAX_JUMP_VY - MIN_JUMP_VY) * power;
+        const simVx = dir * (MIN_JUMP_VX + (MAX_JUMP_VX - MIN_JUMP_VX) * power);
+
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
+        for (let step = 3; step <= 15; step += 3) {
+          const sx = centerX + simVx * step;
+          const sy = centerY + simVy * step + 0.5 * GRAVITY * step * step;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const barW = 48;
+        const barH = 7;
+        const barX = centerX - barW / 2;
+        const barY = player.y + player.h + 8;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+        const barColor = ratio < 0.45 ? '#4ade80' : ratio < 0.99 ? '#facc15' : '#ef4444';
+        ctx.fillStyle = barColor;
+        ctx.fillRect(barX, barY, barW * ratio, barH);
+
+        if (player.fullHoldTime > 0) {
+          const remainRatio = Math.max(0, 1 - player.fullHoldTime / MAX_HOLD_AFTER_FULL);
+          const timerY = barY + 10;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.fillRect(barX - 1, timerY - 1, barW + 2, 4);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(barX, timerY, barW * remainRatio, 2);
+
+          ctx.save();
+          ctx.fillStyle = '#fca5a5';
+          ctx.font = 'bold 10px "Noto Sans KR", sans-serif';
+          ctx.textAlign = 'center';
+          const remainSec = Math.max(0, MAX_HOLD_AFTER_FULL - player.fullHoldTime).toFixed(1);
+          ctx.fillText(`MAX! ${remainSec}s`, centerX, timerY + 13);
+          ctx.restore();
+        }
+      }
+    }
+
+    // Player (The King)
+    ctx.save();
+    const drawW = player.w * player.squishX;
+    const drawH = player.h * player.squishY;
+    const drawX = player.x + (player.w - drawW) / 2;
+    const drawY = player.y + (player.h - drawH);
+
+    ctx.fillStyle = '#dc2626';
+    const capeOffset = player.facing === 1 ? -4 : drawW - 6;
+    ctx.fillRect(drawX + capeOffset, drawY + 12, 10, drawH - 14);
+
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(drawX + 3, drawY + 12, drawW - 6, drawH - 14);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(drawX + 2, drawY + 2, drawW - 4, 14);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(drawX + 4, drawY - 2, drawW - 8, 5);
+
+    ctx.fillStyle = '#0f172a';
+    const eyeX = player.facing === 1 ? drawX + drawW - 10 : drawX + 4;
+    ctx.fillRect(eyeX, drawY + 7, 6, 3);
+
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(drawX + 3, drawY + drawH - 4, 8, 4);
+    ctx.fillRect(drawX + drawW - 11, drawY + drawH - 4, 8, 4);
+    ctx.restore();
+
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop(timestamp) {
+    if (!lastTimestamp) lastTimestamp = timestamp;
+    const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+    lastTimestamp = timestamp;
+
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  resetGame(false);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

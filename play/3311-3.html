@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>버튼 클리커 타이쿤 (Button Clicker Tycoon)</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-panel: #1e293b;
+      --bg-card: #283548;
+      --bg-card-hover: #334155;
+      --accent: #f59e0b;
+      --accent-hover: #d97706;
+      --green: #10b981;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --red: #ef4444;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* 상단 헤더 */
+    header {
+      background-color: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    .ctrl-btn.danger:hover {
+      background-color: rgba(239, 68, 68, 0.2);
+      border-color: var(--red);
+      color: #fca5a5;
+    }
+
+    /* 메인 레이아웃 */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 20px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    @media (max-width: 850px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+    }
+
+    /* 왼쪽 클릭 영역 */
+    .click-section {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .money-board {
+      text-align: center;
+      width: 100%;
+    }
+
+    .money-label {
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .money-amount {
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      word-break: break-all;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      margin-top: 18px;
+    }
+
+    .stat-box {
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .stat-title {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* 메인 빅 버튼 */
+    .button-wrapper {
+      position: relative;
+      margin: 32px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #main-click-btn {
+      position: relative;
+      width: 210px;
+      height: 210px;
+      border-radius: 50%;
+      border: 6px solid #fbbf24;
+      background: radial-gradient(circle at 35% 35%, #f59e0b, #b45309);
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.35), inset 0 4px 10px rgba(255, 255, 255, 0.35);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    #main-click-btn:active:not(.on-cooldown) {
+      transform: scale(0.93);
+      box-shadow: 0 5px 15px rgba(245, 158, 11, 0.25);
+    }
+
+    #main-click-btn.on-cooldown {
+      cursor: not-allowed;
+      filter: grayscale(0.45) brightness(0.8);
+      border-color: #64748b;
+    }
+
+    #btn-cooldown-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background-color: rgba(15, 23, 42, 0.65);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .btn-content {
+      position: relative;
+      z-index: 2;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .btn-icon {
+      font-size: 2.6rem;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .btn-subtext {
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0.92;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    .shake {
+      animation: shake 0.22s ease-in-out;
+    }
+
+    /* 쿨타임 게이지 */
+    .cooldown-container {
+      width: 100%;
+      background-color: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .cooldown-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+    }
+
+    .cooldown-status {
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .cooldown-status.waiting {
+      color: var(--accent);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background-color: var(--bg-card);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 999px;
+      transition: width 0.03s linear;
+    }
+
+    /* 떠오르는 텍스트 이펙트 */
+    .floating-text {
+      position: absolute;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fde047;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+      pointer-events: none;
+      z-index: 10;
+      animation: floatUp 0.85s ease-out forwards;
+      white-space: nowrap;
+    }
+
+    .floating-text.auto {
+      font-size: 0.95rem;
+      color: #6ee7b7;
+    }
+
+    .floating-text.warn {
+      font-size: 0.9rem;
+      color: #fca5a5;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -65px) scale(1.15);
+      }
+    }
+
+    /* 오른쪽 상점 영역 */
+    .shop-section {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 110px);
+    }
+
+    @media (max-width: 850px) {
+      .shop-section {
+        max-height: none;
+      }
+    }
+
+    .shop-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .shop-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background-color: var(--bg-dark);
+      color: var(--text-sub);
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background-color: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    .upgrade-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .upgrade-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .upgrade-list::-webkit-scrollbar-thumb {
+      background-color: var(--border);
+      border-radius: 3px;
+    }
+
+    .upgrade-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.15s;
+    }
+
+    .upgrade-card.affordable {
+      border-color: rgba(245, 158, 11, 0.5);
+      background-color: #2c3a4f;
+    }
+
+    .upgrade-info {
+      flex: 1;
+    }
+
+    .upgrade-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .upgrade-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .upgrade-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background-color: var(--bg-dark);
+      color: var(--accent);
+    }
+
+    .upgrade-desc {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      line-height: 1.35;
+    }
+
+    .upgrade-effect {
+      font-size: 0.78rem;
+      color: #6ee7b7;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    .buy-btn {
+      min-width: 120px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background-color: var(--bg-dark);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .buy-btn.can-buy {
+      background-color: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+
+    .buy-btn.can-buy:hover {
+      background-color: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .buy-btn.maxed {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--green);
+      border-color: var(--green);
+      cursor: default;
+    }
+
+    /* 토스트 및 커스텀 확인 모달 (alert/confirm 미사용) */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background-color: #1e293b;
+      color: #f8fafc;
+      border: 1px solid var(--accent);
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transition: transform 0.25s ease;
+      z-index: 100;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 200;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background-color: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .modal-desc {
+      font-size: 0.88rem;
+      color: var(--text-sub);
+      line-height: 1.45;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background-color: var(--bg-card);
+      color: var(--text-main);
+    }
+
+    .modal-btn.confirm {
+      background-color: var(--red);
+      border-color: var(--red);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">🪙 버튼 클리커 타이쿤</div>
+    <div class="header-controls">
+      <button class="ctrl-btn" id="sound-toggle-btn">🔊 효과음: 켜짐</button>
+      <button class="ctrl-btn danger" id="reset-btn">🗑️ 초기화</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 왼쪽: 클릭 및 상태 패널 -->
+    <section class="click-section" id="click-area">
+      <div class="money-board">
+        <div class="money-label">현재 보유 자금</div>
+        <div class="money-amount" id="money-display">0원</div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-title">클릭당 수익 (2ⁿ)</div>
+            <div class="stat-value" id="click-power-display">1원</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">초당 자동 수익</div>
+            <div class="stat-value" id="cps-display">0원/초</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">버튼 쿨타임</div>
+            <div class="stat-value" id="cooldown-time-display">0.50초</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-wrapper">
+        <button id="main-click-btn" type="button">
+          <div id="btn-cooldown-overlay"></div>
+          <div class="btn-content">
+            <span class="btn-icon">👆</span>
+            <span>버튼 누르기</span>
+            <span class="btn-subtext" id="btn-reward-label">+1원</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="cooldown-container">
+        <div class="cooldown-header">
+          <span>수동 클릭 쿨타임</span>
+          <span class="cooldown-status" id="cooldown-status-text">준비 완료!</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="cooldown-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 오른쪽: 업그레이드 상점 -->
+    <section class="shop-section">
+      <div class="shop-title">
+        <span>🛒 업그레이드 상점</span>
+        <span style="font-size: 0.8rem; color: var(--text-sub);" id="total-earned-display">누적 수익: 0원</span>
+      </div>
+
+      <div class="shop-tabs">
+        <button class="tab-btn active" data-tab="all">전체 보기</button>
+        <button class="tab-btn" data-tab="click">클릭 / 속도 강화</button>
+        <button class="tab-btn" data-tab="auto">자동화 고용</button>
+      </div>
+
+      <div class="upgrade-list" id="upgrade-list"></div>
+    </section>
+  </main>
+
+  <div id="toast">저장되었습니다!</div>
+
+  <!-- 초기화 확인 모달 -->
+  <div class="modal-backdrop" id="reset-modal">
+    <div class="modal-box">
+      <div class="modal-title">정말 초기화하시겠습니까?</div>
+      <div class="modal-desc">지금까지 모은 모든 자금과 업그레이드 내역이 영구적으로 삭제됩니다.</div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="cancel-reset-btn">취소</button>
+        <button class="modal-btn confirm" id="confirm-reset-btn">초기화 실행</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 게임 상태 데이터
+    const defaultState = {
+      money: 0,
+      totalEarned: 0,
+      clickLevel: 0,      // 0이면 2^0 = 1원, 1이면 2^1 = 2원, 2이면 2^2 = 4원...
+      cooldownLevel: 0,   // 0이면 0.50초
+      workers: {
+        partTimer: 0,     // 알바생
+        macro: 0,         // 자동 클릭 매크로
+        robotArm: 0,      // 산업용 로봇 팔
+        aiCenter: 0,      // AI 데이터센터
+        quantum: 0        // 양자 클리커
+      }
+    };
+
+    let state = JSON.parse(JSON.stringify(defaultState));
+    let soundEnabled = true;
+    let currentTab = 'all';
+
+    // 쿨타임 관리 변수
+    let lastManualClickTime = 0;
+    let isCoolingDown = false;
+
+    // 클릭당 수익: 2의 제곱수 (2^clickLevel: 1, 2, 4, 8, 16, 32, 64...)
+    function getCurrentClickPower() {
+      return Math.pow(2, state.clickLevel);
+    }
+
+    function getNextClickPower() {
+      return Math.pow(2, state.clickLevel + 1);
+    }
+
+    // 클릭 강화 비용 (50원부터 시작해서 4.2배씩 가파르게 상승)
+    function getClickUpgradeCost() {
+      return Math.floor(50 * Math.pow(4.2, state.clickLevel));
+    }
+
+    // 쿨타임 테이블 (초기 0.50초 -> 최대 0.02초까지 단축)
+    const cooldownTable = [
+      0.50, 0.44, 0.38, 0.32, 0.27, 0.22, 0.18, 0.14, 0.11, 0.08, 0.05, 0.03, 0.02
+    ];
+
+    function getCurrentCooldown() {
+      return cooldownTable[Math.min(state.cooldownLevel, cooldownTable.length - 1)];
+    }
+
+    function getNextCooldown() {
+      return cooldownTable[Math.min(state.cooldownLevel + 1, cooldownTable.length - 1)];
+    }
+
+    function isCooldownMaxed() {
+      return state.cooldownLevel >= cooldownTable.length - 1;
+    }
+
+    // 연타 훈련 비용 (800원부터 시작하여 4.5배씩 크게 상승)
+    function getCooldownUpgradeCost() {
+      return Math.floor(800 * Math.pow(4.5, state.cooldownLevel));
+    }
+
+    // 자동화 유닛 정의
+    const workerConfigs = [
+      {
+        id: 'partTimer',
+        name: '🧑‍💼 버튼 누르기 알바생',
+        desc: '초보 알바생을 저렴하게 고용해 5초에 1원(초당 0.2원)씩 천천히 벌게 합니다.',
+        baseCost: 35,
+        costMultiplier: 1.35,
+        baseCps: 0.2
+      },
+      {
+        id: 'macro',
+        name: '🖱️ 자동 클릭 매크로',
+        desc: '소프트웨어 매크로가 쉬지 않고 버튼을 클릭합니다.',
+        baseCost: 4500,
+        costMultiplier: 1.48,
+        baseCps: 14
+      },
+      {
+        id: 'robotArm',
+        name: '🦾 산업용 로봇 팔',
+        desc: '고속 유압식 로봇 팔이 묵직한 압력으로 버튼을 내리찍습니다.',
+        baseCost: 75000,
+        costMultiplier: 1.50,
+        baseCps: 210
+      },
+      {
+        id: 'aiCenter',
+        name: '🏢 AI 클릭 데이터센터',
+        desc: '수천 대의 서버가 최적의 타이밍을 계산해 동시다발적으로 클릭합니다.',
+        baseCost: 1500000,
+        costMultiplier: 1.55,
+        baseCps: 3600
+      },
+      {
+        id: 'quantum',
+        name: '⚛️ 양자 중첩 클리커',
+        desc: '버튼을 누른 상태와 누르지 않은 상태를 중첩시켜 막대한 부를 창출합니다.',
+        baseCost: 50000000,
+        costMultiplier: 1.60,
+        baseCps: 75000
+      }
+    ];
+
+    function getWorkerCost(cfg) {
+      const count = state.workers[cfg.id] || 0;
+      return Math.floor(cfg.baseCost * Math.pow(cfg.costMultiplier, count));
+    }
+
+    function getTotalCps() {
+      let total = 0;
+      for (const cfg of workerConfigs) {
+        total += (state.workers[cfg.id] || 0) * cfg.baseCps;
+      }
+      return Math.round(total * 10) / 10;
+    }
+
+    // 한국어 단위 포맷팅 (소수점 지원 및 만, 억, 조, 경, 해)
+    function formatMoney(num, allowDecimal = false) {
+      if (!isFinite(num)) return '무한대 원';
+
+      if (allowDecimal && num > 0 && num < 100) {
+        const rounded = Math.round(num * 10) / 10;
+        return (Number.isInteger(rounded) ? rounded.toString() : rounded.toFixed(1)) + '원';
+      }
+
+      num = Math.floor(num + 1e-9);
+      if (num < 10000) {
+        return num.toLocaleString('ko-KR') + '원';
+      }
+      const units = ['', '만 ', '억 ', '조 ', '경 ', '해 '];
+      let result = '';
+      let unitIndex = 0;
+      let temp = num;
+
+      while (temp > 0 && unitIndex < units.length) {
+        const part = temp % 10000;
+        if (part > 0) {
+          result = part.toLocaleString('ko-KR') + units[unitIndex] + result;
+        }
+        temp = Math.floor(temp / 10000);
+        unitIndex++;
+      }
+      return result.trim() + '원';
+    }
+
+    // Web Audio API 기반 효과음
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        const now = ctx.currentTime;
+        if (type === 'click') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.07);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.07);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        } else if (type === 'buy') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(660, now + 0.06);
+          osc.frequency.setValueAtTime(880, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } else if (type === 'blocked') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.08);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        }
+      } catch (e) {}
+    }
+
+    // 떠오르는 텍스트 효과
+    function spawnFloatingText(text, x, y, className = '') {
+      const container = document.getElementById('click-area');
+      const rect = container.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.className = 'floating-text ' + className;
+      el.textContent = text;
+
+      const posX = x ? (x - rect.left) : (rect.width / 2 + (Math.random() * 60 - 30));
+      const posY = y ? (y - rect.top - 10) : (rect.height / 2 - 40);
+
+      el.style.left = `${posX}px`;
+      el.style.top = `${posY}px`;
+      container.appendChild(el);
+
+      setTimeout(() => {
+        el.remove();
+      }, 850);
+    }
+
+    // 메인 버튼 클릭 핸들러 (엄격한 쿨타임 적용)
+    const mainBtn = document.getElementById('main-click-btn');
+    mainBtn.addEventListener('click', (e) => {
+      const now = performance.now();
+      const cooldownMs = getCurrentCooldown() * 1000;
+      const elapsed = now - lastManualClickTime;
+
+      if (elapsed < cooldownMs) {
+        playSound('blocked');
+        mainBtn.classList.remove('shake');
+        void mainBtn.offsetWidth;
+        mainBtn.classList.add('shake');
+        const remain = ((cooldownMs - elapsed) / 1000).toFixed(2);
+        spawnFloatingText(`대기 중 (${remain}s)`, e.clientX, e.clientY, 'warn');
+        return;
+      }
+
+      lastManualClickTime = now;
+      isCoolingDown = true;
+      mainBtn.classList.add('on-cooldown');
+
+      const reward = getCurrentClickPower();
+      state.money += reward;
+      state.totalEarned += reward;
+
+      playSound('click');
+      spawnFloatingText(`+${formatMoney(reward)}`, e.clientX, e.clientY);
+      updateUI();
+    });
+
+    // 업그레이드 구매 함수
+    function buyClickUpgrade() {
+      const cost = getClickUpgradeCost();
+      if (state.money + 1e-9 < cost) return;
+      state.money = Math.max(0, state.money - cost);
+      state.clickLevel++;
+      playSound('buy');
+      renderShop();
+      updateUI();
+    }
+
+    function buyCooldownUpgrade() {
+      if (isCooldownMaxed()) return;
+      const cost = getCooldownUpgradeCost();
+      if (state.money + 1e-9 < cost) return;
+      state.money = Math.max(0, state.money - cost);
+      state.cooldownLevel++;
+      playSound('buy');
+      renderShop();
+      updateUI();
+    }
+
+    function buyWorker(workerId) {
+      const cfg = workerConfigs.find(w => w.id === workerId);
+      if (!cfg) return;
+      const cost = getWorkerCost(cfg);
+      if (state.money + 1e-9 < cost) return;
+      state.money = Math.max(0, state.money - cost);
+      state.workers[workerId] = (state.workers[workerId] || 0) + 1;
+      playSound('buy');
+      renderShop();
+      updateUI();
+    }
+
+    // 상점 렌더링
+    function renderShop() {
+      const listEl = document.getElementById('upgrade-list');
+      listEl.innerHTML = '';
+
+      if (currentTab === 'all' || currentTab === 'click') {
+        const clickCost = getClickUpgradeCost();
+        const curPower = getCurrentClickPower();
+        const nextPower = getNextClickPower();
+        const canBuyClick = state.money + 1e-9 >= clickCost;
+
+        const card = document.createElement('div');
+        card.className = `upgrade-card ${canBuyClick ? 'affordable' : ''}`;
+        card.innerHTML = `
+          <div class="upgrade-info">
+            <div class="upgrade-header">
+              <span class="upgrade-name">💪 손가락 근력 강화 (2ⁿ배)</span>
+              <span class="upgrade-badge">Lv.${state.clickLevel} (2^${state.clickLevel})</span>
+            </div>
+            <div class="upgrade-desc">버튼을 한 번 누를 때 얻는 금액이 2배씩 증가합니다.</div>
+            <div class="upgrade-effect">클릭당 ${formatMoney(curPower)} → ${formatMoney(nextPower)}</div>
+          </div>
+          <button class="buy-btn ${canBuyClick ? 'can-buy' : ''}" id="buy-click-btn">
+            ${formatMoney(clickCost)}
+          </button>
+        `;
+        listEl.appendChild(card);
+        document.getElementById('buy-click-btn').addEventListener('click', buyClickUpgrade);
+
+        const cdMaxed = isCooldownMaxed();
+        const cdCost = getCooldownUpgradeCost();
+        const curCd = getCurrentCooldown().toFixed(2);
+        const nextCd = getNextCooldown().toFixed(2);
+        const canBuyCd = !cdMaxed && state.money + 1e-9 >= cdCost;
+
+        const cdCard = document.createElement('div');
+        cdCard.className = `upgrade-card ${canBuyCd ? 'affordable' : ''}`;
+        cdCard.innerHTML = `
+          <div class="upgrade-info">
+            <div class="upgrade-header">
+              <span class="upgrade-name">⚡ 초고속 연타 훈련</span>
+              <span class="upgrade-badge">${cdMaxed ? 'MAX' : 'Lv.' + state.cooldownLevel}</span>
+            </div>
+            <div class="upgrade-desc">버튼을 누른 후 다음 클릭까지 기다리는 쿨타임을 줄입니다.</div>
+            <div class="upgrade-effect">
+              ${cdMaxed ? `최대 속도 달성! (${curCd}초)` : `쿨타임 ${curCd}초 → ${nextCd}초`}
+            </div>
+          </div>
+          <button class="buy-btn ${cdMaxed ? 'maxed' : (canBuyCd ? 'can-buy' : '')}" id="buy-cd-btn">
+            ${cdMaxed ? '최대 레벨' : formatMoney(cdCost)}
+          </button>
+        `;
+        listEl.appendChild(cdCard);
+        if (!cdMaxed) {
+          document.getElementById('buy-cd-btn').addEventListener('click', buyCooldownUpgrade);
+        }
+      }
+
+      if (currentTab === 'all' || currentTab === 'auto') {
+        for (const cfg of workerConfigs) {
+          const count = state.workers[cfg.id] || 0;
+          const cost = getWorkerCost(cfg);
+          const canBuy = state.money + 1e-9 >= cost;
+          const totalWorkerCps = Math.round(count * cfg.baseCps * 10) / 10;
+
+          const wCard = document.createElement('div');
+          wCard.className = `upgrade-card ${canBuy ? 'affordable' : ''}`;
+          wCard.innerHTML = `
+            <div class="upgrade-info">
+              <div class="upgrade-header">
+                <span class="upgrade-name">${cfg.name}</span>
+                <span class="upgrade-badge">${count}명/대 보유</span>
+              </div>
+              <div class="upgrade-desc">${cfg.desc}</div>
+              <div class="upgrade-effect">개당 +${formatMoney(cfg.baseCps, true)}/초 (현재 총 +${formatMoney(totalWorkerCps, true)}/초)</div>
+            </div>
+            <button class="buy-btn ${canBuy ? 'can-buy' : ''}" data-worker="${cfg.id}">
+              ${formatMoney(cost)}
+            </button>
+          `;
+          listEl.appendChild(wCard);
+        }
+
+        listEl.querySelectorAll('[data-worker]').forEach(btn => {
+          btn.addEventListener('click', () => buyWorker(btn.getAttribute('data-worker')));
+        });
+      }
+    }
+
+    function updateUI() {
+      const hasFractionalCps = getTotalCps() > 0 && getTotalCps() < 10;
+      document.getElementById('money-display').textContent = formatMoney(state.money, hasFractionalCps);
+      document.getElementById('total-earned-display').textContent = `누적 수익: ${formatMoney(state.totalEarned)}`;
+
+      const clickPower = getCurrentClickPower();
+      document.getElementById('click-power-display').textContent = formatMoney(clickPower);
+      document.getElementById('btn-reward-label').textContent = `+${formatMoney(clickPower)}`;
+
+      const cps = getTotalCps();
+      document.getElementById('cps-display').textContent = `${formatMoney(cps, true)}/초`;
+      document.getElementById('cooldown-time-display').textContent = `${getCurrentCooldown().toFixed(2)}초`;
+
+      updateShopButtonsAffordability();
+    }
+
+    function updateShopButtonsAffordability() {
+      const clickBtn = document.getElementById('buy-click-btn');
+      if (clickBtn) {
+        const can = state.money + 1e-9 >= getClickUpgradeCost();
+        clickBtn.classList.toggle('can-buy', can);
+        clickBtn.closest('.upgrade-card').classList.toggle('affordable', can);
+      }
+
+      const cdBtn = document.getElementById('buy-cd-btn');
+      if (cdBtn && !isCooldownMaxed()) {
+        const can = state.money + 1e-9 >= getCooldownUpgradeCost();
+        cdBtn.classList.toggle('can-buy', can);
+        cdBtn.closest('.upgrade-card').classList.toggle('affordable', can);
+      }
+
+      document.querySelectorAll('[data-worker]').forEach(btn => {
+        const id = btn.getAttribute('data-worker');
+        const cfg = workerConfigs.find(w => w.id === id);
+        if (cfg) {
+          const can = state.money + 1e-9 >= getWorkerCost(cfg);
+          btn.classList.toggle('can-buy', can);
+          btn.closest('.upgrade-card').classList.toggle('affordable', can);
+        }
+      });
+    }
+
+    let lastFrameTime = performance.now();
+    let autoFloatTimer = 0;
+
+    function gameLoop(now) {
+      const dt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+
+      const cooldownMs = getCurrentCooldown() * 1000;
+      const elapsed = now - lastManualClickTime;
+      const barEl = document.getElementById('cooldown-bar');
+      const statusEl = document.getElementById('cooldown-status-text');
+      const overlayEl = document.getElementById('btn-cooldown-overlay');
+
+      if (elapsed < cooldownMs) {
+        const ratio = elapsed / cooldownMs;
+        const remainSec = ((cooldownMs - elapsed) / 1000).toFixed(2);
+        barEl.style.width = `${ratio * 100}%`;
+        overlayEl.style.height = `${(1 - ratio) * 100}%`;
+        statusEl.textContent = `재충전 중... (${remainSec}초)`;
+        statusEl.classList.add('waiting');
+      } else {
+        if (isCoolingDown) {
+          isCoolingDown = false;
+          mainBtn.classList.remove('on-cooldown');
+        }
+        barEl.style.width = '100%';
+        overlayEl.style.height = '0%';
+        statusEl.textContent = '준비 완료!';
+        statusEl.classList.remove('waiting');
+      }
+
+      const cps = getTotalCps();
+      if (cps > 0 && dt > 0 && dt < 1) {
+        const earned = cps * dt;
+        state.money += earned;
+        state.totalEarned += earned;
+
+        autoFloatTimer += dt;
+        if (autoFloatTimer >= 1.0) {
+          autoFloatTimer = 0;
+          spawnFloatingText(`+${formatMoney(cps, true)}/초`, null, null, 'auto');
+        }
+        updateUI();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.getAttribute('data-tab');
+        renderShop();
+      });
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    document.getElementById('sound-toggle-btn').addEventListener('click', (e) => {
+      soundEnabled = !soundEnabled;
+      e.target.textContent = soundEnabled ? '🔊 효과음: 켜짐' : '🔇 효과음: 꺼짐';
+    });
+
+    const resetModal = document.getElementById('reset-modal');
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      resetModal.classList.add('open');
+    });
+
+    document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+      resetModal.classList.remove('open');
+    });
+
+    document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+      state = JSON.parse(JSON.stringify(defaultState));
+      lastManualClickTime = 0;
+      isCoolingDown = false;
+      mainBtn.classList.remove('on-cooldown');
+      renderShop();
+      updateUI();
+      resetModal.classList.remove('open');
+      showToast('게임이 초기화되었습니다.');
+    });
+
+    window.onload = function () {
+      renderShop();
+      updateUI();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>

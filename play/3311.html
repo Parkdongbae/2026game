@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shadow Survivors - 뱀파이어 서바이벌 스타일 게임</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+  }
+  body {
+    background-color: #111;
+    color: #fff;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HUD (상단 UI) */
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #xp-bar-container {
+    width: 100%;
+    height: 18px;
+    background: rgba(0, 0, 0, 0.75);
+    border-bottom: 2px solid #222;
+    position: relative;
+  }
+  #xp-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #1d4ed8, #3b82f6, #60a5fa);
+    transition: width 0.15s ease-out;
+  }
+  #level-text {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+  }
+
+  #top-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 20px;
+  }
+  .stat-box {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  #timer {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #f8fafc;
+    text-align: center;
+  }
+  #timer.late-game {
+    color: #f43f5e;
+    text-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
+  }
+  #kill-count {
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 2px;
+  }
+
+  /* 보유 스킬 아이콘 바 */
+  #skills-hud {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    max-width: 540px;
+  }
+  .skill-badge {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid #475569;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .skill-badge.evolved {
+    border-color: #f43f5e;
+    background: linear-gradient(135deg, rgba(88, 28, 135, 0.9), rgba(159, 18, 57, 0.9));
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+  }
+  .skill-badge span.lv {
+    color: #fbbf24;
+    font-weight: bold;
+  }
+  .skill-badge.evolved span.lv {
+    color: #fda4af;
+  }
+
+  /* 알림 배너 (스킬 진화 석판 생성 / 5분 격노 돌입 / 정예 보상) */
+  #event-banner {
+    position: absolute;
+    top: 95px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, rgba(88, 28, 135, 0.92), rgba(190, 18, 60, 0.92));
+    border: 2px solid #fda4af;
+    color: #fff;
+    padding: 10px 26px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 6px 25px rgba(225, 29, 72, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 20;
+    text-align: center;
+    white-space: nowrap;
+  }
+  #event-banner.show {
+    opacity: 1;
+  }
+
+  /* 미니맵 */
+  #minimap-container {
+    width: 150px;
+    height: 150px;
+    background: rgba(10, 15, 25, 0.85);
+    border: 2px solid #475569;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  #minimap {
+    width: 100%;
+    height: 100%;
+  }
+  #minimap-legend {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    font-size: 9px;
+    color: #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(0,0,0,0.55);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+
+  /* 모달 오버레이 (레벨업 / 보물상자 / 시작 / 게임오버) */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(5px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-title {
+    font-size: 36px;
+    font-weight: 900;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+    text-align: center;
+  }
+  .modal-title.levelup { color: #fbbf24; }
+  .modal-title.chest { color: #f59e0b; }
+  .modal-title.gameover { color: #ef4444; }
+  .modal-subtitle {
+    font-size: 15px;
+    color: #cbd5e1;
+    margin-bottom: 22px;
+    text-align: center;
+  }
+
+  /* 캐릭터 선택 그리드 */
+  #character-select-grid {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1020px;
+    margin-bottom: 18px;
+  }
+  .char-card {
+    width: 225px;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 2px solid #334155;
+    border-radius: 14px;
+    padding: 16px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    position: relative;
+  }
+  .char-card:hover {
+    transform: translateY(-4px);
+    border-color: #64748b;
+  }
+  .char-card.selected {
+    border-color: #fbbf24;
+    background: linear-gradient(145deg, #272215, #14110a);
+    box-shadow: 0 0 22px rgba(251, 191, 36, 0.35);
+    transform: translateY(-5px) scale(1.02);
+  }
+  .char-card.selected::after {
+    content: '선택됨';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #fbbf24;
+    color: #111;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 2px 7px;
+    border-radius: 12px;
+  }
+  .char-emoji {
+    font-size: 44px;
+    margin: 6px 0 8px;
+  }
+  .char-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 4px;
+  }
+  .char-weapon {
+    font-size: 12px;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .char-trait {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.45;
+  }
+
+  /* 선택지 카드 컨테이너 */
+  #choices-container {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 960px;
+  }
+  .choice-card {
+    width: 260px;
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 2px solid #334155;
+    border-radius: 14px;
+    padding: 22px 18px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  }
+  .choice-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    border-color: #fbbf24;
+    box-shadow: 0 15px 35px rgba(251, 191, 36, 0.25);
+  }
+  .choice-card.chest-card {
+    border-color: #d97706;
+    background: linear-gradient(145deg, #291d0e, #140d05);
+  }
+  .choice-card.chest-card:hover {
+    border-color: #fcd34d;
+    box-shadow: 0 15px 35px rgba(245, 158, 11, 0.35);
+  }
+  .card-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .tag-new { background: #10b981; color: #022c22; }
+  .tag-upgrade { background: #3b82f6; color: #eff6ff; }
+  .tag-stat { background: #a855f7; color: #faf5ff; }
+  .tag-relic { background: #f59e0b; color: #271300; }
+
+  .card-icon {
+    font-size: 46px;
+    margin: 12px 0 14px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+  }
+  .card-name {
+    font-size: 19px;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 6px;
+  }
+  .card-level {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-bottom: 12px;
+  }
+  .card-desc {
+    font-size: 13.5px;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+
+  /* 시작 & 게임오버 버튼 */
+  .btn-primary {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    border: none;
+    padding: 14px 44px;
+    font-size: 19px;
+    font-weight: 800;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-top: 6px;
+  }
+  .btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.6);
+  }
+  .controls-hint {
+    margin-top: 16px;
+    background: rgba(30, 41, 59, 0.7);
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.6;
+    text-align: center;
+    border: 1px solid #334155;
+  }
+  .key {
+    display: inline-block;
+    background: #334155;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #fff;
+    border-bottom: 2px solid #1e293b;
+  }
+  #gameover-stats {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px 36px;
+    margin-bottom: 20px;
+    text-align: center;
+    line-height: 2;
+    font-size: 17px;
+  }
+</style>
+</head>
+<body>
+
+<!-- 상단 HUD -->
+<div id="hud">
+  <div id="xp-bar-container">
+    <div id="xp-bar"></div>
+    <div id="level-text">LV. 1</div>
+  </div>
+  <div id="top-stats">
+    <div>
+      <div class="stat-box" style="display:flex; gap:14px; align-items:center;">
+        <div id="char-hud-badge" style="font-weight:800; color:#e2e8f0;">🧙‍♂️ 마법사</div>
+        <div>❤️ <span id="hp-text" style="font-weight:bold; color:#f87171;">100 / 100</span></div>
+        <div>⚔️ 공격력 <span id="atk-text" style="font-weight:bold; color:#fbbf24;">100%</span></div>
+        <div>👟 이속 <span id="spd-text" style="font-weight:bold; color:#38bdf8;">100%</span></div>
+      </div>
+      <div id="skills-hud"></div>
+    </div>
+
+    <div class="stat-box">
+      <div id="timer">00:00</div>
+      <div id="kill-count">처치: 0</div>
+    </div>
+
+    <div id="minimap-container" title="미니맵 (초록: 물약 / 노랑: 상자 / 분홍★: 진화 촉매)">
+      <canvas id="minimap" width="150" height="150"></canvas>
+      <div id="minimap-legend">
+        <span style="color:#4ade80;">●물약</span>
+        <span style="color:#fbbf24;">●상자</span>
+        <span style="color:#f43f5e;">★진화</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이벤트 알림 배너 -->
+<div id="event-banner"></div>
+
+<!-- 시작 & 캐릭터 선택 화면 모달 -->
+<div id="start-modal" class="modal-overlay active">
+  <div class="modal-title" style="color:#f8fafc; font-size:44px;">🧛 SHADOW SURVIVORS</div>
+  <div class="modal-subtitle">플레이할 영웅을 선택하고 어둠의 군단 속에서 살아남으세요!</div>
+
+  <div id="character-select-grid"></div>
+
+  <button class="btn-primary" onclick="startGame()">선택한 영웅으로 출격</button>
+  <div class="controls-hint">
+    <div>이동: <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> 또는 <span class="key">방향키</span> | 5분 이후 <b>심연의 격노</b>가 시작되어 강력한 정예 몬스터가 보상을 드랍합니다!</div>
+  </div>
+</div>
+
+<!-- 레벨업 / 보물상자 선택 모달 -->
+<div id="choice-modal" class="modal-overlay">
+  <div id="choice-title" class="modal-title levelup">LEVEL UP!</div>
+  <div id="choice-subtitle" class="modal-subtitle">원하는 능력을 선택하세요</div>
+  <div id="choices-container"></div>
+</div>
+
+<!-- 게임 오버 모달 -->
+<div id="gameover-modal" class="modal-overlay">
+  <div class="modal-title gameover">YOU DIED</div>
+  <div class="modal-subtitle">어둠의 무리에게 쓰러졌습니다...</div>
+  <div id="gameover-stats"></div>
+  <button class="btn-primary" onclick="returnToCharacterSelect()">영웅 선택 및 다시 도전</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const miniCanvas = document.getElementById('minimap');
+const miniCtx = miniCanvas.getContext('2d');
+
+// 화면 크기 맞춤
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// 월드(맵) 설정
+const WORLD_WIDTH = 3600;
+const WORLD_HEIGHT = 3600;
+
+// 게임 상태 변수
+let gameState = 'START';
+let lastTime = 0;
+let elapsedTime = 0;
+let killCount = 0;
+let enemySpawnTimer = 0;
+let itemSpawnTimer = 0;
+let potionRespawnQueue = []; // 먹은 물약 10초 뒤 리스폰 대기열
+let lateGameAnnounced = false;
+let bannerTimeout = null;
+let selectedCharId = 'mage';
+
+// 입력 상태
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// 플레이어 객체
+let player = {};
+
+// 엔티티 배열
+let enemies = [];
+let projectiles = [];
+let xpGems = [];
+let mapItems = []; // 'potion', 'chest', 'evolution'
+let damageTexts = [];
+let areaEffects = []; // 오라, 번개, 검기 베기, 채찍 타격 등
+
+// 4명의 플레이어블 캐릭터 정의 (기존 마법사 + 검사 + 채찍 사냥꾼 + 암살자)
+const CHARACTER_DB = {
+  mage: {
+    id: 'mage',
+    name: '아크 메이지',
+    emoji: '🧙‍♂️',
+    startSkill: 'magicWand',
+    weaponLabel: '시작 무기: 마법 지팡이 🪄',
+    trait: '쿨타임 -12% 감소, 획득 반경 +25% 증가. 원거리 마법 연사에 특화된 현자입니다.',
+    stats: { maxHp: 100, speed: 240, might: 1.0, cooldownMult: 0.88, pickupRadius: 105, regen: 0.6 }
+  },
+  swordsman: {
+    id: 'swordsman',
+    name: '왕국 기사단장',
+    emoji: '⚔️',
+    startSkill: 'swordSlash',
+    weaponLabel: '시작 무기: 파동의 대검 🗡️',
+    trait: '최대 체력 135, 공격력 +15%, 체력 재생 +1.2/초. 전방 넓은 부채꼴 검기로 적을 베어냅니다.',
+    stats: { maxHp: 135, speed: 230, might: 1.15, cooldownMult: 1.0, pickupRadius: 85, regen: 1.2 }
+  },
+  whipHunter: {
+    id: 'whipHunter',
+    name: '뱀파이어 헌터',
+    emoji: '🤠',
+    startSkill: 'vampireWhip',
+    weaponLabel: '시작 무기: 가시 채찍 🪢',
+    trait: '이동 속도 +15%, 공격력 +10%. 좌우를 가로지르는 긴 채찍으로 다수의 적을 관통 타격합니다.',
+    stats: { maxHp: 110, speed: 276, might: 1.10, cooldownMult: 0.95, pickupRadius: 90, regen: 0.7 }
+  },
+  assassin: {
+    id: 'assassin',
+    name: '그림자 암살자',
+    emoji: '🥷',
+    startSkill: 'shadowDagger',
+    weaponLabel: '시작 무기: 암영 단검 🔪',
+    trait: '이동 속도 +20%, 쿨타임 -15% 감소. 이동 방향으로 표창 단검을 고속 난사합니다.',
+    stats: { maxHp: 90, speed: 288, might: 1.05, cooldownMult: 0.85, pickupRadius: 95, regen: 0.5 }
+  }
+};
+
+// 캐릭터 선택 카드 UI 렌더링
+function renderCharacterSelect() {
+  const grid = document.getElementById('character-select-grid');
+  grid.innerHTML = '';
+  for (const [id, char] of Object.entries(CHARACTER_DB)) {
+    const card = document.createElement('div');
+    card.className = `char-card ${selectedCharId === id ? 'selected' : ''}`;
+    card.innerHTML = `
+      <div class="char-emoji">${char.emoji}</div>
+      <div class="char-name">${char.name}</div>
+      <div class="char-weapon">${char.weaponLabel}</div>
+      <div class="char-trait">${char.trait}</div>
+    `;
+    card.onclick = () => {
+      selectedCharId = id;
+      renderCharacterSelect();
+    };
+    grid.appendChild(card);
+  }
+}
+renderCharacterSelect();
+
+function returnToCharacterSelect() {
+  document.getElementById('gameover-modal').classList.remove('active');
+  document.getElementById('start-modal').classList.add('active');
+  renderCharacterSelect();
+}
+
+// 상단 알림 배너 띄우기
+function showBanner(msg, duration = 4200) {
+  const banner = document.getElementById('event-banner');
+  banner.innerHTML = msg;
+  banner.classList.add('show');
+  if (bannerTimeout) clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => {
+    banner.classList.remove('show');
+  }, duration);
+}
+
+// 스킬 정의 (기존 5종 + 신규 캐릭터 전용 3종 = 총 8종, 모두 Lv.5 진화 지원!)
+const SKILL_DB = {
+  magicWand: {
+    id: 'magicWand',
+    name: '마법 지팡이',
+    icon: '🪄',
+    evolvedName: '성스러운 마도서',
+    evolvedIcon: '🔮',
+    maxLevel: 5,
+    desc: [
+      '가장 가까운 적에게 마법탄을 발사합니다.',
+      '발사체 수 +1, 공격력 +20%',
+      '공격 속도 20% 증가, 관통력 +1',
+      '발사체 수 +1, 공격력 +30%',
+      '마스터: 연사 속도 대폭 증가 & 발사체 +1 (진화 가능!)'
+    ]
+  },
+  swordSlash: {
+    id: 'swordSlash',
+    name: '파동의 대검',
+    icon: '🗡️',
+    evolvedName: '엑스칼리버의 빛',
+    evolvedIcon: '🌟',
+    maxLevel: 5,
+    desc: [
+      '바라보는 방향으로 거대한 검기를 휘둘러 전방의 적을 벱니다.',
+      '검기 범위 +25%, 공격력 +25%',
+      '앞뒤 양방향으로 동시 참격 발동',
+      '공격 속도 25% 증가, 공격력 +35%',
+      '마스터: 초대형 검기 난무 (진화 가능!)'
+    ]
+  },
+  vampireWhip: {
+    id: 'vampireWhip',
+    name: '가시 채찍',
+    icon: '🪢',
+    evolvedName: '핏빛 여왕의 채찍',
+    evolvedIcon: '🩸',
+    maxLevel: 5,
+    desc: [
+      '수평 방향으로 긴 채찍을 휘둘러 일직선상의 적들을 타격합니다.',
+      '좌우 양방향 동시 채찍질 발동',
+      '채찍 길이 +30%, 공격력 +30%',
+      '공격 속도 25% 증가, 치명타 피해 상승',
+      '마스터: 화면을 가로지르는 맹렬한 연타 (진화 가능!)'
+    ]
+  },
+  shadowDagger: {
+    id: 'shadowDagger',
+    name: '암영 단검',
+    icon: '🔪',
+    evolvedName: '천개의 환영검',
+    evolvedIcon: '💠',
+    maxLevel: 5,
+    desc: [
+      '이동 중인 방향으로 날카로운 단검을 빠르게 투척합니다.',
+      '단검 투척 수 +2, 비행 속도 증가',
+      '관통력 +1, 공격력 +30%',
+      '단검 투척 수 +2, 연사 속도 증가',
+      '마스터: 부채꼴로 5개의 단검 연속 발사 (진화 가능!)'
+    ]
+  },
+  garlicAura: {
+    id: 'garlicAura',
+    name: '신성한 결계',
+    icon: '🧄',
+    evolvedName: '영혼 흡수 성역',
+    evolvedIcon: '🔯',
+    maxLevel: 5,
+    desc: [
+      '주변에 지속 피해를 입히고 적을 밀쳐내는 오라를 생성합니다.',
+      '결계 범위 +25%, 피해량 +30%',
+      '피해 주기 단축, 피해량 +30%',
+      '결계 범위 +30%, 넉백 강화',
+      '마스터: 거대한 결계와 강력한 지속 피해 (진화 가능!)'
+    ]
+  },
+  orbitingBlade: {
+    id: 'orbitingBlade',
+    name: '수호의 회전검',
+    icon: '⚔️',
+    evolvedName: '천공의 무라마사',
+    evolvedIcon: '🔱',
+    maxLevel: 5,
+    desc: [
+      '플레이어 주위를 회전하며 닿는 적을 베는 검을 소환합니다.',
+      '회전검 개수 +1, 회전 속도 증가',
+      '회전 반경 확대, 공격력 +35%',
+      '회전검 개수 +1, 공격력 +35%',
+      '마스터: 총 4개의 검이 초고속으로 회전 (진화 가능!)'
+    ]
+  },
+  lightningRing: {
+    id: 'lightningRing',
+    name: '천둥의 반지',
+    icon: '⚡',
+    evolvedName: '뇌신 토르의 분노',
+    evolvedIcon: '🌩️',
+    maxLevel: 5,
+    desc: [
+      '무작위 적의 위치에 벼락을 내려 광역 피해를 입힙니다.',
+      '벼락 타격 수 +1, 번개 범위 확대',
+      '재사용 대기시간 20% 감소, 피해량 +35%',
+      '벼락 타격 수 +1, 피해량 +40%',
+      '마스터: 총 4갈래의 거대한 뇌전이 내리꽂힘 (진화 가능!)'
+    ]
+  },
+  fireAxe: {
+    id: 'fireAxe',
+    name: '화염 도끼',
+    icon: '🪓',
+    evolvedName: '지옥불 사신의 낫',
+    evolvedIcon: '🔥',
+    maxLevel: 5,
+    desc: [
+      '포물선을 그리며 날아가 여러 적을 관통하는 도끼를 투척합니다.',
+      '도끼 투척 수 +1, 크기 증가',
+      '공격력 +40%, 재사용 대기시간 감소',
+      '도끼 투척 수 +1, 공격력 +40%',
+      '마스터: 거대한 화염 도끼 3개를 동시에 투척 (진화 가능!)'
+    ]
+  }
+};
+
+// 능력치 업그레이드 정의
+const STAT_DB = [
+  { id: 'might', name: '근력 강화', icon: '💪', desc: '모든 공격의 피해량이 15% 증가합니다.', apply: () => { player.might += 0.15; } },
+  { id: 'speed', name: '신속의 장화', icon: '👢', desc: '이동 속도가 12% 증가합니다.', apply: () => { player.speed *= 1.12; player.speedMult += 0.12; } },
+  { id: 'maxHp', name: '강인한 생명력', icon: '❤️', desc: '최대 체력이 30 증가하고 체력을 30 회복합니다.', apply: () => { player.maxHp += 30; player.hp = Math.min(player.maxHp, player.hp + 30); } },
+  { id: 'cooldown', name: '마력 순환', icon: '⏳', desc: '모든 스킬의 쿨타임이 10% 감소합니다.', apply: () => { player.cooldownMult *= 0.90; } },
+  { id: 'magnet', name: '자석의 부적', icon: '🧲', desc: '경험치 보석 및 아이템 획득 반경이 35% 증가합니다.', apply: () => { player.pickupRadius *= 1.35; } },
+  { id: 'regen', name: '자연 치유', icon: '🌿', desc: '초당 체력 재생량이 1.5 증가합니다.', apply: () => { player.regen += 1.5; } }
+];
+
+// 보물상자 전용 특별 선택지 정의
+const CHEST_REWARDS = [
+  {
+    name: '차원의 진공 자석',
+    icon: '🌀',
+    tag: '보물 유물',
+    desc: '맵 전역에 흩어져 있는 모든 경험치 보석을 즉시 나에게 끌어당겨 흡수합니다!',
+    apply: () => {
+      for (const g of xpGems) {
+        g.magnetized = true;
+      }
+      addDamageText(player.x, player.y - 25, '전체 경험치 흡수!', '#38bdf8', 20);
+    }
+  },
+  {
+    name: '고대의 황금 심장',
+    icon: '💖',
+    tag: '보물 유물',
+    desc: '체력을 100% 완전히 회복하고, 최대 체력이 +50 영구 증가합니다!',
+    apply: () => {
+      player.maxHp += 50;
+      player.hp = player.maxHp;
+    }
+  },
+  {
+    name: '전쟁 군주의 인장',
+    icon: '👑',
+    tag: '보물 유물',
+    desc: '모든 공격력 +25% 및 스킬 쿨타임 -12% 영구 증가!',
+    apply: () => {
+      player.might += 0.25;
+      player.cooldownMult *= 0.88;
+    }
+  },
+  {
+    name: '지식의 고서',
+    icon: '📜',
+    tag: '보물 유물',
+    desc: '보유 중인 무작위 스킬 1개의 레벨을 즉시 +1 올리고 대량의 경험치를 획득합니다!',
+    apply: () => {
+      const ownedIds = Object.keys(player.skills);
+      const upgradable = ownedIds.filter(id => player.skills[id].level < SKILL_DB[id].maxLevel);
+      if (upgradable.length > 0) {
+        const pick = upgradable[Math.floor(Math.random() * upgradable.length)];
+        upgradeSkillLevel(pick);
+      } else {
+        player.might += 0.2;
+      }
+      gainXp(player.nextXp * 0.6);
+    }
+  },
+  {
+    name: '초신성 폭탄',
+    icon: '💥',
+    tag: '보물 유물',
+    desc: '화면 주변의 모든 일반 몬스터를 즉시 소멸시키고 보석을 떨어뜨립니다!',
+    apply: () => {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        const dist = Math.hypot(e.x - player.x, e.y - player.y);
+        if (dist < 1100 && !e.isBoss && !e.isElite) {
+          killEnemy(i);
+        } else {
+          e.hp -= 200;
+        }
+      }
+    }
+  }
+];
+
+// 스킬 레벨업 및 5레벨 달성 시 진화 촉매 아이템 생성 처리
+function upgradeSkillLevel(skillId) {
+  const sk = player.skills[skillId];
+  const info = SKILL_DB[skillId];
+  if (!sk || sk.level >= info.maxLevel) return;
+
+  sk.level++;
+  if (sk.level === 5 && !sk.evolved && !sk.catalystSpawned) {
+    sk.catalystSpawned = true;
+    spawnEvolutionItem(skillId);
+  }
+}
+
+// 맵 랜덤 위치에 스킬 진화 아이템 생성
+function spawnEvolutionItem(skillId) {
+  const info = SKILL_DB[skillId];
+  const margin = 180;
+  let x, y, tries = 0;
+  do {
+    x = margin + Math.random() * (WORLD_WIDTH - margin * 2);
+    y = margin + Math.random() * (WORLD_HEIGHT - margin * 2);
+    tries++;
+  } while (Math.hypot(x - player.x, y - player.y) < 550 && tries < 20);
+
+  mapItems.push({
+    type: 'evolution',
+    skillId: skillId,
+    x: x,
+    y: y,
+    radius: 24,
+    bobOffset: 0
+  });
+
+  showBanner(`🌟 [${info.name}] Lv.5 달성! 지도에 진화 촉매(${info.evolvedIcon})가 나타났습니다!`, 5000);
+}
+
+// 게임 초기화 및 시작
+function startGame() {
+  document.getElementById('start-modal').classList.remove('active');
+  document.getElementById('gameover-modal').classList.remove('active');
+  document.getElementById('choice-modal').classList.remove('active');
+  document.getElementById('event-banner').classList.remove('show');
+  document.getElementById('timer').classList.remove('late-game');
+
+  const charData = CHARACTER_DB[selectedCharId];
+  const st = charData.stats;
+
+  player = {
+    charId: selectedCharId,
+    name: charData.name,
+    emoji: charData.emoji,
+    x: WORLD_WIDTH / 2,
+    y: WORLD_HEIGHT / 2,
+    radius: 18,
+    hp: st.maxHp,
+    maxHp: st.maxHp,
+    speed: st.speed,
+    baseSpeed: st.speed,
+    speedMult: st.speed / 240,
+    might: st.might,
+    cooldownMult: st.cooldownMult,
+    pickupRadius: st.pickupRadius,
+    regen: st.regen,
+    xp: 0,
+    level: 1,
+    nextXp: 15,
+    invulnTimer: 0,
+    facingX: 1,
+    facingY: 0,
+    skills: {
+      [charData.startSkill]: { level: 1, timer: 0, evolved: false, catalystSpawned: false }
+    }
+  };
+
+  document.getElementById('char-hud-badge').textContent = `${player.emoji} ${player.name}`;
+
+  enemies = [];
+  projectiles = [];
+  xpGems = [];
+  mapItems = [];
+  damageTexts = [];
+  areaEffects = [];
+  potionRespawnQueue = [];
+
+  elapsedTime = 0;
+  killCount = 0;
+  enemySpawnTimer = 0;
+  itemSpawnTimer = 0;
+  lateGameAnnounced = false;
+
+  // 맵 곳곳에 초기 체력 회복 물약(정확히 10개)과 보물상자(4개) 배치
+  spawnInitialMapItems();
+  updateHUD();
+
+  gameState = 'PLAYING';
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// 초기 맵 오브젝트(물약 10개 & 보물상자 4개) 배치
+function spawnInitialMapItems() {
+  // 물약 1개는 플레이어 주변에, 나머지 9개는 맵 전역에 배치하여 총 10개 유지
+  spawnMapItem('potion', player.x - 240, player.y + 190);
+  for (let i = 0; i < 9; i++) {
+    spawnMapItem('potion');
+  }
+
+  // 보물상자 4개 배치
+  spawnMapItem('chest', player.x + 360, player.y - 210);
+  for (let i = 0; i < 3; i++) {
+    spawnMapItem('chest');
+  }
+}
+
+function spawnMapItem(type, customX, customY) {
+  const margin = 120;
+  const x = customX !== undefined ? customX : margin + Math.random() * (WORLD_WIDTH - margin * 2);
+  const y = customY !== undefined ? customY : margin + Math.random() * (WORLD_HEIGHT - margin * 2);
+  mapItems.push({
+    type: type, // 'potion' | 'chest' | 'evolution'
+    x: x,
+    y: y,
+    radius: type === 'chest' ? 22 : 16,
+    bobOffset: Math.random() * Math.PI * 2
+  });
+}
+
+// 4방향(상, 하, 좌, 우)에서 적 스폰 (5분 이상 후반부 강화 및 정예 몬스터 추가!)
+function spawnEnemy() {
+  const isLateGame = elapsedTime >= 300; // 5분(300초) 이상 후반부 돌입
+  const lateTimeBonus = isLateGame ? (elapsedTime - 300) / 30 : 0;
+  const difficulty = (1 + elapsedTime / 45) * (isLateGame ? 1.55 + lateTimeBonus * 0.25 : 1.0);
+
+  const dir = Math.floor(Math.random() * 4);
+  const halfW = canvas.width / 2 + 80;
+  const halfH = canvas.height / 2 + 80;
+
+  let sx, sy;
+  if (dir === 0) {
+    sx = player.x + (Math.random() * 2 - 1) * halfW;
+    sy = player.y - halfH;
+  } else if (dir === 1) {
+    sx = player.x + (Math.random() * 2 - 1) * halfW;
+    sy = player.y + halfH;
+  } else if (dir === 2) {
+    sx = player.x - halfW;
+    sy = player.y + (Math.random() * 2 - 1) * halfH;
+  } else {
+    sx = player.x + halfW;
+    sy = player.y + (Math.random() * 2 - 1) * halfH;
+  }
+
+  sx = Math.max(30, Math.min(WORLD_WIDTH - 30, sx));
+  sy = Math.max(30, Math.min(WORLD_HEIGHT - 30, sy));
+
+  const roll = Math.random();
+  let type = 'bat';
+  let hp = 18 * difficulty;
+  let speed = (105 + Math.random() * 25) * (isLateGame ? 1.15 : 1.0);
+  let radius = 15;
+  let damage = 8 + Math.floor(difficulty * 2);
+  let xpValue = 3;
+  let emoji = '🦇';
+  let isBoss = false;
+  let isElite = false;
+  let rewardType = null;
+
+  // 후반부(5분 이상) 전용 초강력 몬스터 및 보상형 정예 몬스터
+  if (isLateGame && roll < 0.08) {
+    // 1) 심연의 보물 수호자 (처치 시 보물상자 또는 회복 물약/대량 경험치 드랍!)
+    type = 'abyssKnight';
+    hp = 680 * (1 + lateTimeBonus * 0.35);
+    speed = 92;
+    radius = 30;
+    damage = 34 + Math.floor(lateTimeBonus * 5);
+    xpValue = 95;
+    emoji = '🐲';
+    isElite = true;
+    rewardType = Math.random() < 0.45 ? 'chest' : 'megaXp';
+  } else if (isLateGame && roll < 0.28) {
+    // 2) 지옥의 사신 (빠르고 강력한 후반 전용 몬스터)
+    type = 'reaper';
+    hp = 260 * (1 + lateTimeBonus * 0.25);
+    speed = 128;
+    radius = 23;
+    damage = 28 + Math.floor(lateTimeBonus * 4);
+    xpValue = 38;
+    emoji = ' GrimReaper';
+    emoji = '☠️';
+  } else if (elapsedTime > 60 && roll < 0.14) {
+    type = 'ogre';
+    hp = 130 * difficulty;
+    speed = 62 * (isLateGame ? 1.15 : 1.0);
+    radius = 27;
+    damage = 22 + Math.floor(difficulty * 4);
+    xpValue = 20;
+    emoji = '👹';
+  } else if (elapsedTime > 25 && roll < 0.35) {
+    type = 'skeleton';
+    hp = 42 * difficulty;
+    speed = 80 * (isLateGame ? 1.15 : 1.0);
+    radius = 19;
+    damage = 14 + Math.floor(difficulty * 3);
+    xpValue = 7;
+    emoji = '💀';
+  }
+
+  // 45초마다 중간 보스 등장 (보스도 처치 시 특별 보상 드랍)
+  if (Math.floor(elapsedTime) > 0 && Math.floor(elapsedTime) % 45 === 0 && Math.random() < 0.04) {
+    type = 'boss';
+    hp = 480 * difficulty;
+    speed = 78;
+    radius = 36;
+    damage = 32;
+    xpValue = 110;
+    emoji = '🧛‍♂️';
+    isBoss = true;
+    isElite = true;
+    rewardType = 'chest';
+  }
+
+  enemies.push({
+    type, x: sx, y: sy, hp, maxHp: hp, speed, radius, damage, xpValue, emoji,
+    isBoss, isElite, rewardType, isEnraged: isLateGame,
+    hitFlash: 0, knockbackX: 0, knockbackY: 0
+  });
+}
+
+// 데미지 텍스트 띄우기
+function addDamageText(x, y, text, color = '#fff', size = 15) {
+  damageTexts.push({
+    x: x + (Math.random() - 0.5) * 16,
+    y: y - 10,
+    text: text,
+    color: color,
+    size: size,
+    life: 0.65
+  });
+}
+
+// 적 처치 처리 (후반 정예/보스 처치 시 특별 보상 드랍!)
+function killEnemy(index) {
+  const e = enemies[index];
+  killCount++;
+
+  xpGems.push({
+    x: e.x,
+    y: e.y,
+    value: e.xpValue,
+    color: e.xpValue >= 35 ? '#f59e0b' : (e.xpValue >= 20 ? '#ef4444' : (e.xpValue >= 7 ? '#10b981' : '#38bdf8')),
+    radius: e.xpValue >= 35 ? 10 : (e.xpValue >= 20 ? 8 : 6),
+    magnetized: false
+  });
+
+  // 정예 몬스터 / 보스 처치 보상
+  if (e.isElite) {
+    if (e.rewardType === 'chest') {
+      spawnMapItem('chest', e.x, e.y);
+      addDamageText(e.x, e.y - 24, '🎁 보물상자 드랍!', '#fbbf24', 19);
+    } else {
+      // 대량 경험치 보석 다발 + 즉시 체력 소량 회복
+      for (let k = 0; k < 5; k++) {
+        xpGems.push({
+          x: e.x + (Math.random() - 0.5) * 50,
+          y: e.y + (Math.random() - 0.5) * 50,
+          value: 25,
+          color: '#f59e0b',
+          radius: 9,
+          magnetized: true
+        });
+      }
+      player.hp = Math.min(player.maxHp, player.hp + 20);
+      addDamageText(e.x, e.y - 24, '✨ 정예 보상 & +20 HP!', '#4ade80', 18);
+    }
+  }
+
+  enemies.splice(index, 1);
+}
+
+// 경험치 획득 및 레벨업 체크
+function gainXp(amount) {
+  player.xp += amount;
+  if (player.xp >= player.nextXp) {
+    player.xp -= player.nextXp;
+    player.level++;
+    player.nextXp = Math.floor(player.nextXp * 1.32 + 10);
+    triggerLevelUpModal();
+  }
+  updateHUD();
+}
+
+// 레벨업 선택지 모달 열기
+function triggerLevelUpModal() {
+  gameState = 'PAUSED';
+  const modal = document.getElementById('choice-modal');
+  const title = document.getElementById('choice-title');
+  const subtitle = document.getElementById('choice-subtitle');
+  const container = document.getElementById('choices-container');
+
+  title.textContent = `LEVEL UP! (LV. ${player.level})`;
+  title.className = 'modal-title levelup';
+  subtitle.textContent = '새로운 스킬을 배우거나 기존 스킬 및 능력치를 강화하세요';
+  container.innerHTML = '';
+
+  const pool = [];
+
+  for (const [id, data] of Object.entries(SKILL_DB)) {
+    const owned = player.skills[id];
+    if (owned && owned.level < data.maxLevel) {
+      pool.push({
+        type: 'upgrade',
+        tag: '스킬 강화',
+        tagClass: 'tag-upgrade',
+        icon: data.icon,
+        name: data.name,
+        levelText: `LV. ${owned.level} ➔ LV. ${owned.level + 1}`,
+        desc: data.desc[owned.level],
+        action: () => {
+          upgradeSkillLevel(id);
+        }
+      });
+    } else if (!owned) {
+      pool.push({
+        type: 'new',
+        tag: '신규 스킬',
+        tagClass: 'tag-new',
+        icon: data.icon,
+        name: data.name,
+        levelText: 'NEW! (LV. 1)',
+        desc: data.desc[0],
+        action: () => {
+          player.skills[id] = { level: 1, timer: 0, evolved: false, catalystSpawned: false };
+        }
+      });
+    }
+  }
+
+  for (const stat of STAT_DB) {
+    pool.push({
+      type: 'stat',
+      tag: '능력치 강화',
+      tagClass: 'tag-stat',
+      icon: stat.icon,
+      name: stat.name,
+      levelText: '패시브 스탯 업그레이드',
+      desc: stat.desc,
+      action: stat.apply
+    });
+  }
+
+  const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+
+  shuffled.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'choice-card';
+    card.innerHTML = `
+      <span class="card-tag ${item.tagClass}">${item.tag}</span>
+      <div class="card-icon">${item.icon}</div>
+      <div class="card-name">${item.name}</div>
+      <div class="card-level">${item.levelText}</div>
+      <div class="card-desc">${item.desc}</div>
+    `;
+    card.onclick = () => {
+      item.action();
+      closeChoiceModal();
+    };
+    container.appendChild(card);
+  });
+
+  modal.classList.add('active');
+}
+
+// 보물상자 선택지 모달 열기
+function triggerChestModal() {
+  gameState = 'PAUSED';
+  const modal = document.getElementById('choice-modal');
+  const title = document.getElementById('choice-title');
+  const subtitle = document.getElementById('choice-subtitle');
+  const container = document.getElementById('choices-container');
+
+  title.textContent = '🎁 고대의 보물상자 발견!';
+  title.className = 'modal-title chest';
+  subtitle.textContent = '보물상자 속 특별한 보상 중 하나를 선택하세요';
+  container.innerHTML = '';
+
+  const picks = [...CHEST_REWARDS].sort(() => Math.random() - 0.5).slice(0, 3);
+
+  picks.forEach(reward => {
+    const card = document.createElement('div');
+    card.className = 'choice-card chest-card';
+    card.innerHTML = `
+      <span class="card-tag tag-relic">${reward.tag}</span>
+      <div class="card-icon">${reward.icon}</div>
+      <div class="card-name">${reward.name}</div>
+      <div class="card-level">특별 보상</div>
+      <div class="card-desc">${reward.desc}</div>
+    `;
+    card.onclick = () => {
+      reward.apply();
+      closeChoiceModal();
+    };
+    container.appendChild(card);
+  });
+
+  modal.classList.add('active');
+}
+
+function closeChoiceModal() {
+  document.getElementById('choice-modal').classList.remove('active');
+  updateHUD();
+  if (player.xp >= player.nextXp) {
+    gainXp(0);
+    return;
+  }
+  gameState = 'PLAYING';
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// 스킬 발동 로직 업데이트 (기존 5종 + 신규 3종 + 진화 형태)
+function updateSkills(dt) {
+  // 1. 마법 지팡이 -> [성스러운 마도서]
+  if (player.skills.magicWand) {
+    const sk = player.skills.magicWand;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const baseCd = ev ? 0.16 : (lv === 5 ? 0.55 : (lv >= 3 ? 0.85 : 1.1));
+    const cd = baseCd * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0 && enemies.length > 0) {
+      sk.timer = cd;
+      let nearest = null;
+      let minDist = Infinity;
+      for (const e of enemies) {
+        const d = Math.hypot(e.x - player.x, e.y - player.y);
+        if (d < minDist) { minDist = d; nearest = e; }
+      }
+      if (nearest && minDist < 950) {
+        const count = ev ? 3 : (lv === 5 ? 4 : (lv >= 4 ? 3 : (lv >= 2 ? 2 : 1)));
+        const baseAngle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+        const dmg = (ev ? 46 : (18 + lv * 7)) * player.might;
+        const pierce = ev ? 5 : (lv >= 3 ? 2 : 1);
+
+        for (let i = 0; i < count; i++) {
+          const spread = (i - (count - 1) / 2) * (ev ? 0.1 : 0.14);
+          const ang = baseAngle + spread;
+          projectiles.push({
+            type: ev ? 'evolvedWand' : 'wand',
+            x: player.x,
+            y: player.y,
+            vx: Math.cos(ang) * (ev ? 680 : 520),
+            vy: Math.sin(ang) * (ev ? 680 : 520),
+            radius: ev ? 10 : 7,
+            damage: dmg,
+            pierce: pierce,
+            life: 1.8,
+            hitSet: new Set()
+          });
+        }
+      }
+    }
+  }
+
+  // 2. 파동의 대검 (검사 시작 무기) -> [엑스칼리버의 빛]
+  if (player.skills.swordSlash) {
+    const sk = player.skills.swordSlash;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const cd = (ev ? 0.55 : (lv >= 4 ? 0.85 : 1.15)) * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0) {
+      sk.timer = cd;
+      const baseAngle = Math.atan2(player.facingY, player.facingX);
+      const slashRadius = ev ? 230 : (125 + lv * 16);
+      const dmg = (ev ? 85 : (26 + lv * 10)) * player.might;
+      const angles = ev ? [baseAngle, baseAngle + Math.PI, baseAngle + Math.PI / 2, baseAngle - Math.PI / 2]
+                        : (lv >= 3 ? [baseAngle, baseAngle + Math.PI] : [baseAngle]);
+
+      for (const ang of angles) {
+        areaEffects.push({
+          type: ev ? 'evolvedSlash' : 'slash',
+          x: player.x,
+          y: player.y,
+          angle: ang,
+          radius: slashRadius,
+          life: 0.24,
+          maxLife: 0.24
+        });
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const e = enemies[i];
+          const dist = Math.hypot(e.x - player.x, e.y - player.y);
+          if (dist <= slashRadius + e.radius) {
+            const diffAng = Math.atan2(e.y - player.y, e.x - player.x) - ang;
+            const normAng = Math.atan2(Math.sin(diffAng), Math.cos(diffAng));
+            if (Math.abs(normAng) <= 1.05 || dist < 45) {
+              damageEnemy(i, dmg, true, ev ? 220 : 160);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 3. 가시 채찍 (채찍 사냥꾼 시작 무기) -> [핏빛 여왕의 채찍]
+  if (player.skills.vampireWhip) {
+    const sk = player.skills.vampireWhip;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const cd = (ev ? 0.5 : (lv >= 4 ? 0.78 : 1.05)) * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0) {
+      sk.timer = cd;
+      const reach = ev ? 340 : (180 + lv * 28);
+      const thickness = ev ? 44 : 28;
+      const dmg = (ev ? 72 : (24 + lv * 9)) * player.might;
+      const dirSign = player.facingX >= 0 ? 1 : -1;
+      const dirs = (ev || lv >= 2) ? [1, -1] : [dirSign];
+
+      for (const d of dirs) {
+        areaEffects.push({
+          type: ev ? 'evolvedWhip' : 'whip',
+          x: player.x,
+          y: player.y - 4,
+          dir: d,
+          reach: reach,
+          thickness: thickness,
+          life: 0.22,
+          maxLife: 0.22
+        });
+
+        let healed = false;
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const e = enemies[i];
+          const dx = (e.x - player.x) * d;
+          const dy = Math.abs(e.y - player.y);
+          if (dx >= -20 && dx <= reach + e.radius && dy <= thickness + e.radius) {
+            damageEnemy(i, dmg, true, 130);
+            if (ev && !healed && player.hp < player.maxHp) {
+              player.hp = Math.min(player.maxHp, player.hp + 1.5);
+              healed = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. 암영 단검 (암살자 시작 무기) -> [천개의 환영검]
+  if (player.skills.shadowDagger) {
+    const sk = player.skills.shadowDagger;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const cd = (ev ? 0.22 : (lv >= 4 ? 0.42 : 0.62)) * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0) {
+      sk.timer = cd;
+      const count = ev ? 7 : (lv === 5 ? 5 : (lv >= 4 ? 4 : (lv >= 2 ? 3 : 1)));
+      const baseAngle = Math.atan2(player.facingY, player.facingX);
+      const dmg = (ev ? 42 : (15 + lv * 6)) * player.might;
+      const pierce = ev ? 4 : (lv >= 3 ? 2 : 1);
+
+      for (let i = 0; i < count; i++) {
+        const spread = (i - (count - 1) / 2) * (ev ? 0.11 : 0.13);
+        const ang = baseAngle + spread;
+        projectiles.push({
+          type: ev ? 'evolvedDagger' : 'dagger',
+          x: player.x,
+          y: player.y,
+          vx: Math.cos(ang) * (ev ? 780 : 640),
+          vy: Math.sin(ang) * (ev ? 780 : 640),
+          angle: ang,
+          radius: ev ? 11 : 8,
+          damage: dmg,
+          pierce: pierce,
+          life: 1.4,
+          hitSet: new Set()
+        });
+      }
+    }
+  }
+
+  // 5. 신성한 결계 -> [영혼 흡수 성역]
+  if (player.skills.garlicAura) {
+    const sk = player.skills.garlicAura;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const auraRadius = ev ? 260 : (85 + lv * 22);
+    const tickRate = ev ? 0.22 : (lv >= 3 ? 0.35 : 0.5);
+    sk.timer -= dt;
+    if (sk.timer <= 0) {
+      sk.timer = tickRate;
+      const dmg = (ev ? 36 : (8 + lv * 5)) * player.might;
+      let hitCount = 0;
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        const dist = Math.hypot(e.x - player.x, e.y - player.y);
+        if (dist <= auraRadius + e.radius) {
+          damageEnemy(i, dmg, true, ev ? 230 : (120 + lv * 20));
+          hitCount++;
+        }
+      }
+      if (ev && hitCount > 0 && player.hp < player.maxHp) {
+        player.hp = Math.min(player.maxHp, player.hp + Math.min(3, hitCount * 0.4));
+      }
+    }
+  }
+
+  // 6. 수호의 회전검 -> [천공의 무라마사]
+  if (player.skills.orbitingBlade) {
+    const sk = player.skills.orbitingBlade;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    sk.angle = (sk.angle || 0) + (ev ? 6.5 : (2.8 + lv * 0.45)) * dt;
+    const count = ev ? 6 : (lv === 5 ? 4 : (lv >= 4 ? 3 : (lv >= 2 ? 2 : 1)));
+    const orbitDist = ev ? 150 : (lv >= 3 ? 115 : 90);
+    const dmg = (ev ? 62 : (16 + lv * 8)) * player.might;
+
+    for (let c = 0; c < count; c++) {
+      const a = sk.angle + (Math.PI * 2 / count) * c;
+      const bx = player.x + Math.cos(a) * orbitDist;
+      const by = player.y + Math.sin(a) * orbitDist;
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        if (!e.bladeCooldown || e.bladeCooldown <= 0) {
+          if (Math.hypot(e.x - bx, e.y - by) < e.radius + (ev ? 26 : 18)) {
+            e.bladeCooldown = ev ? 0.18 : 0.35;
+            damageEnemy(i, dmg, true, ev ? 190 : 140);
+          }
+        }
+      }
+    }
+  }
+
+  // 7. 천둥의 반지 -> [뇌신 토르의 분노]
+  if (player.skills.lightningRing) {
+    const sk = player.skills.lightningRing;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const cd = (ev ? 1.25 : (lv >= 3 ? 2.1 : 2.7)) * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0 && enemies.length > 0) {
+      sk.timer = cd;
+      const strikes = ev ? 7 : (lv === 5 ? 4 : (lv >= 4 ? 3 : (lv >= 2 ? 2 : 1)));
+      const aoeRadius = ev ? 160 : (65 + lv * 12);
+      const dmg = (ev ? 125 : (35 + lv * 15)) * player.might;
+
+      const nearby = enemies.filter(e => Math.hypot(e.x - player.x, e.y - player.y) < 820);
+      for (let s = 0; s < strikes && nearby.length > 0; s++) {
+        const target = nearby[Math.floor(Math.random() * nearby.length)];
+        areaEffects.push({
+          type: ev ? 'evolvedLightning' : 'lightning',
+          x: target.x,
+          y: target.y,
+          radius: aoeRadius,
+          life: 0.42,
+          maxLife: 0.42
+        });
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const e = enemies[i];
+          if (Math.hypot(e.x - target.x, e.y - target.y) <= aoeRadius + e.radius) {
+            damageEnemy(i, dmg, false, 0);
+          }
+        }
+      }
+    }
+  }
+
+  // 8. 화염 도끼 -> [지옥불 사신의 낫]
+  if (player.skills.fireAxe) {
+    const sk = player.skills.fireAxe;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const cd = (ev ? 1.15 : (lv >= 3 ? 1.6 : 2.1)) * player.cooldownMult;
+    sk.timer -= dt;
+    if (sk.timer <= 0) {
+      sk.timer = cd;
+      if (ev) {
+        const count = 8;
+        const dmg = 110 * player.might;
+        for (let i = 0; i < count; i++) {
+          const ang = (Math.PI * 2 / count) * i + (elapsedTime % (Math.PI * 2));
+          projectiles.push({
+            type: 'evolvedScythe',
+            x: player.x,
+            y: player.y,
+            vx: Math.cos(ang) * 430,
+            vy: Math.sin(ang) * 430,
+            gravity: 0,
+            radius: 26,
+            damage: dmg,
+            pierce: 999,
+            life: 2.0,
+            rotation: 0,
+            hitSet: new Set()
+          });
+        }
+      } else {
+        const count = lv === 5 ? 3 : (lv >= 4 ? 3 : (lv >= 2 ? 2 : 1));
+        const dmg = (32 + lv * 14) * player.might;
+        for (let i = 0; i < count; i++) {
+          const vx = ((i - (count - 1) / 2) * 140) + (Math.random() - 0.5) * 80;
+          projectiles.push({
+            type: 'axe',
+            x: player.x,
+            y: player.y - 10,
+            vx: vx,
+            vy: -460 - Math.random() * 60,
+            gravity: 880,
+            radius: lv >= 2 ? 18 : 14,
+            damage: dmg,
+            pierce: 99,
+            life: 2.2,
+            rotation: 0,
+            hitSet: new Set()
+          });
+        }
+      }
+    }
+  }
+}
+
+function damageEnemy(index, amount, applyKnockback, kbForce) {
+  const e = enemies[index];
+  if (!e) return;
+  const finalDmg = Math.round(amount);
+  e.hp -= finalDmg;
+  e.hitFlash = 0.1;
+  addDamageText(e.x, e.y, finalDmg, '#fef08a', 14);
+
+  if (applyKnockback && kbForce > 0 && !e.isBoss && !e.isElite) {
+    const ang = Math.atan2(e.y - player.y, e.x - player.x);
+    e.knockbackX = Math.cos(ang) * kbForce;
+    e.knockbackY = Math.sin(ang) * kbForce;
+  }
+
+  if (e.hp <= 0) {
+    killEnemy(index);
+  }
+}
+
+// 메인 업데이트 루프
+function update(dt) {
+  elapsedTime += dt;
+
+  // 5분(300초) 경과 시 후반 격노 페이즈 알림
+  if (elapsedTime >= 300 && !lateGameAnnounced) {
+    lateGameAnnounced = true;
+    document.getElementById('timer').classList.add('late-game');
+    showBanner('🔥 5분 경과! [심연의 격노] 발동 — 적들이 강화되고 보상형 정예 몬스터가 출현합니다!', 5500);
+  }
+
+  // 체력 자연 재생
+  if (player.hp < player.maxHp) {
+    player.hp = Math.min(player.maxHp, player.hp + player.regen * dt);
+  }
+
+  // 플레이어 4방향 이동 (WASD / 방향키)
+  let moveX = 0;
+  let moveY = 0;
+  if (keys['w'] || keys['arrowup']) moveY -= 1;
+  if (keys['s'] || keys['arrowdown']) moveY += 1;
+  if (keys['a'] || keys['arrowleft']) moveX -= 1;
+  if (keys['d'] || keys['arrowright']) moveX += 1;
+
+  if (moveX !== 0 || moveY !== 0) {
+    const len = Math.hypot(moveX, moveY);
+    moveX /= len;
+    moveY /= len;
+    player.facingX = moveX;
+    player.facingY = moveY;
+    player.x += moveX * player.speed * dt;
+    player.y += moveY * player.speed * dt;
+  }
+
+  // 맵 경계 제한
+  player.x = Math.max(player.radius, Math.min(WORLD_WIDTH - player.radius, player.x));
+  player.y = Math.max(player.radius, Math.min(WORLD_HEIGHT - player.radius, player.y));
+
+  if (player.invulnTimer > 0) player.invulnTimer -= dt;
+
+  // 적 4방향 스폰 (초반 1분 30% 상향 + 후반 5분 이후 스폰 가속)
+  let spawnInterval = Math.max(0.16, 1.1 - elapsedTime * 0.008);
+  if (elapsedTime <= 60) {
+    spawnInterval /= 1.3;
+  } else if (elapsedTime >= 300) {
+    spawnInterval = Math.max(0.12, spawnInterval * 0.78);
+  }
+
+  enemySpawnTimer -= dt;
+  if (enemySpawnTimer <= 0) {
+    enemySpawnTimer = spawnInterval;
+    const burst = elapsedTime >= 300 ? 4 : (elapsedTime > 90 ? 3 : (elapsedTime > 40 ? 2 : 1));
+    for (let b = 0; b < burst; b++) spawnEnemy();
+  }
+
+  // 먹은 물약 10초 뒤 1개씩 리스폰 처리 (항상 맵 내 물약 최대 10개 유지)
+  for (let i = potionRespawnQueue.length - 1; i >= 0; i--) {
+    potionRespawnQueue[i] -= dt;
+    if (potionRespawnQueue[i] <= 0) {
+      potionRespawnQueue.splice(i, 1);
+      if (mapItems.filter(item => item.type === 'potion').length < 10) {
+        spawnMapItem('potion');
+      }
+    }
+  }
+
+  // 보물상자 주기적 보충 (최대 4개 유지)
+  itemSpawnTimer -= dt;
+  if (itemSpawnTimer <= 0) {
+    itemSpawnTimer = 18;
+    if (mapItems.filter(i => i.type === 'chest').length < 4) spawnMapItem('chest');
+  }
+
+  // 스킬 업데이트
+  updateSkills(dt);
+
+  // 투사체 업데이트
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.life -= dt;
+    if (p.type === 'axe') {
+      p.vy += p.gravity * dt;
+      p.rotation += 10 * dt;
+    } else if (p.type === 'evolvedScythe') {
+      p.rotation += 15 * dt;
+    }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      const e = enemies[j];
+      if (!p.hitSet.has(e)) {
+        if (Math.hypot(p.x - e.x, p.y - e.y) < p.radius + e.radius) {
+          p.hitSet.add(e);
+          damageEnemy(j, p.damage, true, p.type === 'evolvedScythe' ? 140 : 85);
+          p.pierce--;
+          if (p.pierce <= 0) break;
+        }
+      }
+    }
+
+    if (p.life <= 0 || p.pierce <= 0) {
+      projectiles.splice(i, 1);
+    }
+  }
+
+  // 적 이동 및 플레이어 충돌 처리
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (e.hitFlash > 0) e.hitFlash -= dt;
+    if (e.bladeCooldown > 0) e.bladeCooldown -= dt;
+
+    const ang = Math.atan2(player.y - e.y, player.x - e.x);
+    e.x += (Math.cos(ang) * e.speed + e.knockbackX) * dt;
+    e.y += (Math.sin(ang) * e.speed + e.knockbackY) * dt;
+    e.knockbackX *= 0.85;
+    e.knockbackY *= 0.85;
+
+    const distToPlayer = Math.hypot(player.x - e.x, player.y - e.y);
+    if (distToPlayer < player.radius + e.radius - 3) {
+      if (player.invulnTimer <= 0) {
+        player.hp = Math.max(0, player.hp - e.damage);
+        player.invulnTimer = 0.45;
+        addDamageText(player.x, player.y - 15, `-${e.damage}`, '#ef4444', 18);
+        if (player.hp <= 0) {
+          triggerGameOver();
+          return;
+        }
+      }
+    }
+  }
+
+  // 경험치 보석 흡수
+  for (let i = xpGems.length - 1; i >= 0; i--) {
+    const g = xpGems[i];
+    const dist = Math.hypot(player.x - g.x, player.y - g.y);
+    if (g.magnetized || dist < player.pickupRadius) {
+      const ang = Math.atan2(player.y - g.y, player.x - g.x);
+      const pullSpeed = g.magnetized ? 950 : 420;
+      g.x += Math.cos(ang) * pullSpeed * dt;
+      g.y += Math.sin(ang) * pullSpeed * dt;
+    }
+    if (dist < player.radius + g.radius + 8) {
+      const val = g.value;
+      xpGems.splice(i, 1);
+      gainXp(val);
+      if (gameState !== 'PLAYING') return;
+    }
+  }
+
+  // 맵 아이템(체력 회복 물약, 보물상자, 진화 촉매) 상호작용
+  for (let i = mapItems.length - 1; i >= 0; i--) {
+    const item = mapItems[i];
+    item.bobOffset += dt * 4;
+    const dist = Math.hypot(player.x - item.x, player.y - item.y);
+
+    if (item.type === 'potion') {
+      if (dist < player.pickupRadius * 0.6) {
+        const ang = Math.atan2(player.y - item.y, player.x - item.x);
+        item.x += Math.cos(ang) * 280 * dt;
+        item.y += Math.sin(ang) * 280 * dt;
+      }
+      if (dist < player.radius + item.radius) {
+        const healAmt = Math.round(player.maxHp * 0.35);
+        player.hp = Math.min(player.maxHp, player.hp + healAmt);
+        addDamageText(player.x, player.y - 20, `+${healAmt} HP`, '#4ade80', 18);
+        mapItems.splice(i, 1);
+        // 물약 1개 섭취 시 10초 뒤 새로운 물약 1개가 랜덤 위치에 생성되도록 예약!
+        potionRespawnQueue.push(10.0);
+      }
+    } else if (item.type === 'chest') {
+      if (dist < player.radius + item.radius + 4) {
+        mapItems.splice(i, 1);
+        triggerChestModal();
+        return;
+      }
+    } else if (item.type === 'evolution') {
+      if (dist < player.radius + item.radius + 6) {
+        const sk = player.skills[item.skillId];
+        const info = SKILL_DB[item.skillId];
+        if (sk) {
+          sk.evolved = true;
+          addDamageText(player.x, player.y - 30, `✨ ${info.evolvedName} 각성!`, '#fda4af', 22);
+          showBanner(`🔥 스킬 진화 완료! [${info.name}] ➔ [${info.evolvedName}]`, 4500);
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            if (Math.hypot(enemies[j].x - player.x, enemies[j].y - player.y) < 350) {
+              damageEnemy(j, 150 * player.might, true, 280);
+            }
+          }
+        }
+        mapItems.splice(i, 1);
+      }
+    }
+  }
+
+  // 데미지 텍스트 및 시각 이펙트 수명 업데이트
+  for (let i = damageTexts.length - 1; i >= 0; i--) {
+    damageTexts[i].y -= 38 * dt;
+    damageTexts[i].life -= dt;
+    if (damageTexts[i].life <= 0) damageTexts.splice(i, 1);
+  }
+  for (let i = areaEffects.length - 1; i >= 0; i--) {
+    areaEffects[i].life -= dt;
+    if (areaEffects[i].life <= 0) areaEffects.splice(i, 1);
+  }
+
+  updateHUD();
+}
+
+function triggerGameOver() {
+  gameState = 'GAMEOVER';
+  const mins = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+  const secs = String(Math.floor(elapsedTime % 60)).padStart(2, '0');
+  document.getElementById('gameover-stats').innerHTML = `
+    <div>🦸 플레이 영웅: <strong style="color:#e2e8f0;">${player.emoji} ${player.name}</strong></div>
+    <div>⏱️ 생존 시간: <strong style="color:#fbbf24;">${mins}:${secs}</strong></div>
+    <div>⭐ 도달 레벨: <strong style="color:#38bdf8;">LV. ${player.level}</strong></div>
+    <div>💀 처치한 몬스터: <strong style="color:#f87171;">${killCount}마리</strong></div>
+  `;
+  document.getElementById('gameover-modal').classList.add('active');
+}
+
+// HUD 및 미니맵 갱신
+function updateHUD() {
+  const xpPct = Math.min(100, (player.xp / player.nextXp) * 100);
+  document.getElementById('xp-bar').style.width = `${xpPct}%`;
+  document.getElementById('level-text').textContent = `LV. ${player.level}`;
+  document.getElementById('hp-text').textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
+  document.getElementById('atk-text').textContent = `${Math.round(player.might * 100)}%`;
+  document.getElementById('spd-text').textContent = `${Math.round((player.speed / 240) * 100)}%`;
+
+  const mins = String(Math.floor(elapsedTime / 60)).padStart(2, '0');
+  const secs = String(Math.floor(elapsedTime % 60)).padStart(2, '0');
+  document.getElementById('timer').textContent = `${mins}:${secs}`;
+  document.getElementById('kill-count').textContent = `처치: ${killCount}`;
+
+  // 보유 스킬 뱃지 업데이트
+  const skillsHud = document.getElementById('skills-hud');
+  skillsHud.innerHTML = '';
+  for (const [id, state] of Object.entries(player.skills)) {
+    const info = SKILL_DB[id];
+    const badge = document.createElement('div');
+    badge.className = state.evolved ? 'skill-badge evolved' : 'skill-badge';
+    if (state.evolved) {
+      badge.innerHTML = `${info.evolvedIcon} <span>${info.evolvedName}</span> <span class="lv">MAX★</span>`;
+    } else {
+      badge.innerHTML = `${info.icon} <span>${info.name}</span> <span class="lv">Lv.${state.level}</span>`;
+    }
+    skillsHud.appendChild(badge);
+  }
+
+  // 미니맵 렌더링
+  miniCtx.clearRect(0, 0, 150, 150);
+  const scaleX = 150 / WORLD_WIDTH;
+  const scaleY = 150 / WORLD_HEIGHT;
+
+  for (const item of mapItems) {
+    const mx = item.x * scaleX;
+    const my = item.y * scaleY;
+    if (item.type === 'evolution') {
+      const pulse = 5 + Math.sin(elapsedTime * 8) * 2;
+      miniCtx.strokeStyle = '#fda4af';
+      miniCtx.lineWidth = 1.5;
+      miniCtx.beginPath();
+      miniCtx.arc(mx, my, pulse, 0, Math.PI * 2);
+      miniCtx.stroke();
+
+      miniCtx.fillStyle = '#f43f5e';
+      miniCtx.beginPath();
+      miniCtx.arc(mx, my, 4, 0, Math.PI * 2);
+      miniCtx.fill();
+    } else {
+      miniCtx.fillStyle = item.type === 'chest' ? '#fbbf24' : '#4ade80';
+      miniCtx.beginPath();
+      miniCtx.arc(mx, my, item.type === 'chest' ? 3.2 : 2.3, 0, Math.PI * 2);
+      miniCtx.fill();
+    }
+  }
+
+  for (const e of enemies) {
+    if (e.isBoss || e.isElite) {
+      miniCtx.fillStyle = '#ef4444';
+      miniCtx.beginPath();
+      miniCtx.arc(e.x * scaleX, e.y * scaleY, 4, 0, Math.PI * 2);
+      miniCtx.fill();
+    }
+  }
+
+  miniCtx.fillStyle = '#ffffff';
+  miniCtx.beginPath();
+  miniCtx.arc(player.x * scaleX, player.y * scaleY, 3.5, 0, Math.PI * 2);
+  miniCtx.fill();
+
+  miniCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  miniCtx.lineWidth = 1;
+  miniCtx.strokeRect(
+    (player.x - canvas.width / 2) * scaleX,
+    (player.y - canvas.height / 2) * scaleY,
+    canvas.width * scaleX,
+    canvas.height * scaleY
+  );
+}
+
+// 화면 렌더링
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  // 1. 월드 배경 및 타일 그리드 (5분 이후 어두운 붉은빛 배경으로 변화)
+  ctx.fillStyle = elapsedTime >= 300 ? '#1b1116' : '#141a23';
+  ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+  const tileSize = 120;
+  const startCol = Math.max(0, Math.floor(camX / tileSize));
+  const endCol = Math.min(WORLD_WIDTH / tileSize, Math.ceil((camX + canvas.width) / tileSize));
+  const startRow = Math.max(0, Math.floor(camY / tileSize));
+  const endRow = Math.min(WORLD_HEIGHT / tileSize, Math.ceil((camY + canvas.height) / tileSize));
+
+  ctx.strokeStyle = elapsedTime >= 300 ? '#2b1922' : '#1e2633';
+  ctx.lineWidth = 2;
+  for (let c = startCol; c <= endCol; c++) {
+    ctx.beginPath();
+    ctx.moveTo(c * tileSize, startRow * tileSize);
+    ctx.lineTo(c * tileSize, endRow * tileSize);
+    ctx.stroke();
+  }
+  for (let r = startRow; r <= endRow; r++) {
+    ctx.beginPath();
+    ctx.moveTo(startCol * tileSize, r * tileSize);
+    ctx.lineTo(endCol * tileSize, r * tileSize);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+  // 2. 신성한 결계 / 영혼 흡수 성역 바닥 시각화
+  if (player.skills.garlicAura) {
+    const sk = player.skills.garlicAura;
+    const ev = sk.evolved;
+    const auraRadius = ev ? 260 : (85 + sk.level * 22);
+    const grad = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, auraRadius);
+    if (ev) {
+      grad.addColorStop(0, 'rgba(217, 70, 239, 0.06)');
+      grad.addColorStop(0.75, 'rgba(192, 38, 211, 0.22)');
+      grad.addColorStop(1, 'rgba(244, 63, 94, 0.48)');
+    } else {
+      grad.addColorStop(0, 'rgba(250, 204, 21, 0.04)');
+      grad.addColorStop(0.8, 'rgba(250, 204, 21, 0.16)');
+      grad.addColorStop(1, 'rgba(250, 204, 21, 0.35)');
+    }
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, auraRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. 경험치 보석 렌더링
+  for (const g of xpGems) {
+    ctx.fillStyle = g.color;
+    ctx.beginPath();
+    ctx.moveTo(g.x, g.y - g.radius);
+    ctx.lineTo(g.x + g.radius, g.y);
+    ctx.lineTo(g.x, g.y + g.radius);
+    ctx.lineTo(g.x - g.radius, g.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // 4. 맵 아이템 렌더링
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const item of mapItems) {
+    const bobY = Math.sin(item.bobOffset) * 5;
+    if (item.type === 'evolution') {
+      const info = SKILL_DB[item.skillId];
+      const ringRadius = 32 + Math.sin(elapsedTime * 6) * 6;
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(item.x, item.y, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(217, 70, 239, 0.32)';
+      ctx.beginPath();
+      ctx.arc(item.x, item.y, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = '36px sans-serif';
+      ctx.fillText(info.evolvedIcon, item.x, item.y + bobY);
+
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = '#fda4af';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.strokeText(`${info.name} 진화`, item.x, item.y - 32);
+      ctx.fillText(`${info.name} 진화`, item.x, item.y - 32);
+    } else {
+      ctx.fillStyle = item.type === 'chest' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(74, 222, 128, 0.22)';
+      ctx.beginPath();
+      ctx.arc(item.x, item.y + 6, item.radius + 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = item.type === 'chest' ? '32px sans-serif' : '24px sans-serif';
+      ctx.fillText(item.type === 'chest' ? '🎁' : '🧪', item.x, item.y + bobY);
+    }
+  }
+
+  // 진화 촉매 방향 화살표 가이드
+  for (const item of mapItems) {
+    if (item.type === 'evolution') {
+      const dx = item.x - player.x;
+      const dy = item.y - player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 220) {
+        const ang = Math.atan2(dy, dx);
+        const indX = player.x + Math.cos(ang) * 75;
+        const indY = player.y + Math.sin(ang) * 75;
+        ctx.save();
+        ctx.translate(indX, indY);
+        ctx.rotate(ang);
+        ctx.fillStyle = '#f43f5e';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(-8, -7);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-8, 7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+
+  // 5. 몬스터 렌더링
+  for (const e of enemies) {
+    // 정예/보스 또는 5분 이후 격노 적 오라
+    if (e.isElite) {
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.75)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.radius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (e.isEnraged) {
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.18)';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.radius + 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(e.x, e.y + e.radius * 0.85, e.radius * 0.8, e.radius * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (e.hitFlash > 0) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.font = `${e.radius * 1.9}px sans-serif`;
+      ctx.fillText(e.emoji, e.x, e.y);
+    }
+
+    if (e.hp < e.maxHp && (e.isBoss || e.isElite || e.maxHp > 60)) {
+      const barW = e.radius * 1.8;
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(e.x - barW / 2, e.y - e.radius - 10, barW, 5);
+      ctx.fillStyle = e.isElite ? '#fbbf24' : '#ef4444';
+      ctx.fillRect(e.x - barW / 2, e.y - e.radius - 10, barW * Math.max(0, e.hp / e.maxHp), 5);
+    }
+  }
+
+  // 6. 플레이어 렌더링
+  ctx.save();
+  if (player.invulnTimer > 0 && Math.floor(player.invulnTimer * 20) % 2 === 0) {
+    ctx.globalAlpha = 0.45;
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(player.x, player.y + 16, 15, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = '34px sans-serif';
+  ctx.fillText(player.emoji, player.x, player.y);
+  ctx.restore();
+
+  // 플레이어 발밑 미니 체력바
+  const hpBarW = 44;
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(player.x - hpBarW / 2, player.y + 24, hpBarW, 6);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(player.x - hpBarW / 2, player.y + 24, hpBarW * (player.hp / player.maxHp), 6);
+
+  // 7. 수호의 회전검 / 천공의 무라마사 렌더링
+  if (player.skills.orbitingBlade) {
+    const sk = player.skills.orbitingBlade;
+    const lv = sk.level;
+    const ev = sk.evolved;
+    const count = ev ? 6 : (lv === 5 ? 4 : (lv >= 4 ? 3 : (lv >= 2 ? 2 : 1)));
+    const orbitDist = ev ? 150 : (lv >= 3 ? 115 : 90);
+    for (let c = 0; c < count; c++) {
+      const a = (sk.angle || 0) + (Math.PI * 2 / count) * c;
+      const bx = player.x + Math.cos(a) * orbitDist;
+      const by = player.y + Math.sin(a) * orbitDist;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(a + Math.PI / 4);
+      ctx.font = ev ? '34px sans-serif' : '26px sans-serif';
+      ctx.fillText(ev ? '🔱' : '🗡️', 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // 8. 투사체 렌더링
+  for (const p of projectiles) {
+    if (p.type === 'wand' || p.type === 'evolvedWand') {
+      ctx.fillStyle = p.type === 'evolvedWand' ? '#f43f5e' : '#38bdf8';
+      ctx.shadowColor = p.type === 'evolvedWand' ? '#fb7185' : '#0ea5e9';
+      ctx.shadowBlur = p.type === 'evolvedWand' ? 16 : 10;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (p.type === 'dagger' || p.type === 'evolvedDagger') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.type === 'evolvedDagger' ? '#e879f9' : '#e2e8f0';
+      ctx.shadowColor = p.type === 'evolvedDagger' ? '#d946ef' : '#94a3b8';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(-8, -4);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-8, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    } else if (p.type === 'axe' || p.type === 'evolvedScythe') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.font = `${p.radius * 1.8}px sans-serif`;
+      ctx.fillText(p.type === 'evolvedScythe' ? '🔥' : '🪓', 0, 0);
+      ctx.restore();
+    }
+  }
+
+  // 9. 광역 이펙트 (번개, 대검 참격, 채찍 타격)
+  for (const ef of areaEffects) {
+    const alpha = ef.life / ef.maxLife;
+    if (ef.type === 'lightning' || ef.type === 'evolvedLightning') {
+      const isEv = ef.type === 'evolvedLightning';
+      ctx.fillStyle = isEv ? `rgba(192, 132, 252, ${alpha * 0.42})` : `rgba(250, 204, 21, ${alpha * 0.35})`;
+      ctx.beginPath();
+      ctx.arc(ef.x, ef.y, ef.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isEv ? `rgba(233, 213, 255, ${alpha})` : `rgba(254, 240, 138, ${alpha})`;
+      ctx.lineWidth = isEv ? 8 : 5;
+      ctx.beginPath();
+      ctx.moveTo(ef.x + 25, ef.y - 340);
+      ctx.lineTo(ef.x - 14, ef.y - 170);
+      ctx.lineTo(ef.x + 16, ef.y - 85);
+      ctx.lineTo(ef.x, ef.y);
+      ctx.stroke();
+    } else if (ef.type === 'slash' || ef.type === 'evolvedSlash') {
+      const isEv = ef.type === 'evolvedSlash';
+      ctx.save();
+      ctx.translate(ef.x, ef.y);
+      ctx.rotate(ef.angle);
+      ctx.fillStyle = isEv ? `rgba(251, 191, 36, ${alpha * 0.48})` : `rgba(56, 189, 248, ${alpha * 0.42})`;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, ef.radius, -1.0, 1.0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = isEv ? `rgba(254, 240, 138, ${alpha})` : `rgba(186, 230, 253, ${alpha})`;
+      ctx.lineWidth = isEv ? 6 : 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, ef.radius, -1.0, 1.0);
+      ctx.stroke();
+      ctx.restore();
+    } else if (ef.type === 'whip' || ef.type === 'evolvedWhip') {
+      const isEv = ef.type === 'evolvedWhip';
+      ctx.save();
+      ctx.translate(ef.x, ef.y);
+      ctx.scale(ef.dir, 1);
+      ctx.fillStyle = isEv ? `rgba(244, 63, 94, ${alpha * 0.42})` : `rgba(226, 232, 240, ${alpha * 0.35})`;
+      ctx.beginPath();
+      ctx.ellipse(ef.reach / 2, 0, ef.reach / 2, ef.thickness * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isEv ? `rgba(253, 164, 175, ${alpha})` : `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = isEv ? 5 : 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(ef.reach * 0.5, -ef.thickness * 0.7, ef.reach, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 10. 데미지/회복 팝업 텍스트
+  for (const dtObj of damageTexts) {
+    ctx.font = `bold ${dtObj.size}px sans-serif`;
+    ctx.fillStyle = dtObj.color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(dtObj.text, dtObj.x, dtObj.y);
+    ctx.fillText(dtObj.text, dtObj.x, dtObj.y);
+  }
+
+  ctx.restore();
+}
+
+// 메인 게임 루프
+function gameLoop(timestamp) {
+  if (gameState !== 'PLAYING') return;
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  update(dt);
+  if (gameState === 'PLAYING') {
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+}
+</script>
+</body>
+</html>
