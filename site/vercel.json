@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(games.json|config.js)",
+      "source": "/(games.json|config.js|index.html)?",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]

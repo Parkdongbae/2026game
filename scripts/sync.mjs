@@ -17,6 +17,12 @@ const NAME_RE = /(\d{4})\s*([가-힣][가-힣\s]*[가-힣])\s*\.html$/i;
 const ID_RE = /^\d{4}(-\d+)?$/;
 const AI_CHAT_HOSTS = ["gemini.google.com", "chatgpt.com", "chat.openai.com", "claude.ai"];
 const REASON_AI = "AI 대화 화면 저장본 (게임 파일 아님)";
+const FIXES = {
+  [REASON_AI]: "AI와 대화한 화면을 저장한 파일이에요. AI가 만들어 준 게임 코드를 HTML 파일로 내려받아(또는 복사해서 .html로 저장해) 다시 올려 주세요.",
+  "파일명에서 학번·이름을 찾지 못함": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
+  "HTML 파일이 아님": "게임이 들어 있는 .html 파일로 다시 올려 주세요.",
+  "내려받기 실패": "잠시 뒤 자동으로 다시 시도해요. 계속 보이면 선생님께 알려 주세요.",
+};
 const HEADERS = { "Accept-Language": "ko", "User-Agent": "Mozilla/5.0" };
 
 async function readJson(file, fallback) {
@@ -99,10 +105,10 @@ function analyze(sourceName, buf) {
   let title = decodeEntities(rawTitle).replace(/\s+/g, " ").trim();
 
   if (buf.length === 0 || !["<html", "<!doctype", "<script", "<canvas", "<body"].some((t) => lower.includes(t))) {
-    return { skip: "HTML 파일이 아님" };
+    return { skip: "HTML 파일이 아님", studentNo, name };
   }
-  if (head.includes("saved from url=") && AI_CHAT_HOSTS.some((h) => head.includes(h))) return { skip: REASON_AI };
-  if (title.endsWith(" - Google Gemini")) return { skip: REASON_AI };
+  if (head.includes("saved from url=") && AI_CHAT_HOSTS.some((h) => head.includes(h))) return { skip: REASON_AI, studentNo, name };
+  if (title.endsWith(" - Google Gemini")) return { skip: REASON_AI, studentNo, name };
 
   if (!title) {
     title = sourceName
@@ -171,7 +177,7 @@ async function main() {
       return;
     }
     const a = analyze(s.sourceName, buf);
-    if (a.skip) skipped.push({ sourceName: s.sourceName, driveId: s.driveId, reason: a.skip });
+    if (a.skip) skipped.push({ sourceName: s.sourceName, driveId: s.driveId, reason: a.skip, studentNo: a.studentNo, name: a.name });
     else cur.push({ ...s, ...a, buf });
   });
   cur.sort((a, b) => (a.sourceName < b.sourceName ? -1 : a.sourceName > b.sourceName ? 1 : 0));
@@ -263,8 +269,16 @@ async function main() {
   }
 
   const clean = games.map(({ buf, isNew, isChanged, ...g }) => g);
-  if (JSON.stringify(clean) !== JSON.stringify(prev)) {
-    await writeFile(GAMES_JSON, JSON.stringify({ updatedAt: now, games: clean }, null, 2) + "\n");
+  // 갤러리에 보여 줄 "다시 제출이 필요해요" 목록 (교사가 숨긴 게임은 제외)
+  const rejected = skipped
+    .filter((s) => s.reason !== "교사가 숨김")
+    .map((s) => ({
+      who: s.studentNo ? `${s.studentNo} ${s.name}` : s.sourceName,
+      reason: s.reason,
+      fix: FIXES[s.reason] ?? "선생님께 문의해 주세요.",
+    }));
+  if (JSON.stringify(clean) !== JSON.stringify(prev) || JSON.stringify(rejected) !== JSON.stringify(prevData.rejected ?? [])) {
+    await writeFile(GAMES_JSON, JSON.stringify({ updatedAt: now, games: clean, rejected }, null, 2) + "\n");
   }
   if (JSON.stringify(skipped) !== JSON.stringify(prevReport.skipped ?? [])) {
     await writeFile(REPORT_JSON, JSON.stringify({ updatedAt: now, skipped }, null, 2) + "\n");

@@ -3,210 +3,288 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>동신중 게임 갤러리</title>
 <meta name="description" content="동신중학교 학생들이 직접 만든 웹 게임 모음">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
 <style>
+  /* 디자인: 캔바 시안 "동신중 게임 갤러리"(네온 아케이드) 기준. 그림은 캔바에서 생성 */
   :root {
     --pink: #ff4d7d;
-    --pink-soft: #ffe3ec;
-    --purple: #7c4dff;
-    --page: linear-gradient(135deg, #ebe8ff 0%, #f6e9ff 45%, #ffe6f0 100%);
-    --panel: #ffffff;
-    --card: #ffffff;
-    --line: #ece8f5;
-    --text: #1f1b2e;
-    --muted: #6f6a82;
-    --chip: #ffffff;
-    --shadow: 0 6px 20px rgba(80, 50, 140, .10);
-    --shadow-hover: 0 14px 30px rgba(80, 50, 140, .18);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --pink-soft: #4a1f31;
-      --page: linear-gradient(135deg, #17142a 0%, #1d1530 50%, #2a1426 100%);
-      --panel: #201c33;
-      --card: #2a2540;
-      --line: #3a3455;
-      --text: #f3f0ff;
-      --muted: #b0a9c9;
-      --chip: #2a2540;
-      --shadow: 0 6px 20px rgba(0, 0, 0, .35);
-      --shadow-hover: 0 14px 30px rgba(0, 0, 0, .5);
-    }
+    --pink2: #fa4095;
+    --violet: #8b5cf6;
+    --cyan: #22d3ee;
+    --amber: #fbbf24;
+    --bg: #0d0822;
+    --glass: rgba(255, 255, 255, .06);
+    --glass-strong: rgba(255, 255, 255, .10);
+    --line: rgba(190, 150, 255, .28);
+    --text: #f6f3ff;
+    --muted: #b9add8;
+    --glow: 0 0 0 1px rgba(250, 64, 149, .55), 0 0 24px rgba(250, 64, 149, .35), 0 16px 40px rgba(0, 0, 0, .5);
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--page) fixed;
     color: var(--text);
+    background:
+      radial-gradient(900px 500px at 12% -5%, rgba(139, 92, 246, .35), transparent 60%),
+      radial-gradient(800px 500px at 95% 10%, rgba(250, 64, 149, .28), transparent 60%),
+      radial-gradient(900px 600px at 50% 110%, rgba(34, 211, 238, .16), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
     font-family: system-ui, "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
     line-height: 1.4;
   }
   button, input { font: inherit; color: inherit; }
-  :focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+  :focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 20px 28px; }
 
-  .panel {
-    max-width: 1240px;
-    margin: 20px auto;
-    background: var(--panel);
-    border-radius: 28px;
-    box-shadow: var(--shadow);
-    overflow: clip;
-  }
-  @media (max-width: 1280px) { .panel { margin: 12px; } }
-
+  /* 머리글 */
   header {
-    position: sticky; top: 0; z-index: 20;
+    position: sticky; top: 10px; z-index: 30;
     display: flex; align-items: center; gap: 12px;
-    padding: 16px 24px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--line);
+    margin-top: 10px; padding: 10px 14px 10px 20px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: rgba(20, 12, 48, .78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .35);
   }
-  h1 { margin: 0; font-size: 1.45rem; font-weight: 800; white-space: nowrap; }
-  .summary { flex: 1; text-align: center; color: var(--muted); font-weight: 600; font-size: .95rem; }
+  .brand { margin: 0; font-size: 1.2rem; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; }
+  .brand b { color: var(--pink2); font-weight: 900; }
+  .brand i { color: var(--violet); font-style: normal; }
   .login {
-    border: 0; cursor: pointer;
-    min-height: 44px; padding: 0 18px;
-    border-radius: 999px;
-    background: var(--pink); color: #fff; font-weight: 700;
-    white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis;
+    margin-left: auto; border: 0; cursor: pointer;
+    min-height: 44px; padding: 0 20px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--pink), #c026d3); color: #fff; font-weight: 800;
+    box-shadow: 0 0 18px rgba(250, 64, 149, .5);
+    white-space: nowrap; max-width: 52vw; overflow: hidden; text-overflow: ellipsis;
   }
-  .login.in { background: var(--chip); color: var(--text); border: 1.5px solid var(--line); }
+  .login.in { background: var(--glass-strong); box-shadow: none; border: 1px solid var(--line); }
   .login[hidden] { display: none; }
 
-  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 24px 4px; }
-  .search {
-    flex: 1 1 240px; max-width: 420px; min-height: 44px;
-    padding: 0 16px 0 40px;
-    border: 1.5px solid var(--line); border-radius: 999px;
-    background: var(--chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%239a94b3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='5.5'/%3E%3Cpath d='m12.5 12.5 4 4'/%3E%3C/svg%3E") 14px center no-repeat;
+  /* 히어로 */
+  .hero {
+    position: relative; overflow: hidden;
+    margin-top: 16px; padding: 44px 40px;
+    min-height: 330px;
+    border: 1px solid var(--line); border-radius: 32px;
+    background: #120b2e url("./assets/hero.jpg") right center / cover no-repeat;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .45), inset 0 0 80px rgba(139, 92, 246, .18);
   }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(13, 8, 34, .92) 0%, rgba(13, 8, 34, .72) 38%, rgba(13, 8, 34, 0) 68%);
+  }
+  .hero > * { position: relative; }
+  .hero h1 { margin: 0; font-size: clamp(1.9rem, 4.6vw, 3.4rem); font-weight: 900; line-height: 1.15; letter-spacing: -.02em; text-shadow: 0 4px 24px rgba(0, 0, 0, .5); }
+  .hero h1 em { display: block; font-style: normal; color: var(--pink2); text-shadow: 0 0 28px rgba(250, 64, 149, .65); }
+  .hero p { margin: 14px 0 22px; color: #d9c8ff; font-size: 1.05rem; font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; }
+  .stat {
+    min-width: 120px; padding: 12px 18px;
+    border: 1px solid var(--line); border-radius: 18px;
+    background: rgba(20, 12, 48, .62);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .stat small { display: block; color: #e3a6ff; font-size: .82rem; font-weight: 700; }
+  .stat strong { font-size: 1.7rem; font-weight: 900; }
+  .stat[hidden] { display: none; }
+
+  /* 다시 제출 안내 */
+  .notice {
+    margin-top: 18px;
+    border: 1.5px solid rgba(251, 191, 36, .7); border-radius: 22px;
+    background: linear-gradient(180deg, rgba(251, 191, 36, .16), rgba(251, 191, 36, .07));
+    box-shadow: 0 0 26px rgba(251, 191, 36, .18);
+  }
+  .notice[hidden] { display: none; }
+  .notice summary {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 16px 20px; font-size: 1.08rem; font-weight: 900; color: #ffe08a;
+    list-style: none; border-radius: 22px;
+  }
+  .notice summary::-webkit-details-marker { display: none; }
+  .notice summary .count { padding: 2px 12px; border-radius: 999px; background: var(--amber); color: #2a1a00; font-size: .9rem; }
+  .notice summary .hint { margin-left: auto; color: #f5dfa0; font-size: .85rem; font-weight: 600; }
+  .notice summary .hint::after { content: " ▾"; }
+  .notice[open] summary .hint::after { content: " ▴"; }
+  .notice-lead { margin: 0; padding: 0 20px 12px; color: #f5e7bd; font-size: .95rem; }
+  .notice ul { list-style: none; margin: 0; padding: 0 14px 14px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .notice li { padding: 14px 16px; border-radius: 16px; background: rgba(13, 8, 34, .6); border: 1px solid rgba(251, 191, 36, .35); }
+  .notice .who { display: block; font-size: 1.1rem; font-weight: 900; color: #fff; overflow-wrap: anywhere; }
+  .notice .why { display: inline-block; margin: 6px 0; padding: 2px 10px; border-radius: 999px; background: rgba(251, 191, 36, .22); color: #ffe08a; font-size: .82rem; font-weight: 800; }
+  .notice .fix { margin: 0; color: #e9defc; font-size: .92rem; }
+
+  /* 도구 줄 */
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 20px; }
+  .search {
+    flex: 1 1 260px; max-width: 520px; min-height: 48px;
+    padding: 0 18px 0 46px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--glass) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23c9b8f5' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='9' cy='9' r='6'/%3E%3Cpath d='m14 14 4.5 4.5'/%3E%3C/svg%3E") 16px center no-repeat;
+  }
+  .search::placeholder { color: #9c90bd; }
   .sorts { display: flex; gap: 8px; margin-left: auto; }
   .sort {
-    min-height: 44px; padding: 0 18px; cursor: pointer;
-    border: 1.5px solid var(--line); border-radius: 999px;
-    background: var(--chip); font-weight: 700;
+    min-height: 48px; padding: 0 22px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--glass); color: #d9c8ff; font-weight: 800;
+    transition: background .15s, box-shadow .15s;
   }
-  .sort[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }
+  .sort:hover { background: var(--glass-strong); }
+  .sort[aria-pressed="true"] { background: linear-gradient(90deg, var(--pink), #e11d74); border-color: transparent; color: #fff; box-shadow: 0 0 18px rgba(250, 64, 149, .55); }
 
-  .grid {
-    display: grid; gap: 18px;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    padding: 18px 24px 8px;
-  }
+  /* 카드 */
+  .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-top: 20px; }
   .card {
-    position: relative;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: transform .15s ease, box-shadow .15s ease;
+    position: relative; overflow: hidden;
+    border: 1px solid var(--line); border-radius: 24px;
+    background: linear-gradient(180deg, rgba(40, 24, 86, .85), rgba(20, 12, 48, .92));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
   }
-  .card:hover, .card:focus-within { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-  .card-link { display: block; color: inherit; text-decoration: none; padding-bottom: 60px; }
-  .card-link:focus-visible { outline-offset: -3px; border-radius: 20px; }
+  .card:hover, .card:focus-within { transform: translateY(-4px); border-color: transparent; box-shadow: var(--glow); }
+  .card-link { display: block; color: inherit; text-decoration: none; padding-bottom: 68px; }
+  .card-link:focus-visible { outline-offset: -3px; border-radius: 24px; }
   .art {
-    aspect-ratio: 16 / 10;
-    display: grid; place-items: center;
-    font-size: clamp(2.6rem, 6vw, 4rem); font-weight: 900; color: #fff;
-    text-shadow: 0 3px 10px rgba(0, 0, 0, .22);
-    user-select: none;
+    position: relative; aspect-ratio: 16 / 10; overflow: hidden;
+    background: #1a1040 center / cover no-repeat;
   }
-  .medal { position: absolute; top: 8px; left: 10px; font-size: 1.9rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+  .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(13, 8, 34, 0) 45%, rgba(20, 12, 48, .95) 100%); }
+  .art-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .35s ease; }
+  .card:hover .art-img { transform: scale(1.06); }
+  .glyph {
+    position: absolute; right: 12px; bottom: 8px; z-index: 1;
+    font-size: 2.2rem; font-weight: 900; line-height: 1; color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .7); user-select: none;
+  }
+  .medal {
+    position: absolute; top: 10px; left: 10px; z-index: 2;
+    width: 44px; height: 44px; display: grid; place-items: center;
+    border-radius: 50%; font-size: 1.5rem;
+    background: rgba(13, 8, 34, .7); border: 1px solid rgba(255, 255, 255, .25);
+    box-shadow: 0 0 16px rgba(251, 191, 36, .5);
+  }
   .new {
-    position: absolute; top: 12px; right: 12px;
-    padding: 3px 10px; border-radius: 999px;
-    background: var(--purple); color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .04em;
+    position: absolute; top: 14px; right: 14px; z-index: 2;
+    padding: 4px 12px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--pink), #c026d3); color: #fff;
+    font-size: .74rem; font-weight: 900; letter-spacing: .06em;
+    box-shadow: 0 0 14px rgba(250, 64, 149, .7);
   }
   .title {
-    margin: 12px 14px 2px; text-align: center; font-size: 1rem; font-weight: 800;
+    margin: 12px 16px 4px; font-size: 1.08rem; font-weight: 900;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
     overflow-wrap: anywhere; min-height: 2.8em;
   }
-  .maker { margin: 0 14px; text-align: center; color: var(--muted); font-size: .9rem; font-weight: 600; }
+  .maker { margin: 0 16px; color: var(--muted); font-size: .93rem; font-weight: 700; }
   .play {
-    position: absolute; left: 14px; bottom: 12px;
-    display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
-    border-radius: 999px; background: var(--pink-soft); color: var(--pink);
-    font-weight: 800; font-size: .88rem; pointer-events: none;
-    transition: background .15s, color .15s;
+    position: absolute; left: 16px; bottom: 16px;
+    display: inline-flex; align-items: center; min-height: 40px; padding: 0 18px;
+    border-radius: 999px; background: linear-gradient(90deg, var(--pink), #c026d3); color: #fff;
+    font-weight: 900; font-size: .9rem; pointer-events: none;
+    box-shadow: 0 0 14px rgba(250, 64, 149, .45);
   }
-  .card:hover .play { background: var(--pink); color: #fff; }
   .like {
-    position: absolute; right: 8px; bottom: 8px;
-    min-width: 44px; min-height: 44px; padding: 0 12px;
-    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-    border: 1.5px solid var(--line); border-radius: 999px;
-    background: var(--card); cursor: pointer; font-weight: 800; color: var(--muted);
+    position: absolute; right: 12px; bottom: 14px; z-index: 3;
+    min-width: 48px; min-height: 44px; padding: 0 14px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: rgba(13, 8, 34, .6); cursor: pointer; font-weight: 900; font-size: 1.05rem; color: #fff;
+    transition: background .15s, box-shadow .15s;
   }
-  .like .heart { font-size: 1.2rem; line-height: 1; color: var(--pink); display: inline-block; }
-  .like[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }
+  .like:hover { background: rgba(250, 64, 149, .22); }
+  .like .heart { font-size: 1.3rem; line-height: 1; color: var(--pink2); display: inline-block; }
+  .like[aria-pressed="true"] { background: var(--pink); border-color: transparent; box-shadow: 0 0 18px rgba(250, 64, 149, .7); }
   .like[aria-pressed="true"] .heart { color: #fff; }
   .like.pop .heart { animation: pop .4s ease; }
   .like.unpop .heart { animation: unpop .2s ease; }
   @keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
   @keyframes unpop { 0% { transform: scale(1); } 50% { transform: scale(.85); } 100% { transform: scale(1); } }
-  .spark {
-    position: absolute; left: 50%; top: 40%; pointer-events: none;
-    color: var(--pink); font-size: .9rem;
-    animation: spark .6s ease-out forwards;
-  }
+  .spark { position: absolute; left: 50%; top: 40%; pointer-events: none; color: var(--pink2); font-size: .95rem; animation: spark .6s ease-out forwards; }
   @keyframes spark {
     from { transform: translate(-50%, -50%) scale(.6); opacity: 1; }
-    to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); opacity: 0; }
+    to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15); opacity: 0; }
   }
 
-  .skeleton { border-radius: 20px; min-height: 250px; background: linear-gradient(100deg, var(--line) 30%, var(--card) 50%, var(--line) 70%) 0 0 / 200% 100%; animation: shimmer 1.2s linear infinite; }
+  .skeleton { border-radius: 24px; min-height: 290px; border: 1px solid var(--line); background: linear-gradient(100deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.04) 70%) 0 0 / 200% 100%; animation: shimmer 1.2s linear infinite; }
   @keyframes shimmer { to { background-position: -200% 0; } }
-  .empty { grid-column: 1 / -1; text-align: center; padding: 60px 16px; color: var(--muted); font-weight: 600; }
+  .empty { grid-column: 1 / -1; text-align: center; padding: 60px 16px; color: var(--muted); font-weight: 700; }
 
-  footer { padding: 18px 24px 24px; text-align: center; color: var(--muted); font-size: .9rem; }
+  footer { margin-top: 28px; text-align: center; color: #b58cf0; font-size: .92rem; font-weight: 600; }
+  footer b { color: #e08bff; }
 
   .toast {
     position: fixed; left: 50%; bottom: 24px; z-index: 50;
     transform: translate(-50%, 20px);
     max-width: calc(100vw - 32px);
-    padding: 12px 18px; border-radius: 14px;
-    background: #1f1b2e; color: #fff; font-weight: 600; font-size: .95rem; text-align: center;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
-    opacity: 0; pointer-events: none;
-    transition: opacity .2s, transform .2s;
+    padding: 13px 20px; border-radius: 16px;
+    background: rgba(20, 12, 48, .95); border: 1px solid var(--pink2); color: #fff;
+    font-weight: 700; font-size: .95rem; text-align: center;
+    box-shadow: 0 0 24px rgba(250, 64, 149, .4);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-  @media (max-width: 600px) {
-    header { padding: 12px 14px; flex-wrap: wrap; }
-    h1 { font-size: 1.15rem; }
-    .summary { order: 3; flex-basis: 100%; text-align: left; font-size: .85rem; }
-    .login { margin-left: auto; padding: 0 14px; font-size: .9rem; }
-    .tools { padding: 12px 14px 0; }
+  @media (max-width: 700px) {
+    .wrap { padding: 0 12px 24px; }
+    header { padding: 8px 8px 8px 16px; top: 8px; }
+    .brand { font-size: 1rem; }
+    .login { padding: 0 14px; font-size: .88rem; }
+    .hero { padding: 26px 20px; min-height: 0; border-radius: 24px; background-position: 72% center; }
+    .hero::before { background: linear-gradient(180deg, rgba(13, 8, 34, .78), rgba(13, 8, 34, .88)); }
+    .hero p { font-size: .95rem; margin: 10px 0 16px; }
+    .stat { min-width: 0; flex: 1; padding: 10px 12px; }
+    .stat strong { font-size: 1.3rem; }
+    .notice summary { padding: 14px 16px; font-size: 1rem; flex-wrap: wrap; }
+    .notice summary .hint { display: none; }
+    .notice ul { grid-template-columns: 1fr; padding: 0 10px 10px; }
     .search { max-width: none; flex-basis: 100%; }
     .sorts { margin-left: 0; width: 100%; }
     .sort { flex: 1; padding: 0 6px; }
-    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 14px 4px; }
-    .title { font-size: .92rem; margin: 10px 8px 2px; }
-    .maker { font-size: .82rem; margin: 0 8px; }
-    .play { left: 8px; padding: 0 10px; font-size: .8rem; }
-    .like { right: 6px; padding: 0 9px; }
-    .medal { font-size: 1.5rem; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .card { border-radius: 18px; }
+    .card-link { padding-bottom: 60px; }
+    .title { font-size: .95rem; margin: 10px 10px 2px; }
+    .maker { font-size: .82rem; margin: 0 10px; }
+    .play { left: 10px; bottom: 12px; padding: 0 12px; font-size: .8rem; min-height: 36px; }
+    .like { right: 8px; bottom: 8px; padding: 0 10px; font-size: .95rem; }
+    .medal { width: 36px; height: 36px; font-size: 1.2rem; }
+    .glyph { font-size: 1.6rem; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .card:hover, .card:focus-within { transform: none; }
+    .card:hover .art-img { transform: none; }
   }
 </style>
 </head>
 <body>
-<div class="panel">
+<div class="wrap">
   <header>
-    <h1>🎮 동신중 게임 갤러리</h1>
-    <div class="summary" id="summary"></div>
+    <p class="brand">🎮 <b>동신</b><i>중</i> 게임 갤러리</p>
     <button class="login" id="login" type="button" hidden>학교 계정 로그인</button>
   </header>
+
+  <section class="hero" aria-label="소개">
+    <h1>우리가 만든 게임,<em>지금 플레이!</em></h1>
+    <p>마음에 드는 게임에 ♥를 눌러 주세요</p>
+    <div class="stats" id="summary">
+      <div class="stat"><small>게임</small><strong id="statGames">·</strong></div>
+      <div class="stat"><small>좋아요</small><strong id="statLikes">·</strong></div>
+      <div class="stat" id="statMineBox" hidden><small>내가 누른 ♥</small><strong id="statMine">0</strong></div>
+    </div>
+  </section>
+
+  <details class="notice" id="notice" open hidden>
+    <summary>⚠️ 다시 제출이 필요해요 <span class="count" id="noticeCount"></span><span class="hint">내 이름이 있는지 확인하세요</span></summary>
+    <p class="notice-lead">아래 파일은 게임으로 열 수 없어서 갤러리에 올라가지 않았어요. 고쳐서 제출 폴더에 다시 올리면 자동으로 사라집니다.</p>
+    <ul id="noticeList"></ul>
+  </details>
+
   <div class="tools">
     <input class="search" id="search" type="search" placeholder="제목·이름·학번 검색" aria-label="게임 검색" autocomplete="off">
     <div class="sorts" role="group" aria-label="정렬">
@@ -230,10 +308,13 @@ const NEW_MS = 72 * 60 * 60 * 1000;
 const FILE_RE = /^[0-9A-Za-z_-]+\.html$/;
 
 const $ = (id) => document.getElementById(id);
-const grid = $("grid"), summaryEl = $("summary"), loginBtn = $("login"), toastEl = $("toast"), searchEl = $("search");
+const COVERS = 6; // assets/cover1~6.jpg (캔바에서 만든 표지 그림)
+const grid = $("grid"), loginBtn = $("login"), toastEl = $("toast"), searchEl = $("search");
 
 const state = {
   games: [],
+  rejected: [],
+  coverOf: new Map(),    // id -> 표지 순번 (등록 순서대로 돌려 써서 이웃 카드와 겹치지 않게)
   loaded: false,
   loadError: false,
   counts: new Map(),     // id -> number | null(실패). 없으면 읽는 중
@@ -247,7 +328,11 @@ const state = {
 };
 let fb = null; // { auth, db, api }
 
-$("footer").textContent = `좋아요는 @${DOMAIN} 계정으로 게임마다 1번 누를 수 있어요.`;
+{
+  const b = document.createElement("b");
+  b.textContent = `@${DOMAIN}`;
+  $("footer").append("좋아요는 ", b, " 계정으로 게임마다 1번 누를 수 있어요.");
+}
 
 // ---------- 도구 ----------
 let toastTimer;
@@ -317,17 +402,20 @@ function paintLike(btn, g) {
   btn.setAttribute("aria-label", `${g.name}의 게임 좋아요, 현재 ${n || 0}개`);
 }
 function updateSummary() {
-  if (!state.loaded) { summaryEl.textContent = ""; return; }
-  let text = `게임 ${state.games.length}개`;
-  if (state.countsReady) {
-    const total = state.games.reduce((s, g) => s + countOf(g.id), 0);
-    text += ` · 좋아요 ${total}개`;
-  }
-  if (state.user) {
-    const mine = state.games.filter((g) => state.myLikes.has(g.id)).length;
-    text += ` · 내가 누른 ♥ ${mine}/${state.games.length}`;
-  }
-  summaryEl.textContent = text;
+  $("statGames").textContent = state.loaded && !state.loadError ? `${state.games.length}개` : "·";
+  $("statLikes").textContent = state.countsReady ? `${state.games.reduce((s, g) => s + countOf(g.id), 0)}개` : fb ? "·" : "-";
+  $("statMineBox").hidden = !state.user;
+  if (state.user) $("statMine").textContent = `${state.games.filter((g) => state.myLikes.has(g.id)).length} / ${state.games.length}`;
+}
+function renderNotice() {
+  const box = $("notice");
+  box.hidden = state.rejected.length === 0;
+  $("noticeCount").textContent = `${state.rejected.length}건`;
+  $("noticeList").replaceChildren(...state.rejected.map((r) => {
+    const li = el("li");
+    li.append(el("strong", "who", r.who), el("span", "why", r.reason), el("p", "fix", r.fix));
+    return li;
+  }));
 }
 function render() {
   updateSummary();
@@ -350,10 +438,16 @@ function render() {
     link.rel = "noopener noreferrer";
     link.setAttribute("aria-label", `${g.title} — ${g.studentNo} ${g.name} (새 창에서 열림)`);
 
-    const h = hash(g.id) % 360;
-    const art = el("div", "art", firstGlyph(g.title));
-    art.style.background = `linear-gradient(135deg, hsl(${h} 85% 68%), hsl(${(h + 50) % 360} 85% 60%))`;
+    const art = el("div", "art");
     art.setAttribute("aria-hidden", "true");
+    const img = el("img", "art-img");
+    img.src = `./assets/cover${(state.coverOf.get(g.id) ?? hash(g.id)) % COVERS + 1}.jpg`;
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    art.append(img);
+    const glyph = firstGlyph(g.title);
+    if (/\p{Extended_Pictographic}/u.test(glyph)) art.append(el("span", "glyph", glyph)); // 제목이 이모지로 시작할 때만 표시
     link.append(art, el("h2", "title", g.title), el("p", "maker", `${g.studentNo} ${g.name}`), el("span", "play", "▶ 플레이"));
     card.append(link);
 
@@ -544,6 +638,13 @@ try {
   state.games = (Array.isArray(data.games) ? data.games : [])
     .filter((g) => g && typeof g.id === "string" && typeof g.file === "string" && FILE_RE.test(g.file))
     .map((g) => ({ ...g, title: String(g.title || ""), name: String(g.name || ""), studentNo: String(g.studentNo || "") }));
+  [...state.games]
+    .sort((a, b) => time(a) - time(b) || a.id.localeCompare(b.id))
+    .forEach((g, i) => state.coverOf.set(g.id, i));
+  state.rejected = (Array.isArray(data.rejected) ? data.rejected : [])
+    .filter((r) => r && r.who)
+    .map((r) => ({ who: String(r.who), reason: String(r.reason || ""), fix: String(r.fix || "") }));
+  renderNotice();
 } catch (e) {
   console.warn("games.json 읽기 실패", e);
   state.loadError = true;
