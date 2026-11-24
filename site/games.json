@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T04:33:55.006Z",
+  "updatedAt": "2026-11-24T04:37:21.706Z",
   "games": [
     {
       "id": "2105",
@@ -145,6 +145,19 @@
       "updatedAt": "2026-11-24T04:28:20.180Z"
     },
     {
+      "id": "3307",
+      "studentNo": "3307",
+      "name": "박승현",
+      "title": "네온 벽돌깨기 - 하이퍼 스피드",
+      "file": "3307.html",
+      "driveId": "1q2QI_hjbcDpr0r_guxWYGGXXtKijM5JW",
+      "sourceName": "code_artifact (1) - 3307박승현.html",
+      "hash": "b6a5acac8f92b0bd",
+      "size": 62150,
+      "addedAt": "2026-11-24T04:37:21.706Z",
+      "updatedAt": "2026-11-24T04:37:21.706Z"
+    },
+    {
       "id": "3308",
       "studentNo": "3308",
       "name": "윤시현",
@@ -200,14 +213,14 @@
       "id": "3313",
       "studentNo": "3313",
       "name": "정세영",
-      "title": "NEON SURVIVOR - 뱀파이어 서바이버즈 스타일",
+      "title": "NEON SURVIVOR v4 - 보스 & 14종 아이템 업그레이드",
       "file": "3313.html",
-      "driveId": "1WWipecap8-PGszk54yfBt7SHpVgFW6mC",
-      "sourceName": "3313정세뎡 게임 - 3313정세영.html",
-      "hash": "ea890920a67689fd",
-      "size": 27813,
+      "driveId": "1bc3A18bT_UamQJnAvhy4kWs6qPlM2ZuB",
+      "sourceName": "neon_survivor_v4 - 3313정세영.html",
+      "hash": "67762df7f2527bd7",
+      "size": 93908,
       "addedAt": "2026-11-24T04:32:47.884Z",
-      "updatedAt": "2026-11-24T04:32:47.884Z"
+      "updatedAt": "2026-11-24T04:37:21.706Z"
     }
   ],
   "rejected": [

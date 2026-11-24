@@ -1,28 +1,845 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEON SURVIVOR - 뱀파이어 서바이버즈 스타일</title>
+<html lang="ko"><head><script data-bard-client-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIxMjM1MTMwMTQyOTc2MTYzNjU2NiIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjX2JmZjc3MTAxZjlkZTQ2OTdfbmVvbl9zdXJ2aXZvci5odG1sLTU0NSJ9LCJleHAiOjE3OTU0OTg1NTUsImlhdCI6MTc5NTQ5NDk1NSwiYWxnIjoiUlMyNTYifQ.OmvwenuUTz09oU3ph4N7oTpv3JwStKBylc-lXd13bvtSLuGKJYRn9JLKpig9F_AbR0AkRjGeISqDgVs4_-xGWqz3MczihBS6MdknrxmvhiTEI-1IUrsIWZHvSlhfkmCyFbXuR63fsESrUbNfa2sV0zoMCeiDMWKzlr83fjOZiJG-V57V6Cz-BhNa5k4nqn5ma6LrXfh0edIzNzajBP7bZ2rksDIIXAQ6ogShbAnzw1CdoeRvvERtQtkIrP3m7Cl03bFAnNvJ0ukB4K4fWDiDBinrX6-b5XsEPXzAQHnbGudGeSejfmgiKHcv9ir0IldO7aGaaYUww3x4TQ-xwDPmgQ","c_bff77101f9de4697_neon_survivor.html-545")</script><script data-bard-client-injected="true">
+  document.addEventListener('input', (event) => {
+    if (event.target && (event.target.isContentEditable || event.target.hasAttribute('contenteditable'))) {
+      const clonedDoc = document.cloneNode(true);
+      const injectedScripts = clonedDoc.querySelectorAll('[data-bard-client-injected="true"]');
+      injectedScripts.forEach(el => el.remove());
+      window.parent.postMessage({
+        type: 'inlineEdit',
+        html: '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML
+      }, '*');
+    }
+  });
+</script><script data-bard-client-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const SCROLL_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    ' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End',
+  ]);
+  const HORIZONTAL_KEYS = new Set(['ArrowLeft', 'ArrowRight']);
+
+  function isTextEntryTarget(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' ||
+        tagName === 'SELECT' || target.isContentEditable === true;
+  }
+
+  // An element absorbs the key only if it both overflows on the axis being
+  // scrolled and is configured to scroll on that axis. The cheap dimension
+  // test runs first because getComputedStyle forces a style recalc, and this
+  // runs on every keypress. Each axis is read from its own longhand: the
+  // 'overflow' shorthand serializes as two values when the axes differ, which
+  // is the common 'overflow-x: hidden; overflow-y: auto' pane.
+  function canScroll(node, horizontal) {
+    const overflows = horizontal ? node.scrollWidth > node.clientWidth
+                                 : node.scrollHeight > node.clientHeight;
+    if (!overflows) return false;
+    const style = window.getComputedStyle(node);
+    const overflow = horizontal ? style.overflowX : style.overflowY;
+    return overflow === 'auto' || overflow === 'scroll';
+  }
+
+  // Walks up from the event target so nested scrollers keep their behavior.
+  // <body> is included because pages that pin the root height make it the
+  // scroll container.
+  function hasScrollableAncestor(target, horizontal) {
+    let node = target;
+    while (node && node !== document.documentElement) {
+      if (canScroll(node, horizontal)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function rootCanScroll(horizontal) {
+    const scroller = document.scrollingElement || document.documentElement;
+    if (!scroller) return false;
+    // Tolerate a pixel of rounding so subpixel layouts do not look scrollable.
+    return horizontal ? scroller.scrollWidth > window.innerWidth + 1
+                      : scroller.scrollHeight > window.innerHeight + 1;
+  }
+
+  window.addEventListener('keydown', function(event) {
+    if (!SCROLL_KEYS.has(event.key)) return;
+    if (event.defaultPrevented) return;
+    // Alt and Meta turn arrows into browser history navigation, and Ctrl is
+    // reserved for shortcuts, so none of them are scroll intent.
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+
+    const target = event.target;
+    if (isTextEntryTarget(target)) return;
+
+    // Anything that can still absorb the scroll gets to keep it.
+    const horizontal = HORIZONTAL_KEYS.has(event.key);
+    if (rootCanScroll(horizontal)) return;
+    if (hasScrollableAncestor(target, horizontal)) return;
+
+    event.preventDefault();
+  }, {capture: true, passive: false});
+})();</script><script data-bard-client-injected="true">(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script data-bard-client-injected="true">
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-client-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.h=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.extensions="";var l=0,t=null,r=null,q=[],F=new TextEncoder,
+G=new TextDecoder;c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*
+16|0;return(f==="x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;
+(g=t)==null||g.postMessage(a)}};Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script data-bard-client-injected="true">((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-client-injected="true">(function() {
+  const OVERLAY_SELECTOR =
+    'dialog[open], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="combobox"]';
+
+  function isVisibleOverlay(element) {
+    if (element.closest('[hidden], [aria-hidden="true"], [inert]')) {
+      return false;
+    }
+    if (window.getComputedStyle(element).visibility === 'hidden') {
+      return false;
+    }
+    for (let cur = element; cur; cur = cur.parentElement) {
+      if (window.getComputedStyle(cur).display === 'none') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function hasOpenOverlay() {
+    const candidates = document.querySelectorAll(OVERLAY_SELECTOR);
+    for (let i = 0; i < candidates.length; i++) {
+      if (isVisibleOverlay(candidates[i])) {
+        return true;
+      }
+    }
+    try {
+      if (document.querySelector('[popover]:popover-open')) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore engines that do not support :popover-open.
+    }
+    return false;
+  }
+
+  function isNonEmptySearchInput(target) {
+    return (
+      Boolean(target) &&
+      target.tagName === 'INPUT' &&
+      typeof target.type === 'string' &&
+      target.type.toLowerCase() === 'search' &&
+      typeof target.value === 'string' &&
+      target.value.length > 0
+    );
+  }
+
+  function shouldIgnoreEscape(event) {
+    return (
+      event.key !== 'Escape' ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing ||
+      event.repeat ||
+      event.keyCode === 229 ||
+      isNonEmptySearchInput(event.target)
+    );
+  }
+
+  let shouldIgnoreCaptureState = false;
+
+  window.addEventListener(
+    'keydown',
+    function(event) {
+      if (event.key === 'Escape') {
+        shouldIgnoreCaptureState =
+          hasOpenOverlay() || isNonEmptySearchInput(event.target);
+      }
+    },
+    {capture: true},
+  );
+
+  window.addEventListener('keydown', function(event) {
+    if (
+      shouldIgnoreEscape(event) ||
+      event.defaultPrevented ||
+      shouldIgnoreCaptureState
+    ) {
+      return;
+    }
+    const wasBlockedOnCapture = shouldIgnoreCaptureState;
+    queueMicrotask(function() {
+      if (event.defaultPrevented || wasBlockedOnCapture) {
+        return;
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({'type': 'escapeKey'}, '*');
+      }
+    });
+  });
+})();</script><script data-bard-client-injected="true">(function() {
+  function normalizeSlug(str) {
+    try {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^p{L}p{N}s_-]/gu, '')
+        .replace(/s+/g, '-');
+    } catch (e) {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9s_-]/g, '')
+        .replace(/s+/g, '-');
+    }
+  }
+
+  function findTargetElement(hash) {
+    if (!hash || hash === '#') {
+      return null;
+    }
+    const rawId = hash.startsWith('#') ? hash.slice(1) : hash;
+    let decodedId = rawId;
+    try {
+      decodedId = decodeURIComponent(rawId);
+    } catch (e) {
+      // Ignore URI malformed errors.
+    }
+
+    // 1. Direct ID match (raw and decoded).
+    let target = document.getElementById(rawId) || document.getElementById(decodedId);
+    if (target) {
+      return target;
+    }
+
+    // 2. Name attribute match (<a name="...">).
+    try {
+      if (typeof CSS !== 'undefined' && CSS.escape) {
+        target =
+          document.querySelector('[name="' + CSS.escape(rawId) + '"]') ||
+          document.querySelector('[name="' + CSS.escape(decodedId) + '"]');
+      } else {
+        const namedElements = document.getElementsByName(rawId);
+        if (namedElements && namedElements.length > 0) {
+          return namedElements[0];
+        }
+      }
+    } catch (e) {
+      // Ignore querySelector syntax errors.
+    }
+    if (target) {
+      return target;
+    }
+
+    // 3. Match heading text by slug (for Markdown TOCs where headings lack explicit IDs).
+    const targetSlug = normalizeSlug(decodedId);
+    if (targetSlug) {
+      for (const heading of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+        if (normalizeSlug(heading.textContent || '') === targetSlug) {
+          return heading;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
+    if (
+      !href ||
+      href.trim().toLowerCase().startsWith('javascript:') ||
+      anchor.hasAttribute('download')
+    ) {
+      return;
+    }
+
+    // Check if the link is an in-page hash / anchor link.
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      const targetElement = findTargetElement(href);
+      if (targetElement) {
+        targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+      return;
+    }
+
+    // Check if the URL has the same origin/pathname but with a hash.
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      if (
+        url.hash &&
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname
+      ) {
+        event.preventDefault();
+        const targetElement = findTargetElement(url.hash);
+        if (targetElement) {
+          targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+        return;
+      }
+    } catch (e) {
+      // Fall through if URL parsing fails.
+    }
+
+    // For all external or full navigation links, prevent iframe-level navigation
+    // (which breaks in AGSA WebView or sandboxed iframes) and ensure they open
+    // safely in a new tab/window.
+    if (anchor.target !== '_blank') {
+      event.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+    }
+  }, {capture: true});
+})();</script><script data-bard-client-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NEON SURVIVOR v4 - 보스 &amp; 14종 아이템 업그레이드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=Noto+Sans+KR:wght@400;700;900&amp;display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       background-color: #0b0d17;
       color: #ffffff;
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
       overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      touch-action: none;
     }
     canvas {
       display: block;
+      width: 100%;
+      height: 100%;
       background-color: #0f1221;
     }
     #ui-layer {
@@ -32,11 +849,12 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+      z-index: 5;
     }
     /* 상단 경험치 바 & HUD */
     #xp-bar-container {
       width: 100%;
-      height: 14px;
+      height: 12px;
       background: rgba(255, 255, 255, 0.1);
       border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
@@ -44,51 +862,186 @@
       height: 100%;
       width: 0%;
       background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%);
-      box-shadow: 0 0 10px #00f2fe;
+      box-shadow: 0 0 12px #00f2fe;
       transition: width 0.15s ease-out;
     }
     #hud-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 12px 20px;
+      font-size: 15px;
       font-weight: 700;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      gap: 8px;
+    }
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .hud-badge {
-      background: rgba(15, 18, 33, 0.75);
+      background: rgba(15, 18, 33, 0.8);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 6px 14px;
+      padding: 6px 13px;
       border-radius: 999px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      backdrop-filter: blur(4px);
     }
     #timer {
       font-size: 22px;
+      font-weight: 900;
       color: #ffd166;
       font-variant-numeric: tabular-nums;
+      letter-spacing: 1px;
     }
+    /* 다운로드 버튼 */
+    .download-btn {
+      pointer-events: auto;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(99, 102, 241, 0.25));
+      border: 1px solid rgba(56, 189, 248, 0.55);
+      color: #e0f2fe;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .download-btn:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(99, 102, 241, 0.45));
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    /* 광폭화 버프 배지 */
+    #frenzy-badge {
+      position: absolute;
+      top: 62px;
+      left: 20px;
+      background: linear-gradient(90deg, rgba(234, 88, 12, 0.85), rgba(220, 38, 38, 0.85));
+      border: 1px solid #fdba74;
+      color: #fff;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 0 15px rgba(249, 115, 22, 0.7);
+      animation: pulseWarn 0.4s infinite alternate;
+    }
+    /* 보스 경고 배너 */
+    #boss-warning {
+      position: absolute;
+      top: 112px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.88), rgba(220, 38, 38, 0.1));
+      border-top: 2px solid #f87171;
+      border-bottom: 2px solid #f87171;
+      padding: 10px 40px;
+      font-size: clamp(16px, 3vw, 20px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #fef2f2;
+      text-shadow: 0 0 12px #ef4444;
+      animation: pulseWarn 0.6s infinite alternate;
+      white-space: nowrap;
+      z-index: 6;
+    }
+    @keyframes pulseWarn {
+      from { opacity: 0.7; transform: translateX(-50%) scale(0.98); }
+      to { opacity: 1; transform: translateX(-50%) scale(1.03); }
+    }
+    /* 보스 상단 대형 체력바 */
+    #boss-hud {
+      position: absolute;
+      top: 62px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(520px, 84vw);
+      background: rgba(15, 18, 33, 0.88);
+      border: 1px solid rgba(248, 113, 113, 0.55);
+      border-radius: 12px;
+      padding: 7px 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+    #boss-hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fca5a5;
+      margin-bottom: 5px;
+    }
+    #boss-hp-bg {
+      width: 100%;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.65);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #boss-hp-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #dc2626, #f97316);
+      box-shadow: 0 0 10px #ef4444;
+      transition: width 0.1s linear;
+    }
+    /* 보유 아이템 아이콘 바 */
+    #inventory-bar {
+      position: absolute;
+      bottom: 38px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 92vw;
+    }
+    .inv-slot {
+      background: rgba(15, 18, 33, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      backdrop-filter: blur(4px);
+    }
+    .inv-lv {
+      font-size: 10px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
     /* 모달 (시작, 레벨업, 게임오버) */
     .modal-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(8, 10, 20, 0.85);
-      backdrop-filter: blur(6px);
+      background: rgba(8, 10, 20, 0.86);
+      backdrop-filter: blur(8px);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       pointer-events: auto;
-      z-index: 10;
+      z-index: 20;
       padding: 20px;
     }
     .hidden {
       display: none !important;
     }
     h1 {
-      font-size: 48px;
+      font-size: clamp(32px, 6vw, 50px);
       font-weight: 900;
       letter-spacing: 2px;
       background: linear-gradient(135deg, #ff4b72, #ff9a44);
@@ -99,19 +1052,26 @@
     }
     p.subtitle {
       color: #a0aec0;
-      font-size: 16px;
-      margin-bottom: 32px;
+      font-size: clamp(14px, 2.5vw, 16px);
+      margin-bottom: 26px;
       text-align: center;
-      line-height: 1.6;
+      line-height: 1.65;
+      max-width: 560px;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
     }
     .btn {
       background: linear-gradient(135deg, #ff4b72 0%, #ff758c 100%);
       color: white;
       border: none;
-      padding: 14px 36px;
-      font-size: 18px;
+      padding: 14px 34px;
+      font-size: 17px;
       font-weight: 800;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       box-shadow: 0 8px 20px rgba(255, 75, 114, 0.4);
       transition: transform 0.15s, box-shadow 0.15s;
@@ -123,38 +1083,63 @@
     .btn:active {
       transform: translateY(1px);
     }
+    .btn-secondary {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #bae6fd;
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.28);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
+    }
+
     /* 레벨업 카드 선택 */
     #upgrade-cards {
       display: flex;
-      gap: 20px;
+      gap: 16px;
       flex-wrap: wrap;
       justify-content: center;
-      max-width: 900px;
-      margin-top: 20px;
+      max-width: 880px;
+      margin-top: 14px;
+      max-height: 70vh;
+      overflow-y: auto;
+      padding: 8px;
     }
     .card {
       background: linear-gradient(180deg, #1a1f36 0%, #121629 100%);
       border: 2px solid #2d3748;
       border-radius: 16px;
-      width: 240px;
-      padding: 24px 20px;
+      width: 235px;
+      padding: 20px 16px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 9px;
     }
     .card:hover {
       border-color: #4facfe;
-      transform: translateY(-6px);
+      transform: translateY(-5px);
       box-shadow: 0 12px 28px rgba(79, 172, 254, 0.35);
     }
+    .card-type {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .type-weapon { background: rgba(244, 63, 94, 0.2); color: #fda4af; }
+    .type-passive { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
     .card-icon {
-      font-size: 40px;
-      width: 72px;
-      height: 72px;
+      font-size: 36px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.06);
       display: flex;
@@ -162,7 +1147,7 @@
       justify-content: center;
     }
     .card-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 800;
       color: #fff;
     }
@@ -175,66 +1160,102 @@
       border-radius: 999px;
     }
     .card-desc {
-      font-size: 14px;
+      font-size: 13px;
       color: #cbd5e0;
-      line-height: 1.4;
+      line-height: 1.45;
     }
     .stats-box {
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px 32px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 18px 32px;
       margin-bottom: 24px;
       text-align: center;
-      line-height: 1.8;
-      font-size: 18px;
+      line-height: 1.85;
+      font-size: 17px;
     }
     .controls-hint {
       position: absolute;
-      bottom: 16px;
+      bottom: 12px;
       left: 50%;
       transform: translateX(-50%);
       color: rgba(255, 255, 255, 0.45);
-      font-size: 13px;
+      font-size: 12px;
+      white-space: nowrap;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" width="948" height="828"></canvas>
 
   <div id="ui-layer">
     <div id="xp-bar-container">
-      <div id="xp-bar-fill"></div>
+      <div id="xp-bar-fill" style="width: 0%;"></div>
     </div>
     <div id="hud-top">
-      <div class="hud-badge">
-        <span style="color:#4facfe;">LV.</span>
-        <span id="level-text">1</span>
+      <div class="hud-group">
+        <div class="hud-badge">
+          <span style="color:#4facfe;">LV.</span>
+          <span id="level-text">1</span>
+        </div>
+        <div class="hud-badge">
+          <span>💀</span>
+          <span id="kill-text">0</span>
+        </div>
       </div>
+
       <div id="timer">00:00</div>
-      <div class="hud-badge">
-        <span>💀</span>
-        <span id="kill-text">0</span>
+
+      <div class="hud-group">
+        <button class="download-btn" id="hud-download-btn" title="폴더에 저장하여 오프라인으로 바로 실행">
+          <span>📥</span>
+          <span>HTML 다운로드</span>
+        </button>
       </div>
     </div>
-    <div class="controls-hint">이동: WASD 또는 방향키 | 공격: 자동 발사</div>
+
+    <!-- 광폭화 버프 표시 -->
+    <div id="frenzy-badge" class="hidden">⚡ 광폭화 활성! (공속/이속 2배)</div>
+
+    <!-- 보스 등장 경고 -->
+    <div id="boss-warning" class="hidden">⚠️ BOSS APPEARED! ⚠️</div>
+
+    <!-- 보스 상단 체력바 -->
+    <div id="boss-hud" class="hidden">
+      <div id="boss-hud-header">
+        <span id="boss-name-text">LV.1 심연의 처형자</span>
+        <span id="boss-hp-text">900 / 900</span>
+      </div>
+      <div id="boss-hp-bg">
+        <div id="boss-hp-fill"></div>
+      </div>
+    </div>
+
+    <!-- 보유 아이템 슬롯 표시 -->
+    <div id="inventory-bar"></div>
+
+    <div class="controls-hint">이동: WASD / 방향키 또는 화면 드래그(터치) | 매 1분마다 강력한 보스 등장</div>
   </div>
 
   <!-- 시작 화면 -->
   <div id="start-screen" class="modal-overlay">
-    <h1>NEON SURVIVOR</h1>
+    <h1>NEON SURVIVOR v4</h1>
     <p class="subtitle">
-      사방에서 대량으로 몰려오는 몬스터 군단을 물리치고 살아남으세요.<br/>
-      무기는 자동으로 발사되며, 경험치 보석을 모아 강력한 스킬을 조합할 수 있습니다.
+      14종의 다양한 무기·패시브 아이템과 필드 보급품을 활용해 살아남으세요.<br>
+      매 <strong>1분마다</strong> 점점 더 강력해지는 거대 보스가 출현합니다!
     </p>
-    <button class="btn" id="start-btn">게임 시작</button>
+    <div class="btn-group">
+      <button class="btn" id="start-btn">게임 시작</button>
+      <button class="btn btn-secondary" id="start-download-btn">📥 HTML 다운로드</button>
+    </div>
   </div>
 
   <!-- 레벨업 선택 화면 -->
   <div id="levelup-screen" class="modal-overlay hidden">
     <h1 style="font-size: 36px; background: linear-gradient(135deg, #00f2fe, #4facfe); -webkit-background-clip: text;">LEVEL UP!</h1>
-    <p class="subtitle" style="margin-bottom: 10px;">강화할 능력을 선택하세요</p>
+    <p class="subtitle" style="margin-bottom: 8px;">새로운 무기 또는 강화 아이템을 선택하세요</p>
     <div id="upgrade-cards"></div>
   </div>
 
@@ -245,8 +1266,12 @@
       <div>생존 시간: <strong id="final-time" style="color:#ffd166;">00:00</strong></div>
       <div>달성 레벨: <strong id="final-level" style="color:#4facfe;">1</strong></div>
       <div>처치한 적: <strong id="final-kills" style="color:#ff4b72;">0</strong></div>
+      <div>처치한 보스: <strong id="final-bosses" style="color:#f97316;">0</strong></div>
     </div>
-    <button class="btn" id="restart-btn">다시 도전하기</button>
+    <div class="btn-group">
+      <button class="btn" id="restart-btn">다시 도전하기</button>
+      <button class="btn btn-secondary" id="over-download-btn">📥 HTML 다운로드</button>
+    </div>
   </div>
 
 <script>
@@ -269,91 +1294,307 @@ const startScreen = document.getElementById('start-screen');
 const levelupScreen = document.getElementById('levelup-screen');
 const gameoverScreen = document.getElementById('gameover-screen');
 const upgradeCardsContainer = document.getElementById('upgrade-cards');
+const bossWarning = document.getElementById('boss-warning');
+const bossHud = document.getElementById('boss-hud');
+const bossNameText = document.getElementById('boss-name-text');
+const bossHpText = document.getElementById('boss-hp-text');
+const bossHpFill = document.getElementById('boss-hp-fill');
+const inventoryBar = document.getElementById('inventory-bar');
+const frenzyBadge = document.getElementById('frenzy-badge');
 
-// 게임 상태
+// 게임 상태 및 밸런스 상수
+const MAX_ENEMIES = 85; // 잡몹 최대 개체 수를 쾌적하게 제한
 let gameState = 'START';
 let gameTime = 0;
 let lastTime = 0;
 let kills = 0;
+let bossKills = 0;
+let nextBossTime = 60; // 첫 보스 1분(60초) 등장
+let bossCount = 0;
+let bossWarningTimer = 0;
 let screenShake = 0;
 
-// 입력 상태
+// 키보드 입력 상태
 const keys = {};
 window.addEventListener('keydown', (e) => { keys[e.code] = true; });
 window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
+// 가상 조이스틱 (마우스 드래그 & 모바일 터치 지원)
+const joystick = {
+  active: false,
+  originX: 0,
+  originY: 0,
+  dx: 0,
+  dy: 0,
+  maxRadius: 50
+};
+
+function handlePointerDown(x, y) {
+  if (gameState !== 'PLAYING') return;
+  joystick.active = true;
+  joystick.originX = x;
+  joystick.originY = y;
+  joystick.dx = 0;
+  joystick.dy = 0;
+}
+
+function handlePointerMove(x, y) {
+  if (!joystick.active) return;
+  const diffX = x - joystick.originX;
+  const diffY = y - joystick.originY;
+  const distance = Math.hypot(diffX, diffY);
+
+  if (distance > 4) {
+    const clamped = Math.min(distance, joystick.maxRadius);
+    const angle = Math.atan2(diffY, diffX);
+    joystick.dx = Math.cos(angle) * (clamped / joystick.maxRadius);
+    joystick.dy = Math.sin(angle) * (clamped / joystick.maxRadius);
+  } else {
+    joystick.dx = 0;
+    joystick.dy = 0;
+  }
+}
+
+function handlePointerUp() {
+  joystick.active = false;
+  joystick.dx = 0;
+  joystick.dy = 0;
+}
+
+canvas.addEventListener('mousedown', (e) => handlePointerDown(e.clientX, e.clientY));
+window.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', handlePointerUp);
+
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+window.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+window.addEventListener('touchend', handlePointerUp);
+
+// 독립 실행형 HTML 파일 다운로드 기능 (폴더에 넣고 더블클릭 시 즉시 실행 가능)
+function downloadStandaloneHTML() {
+  try {
+    const cloneDoc = document.documentElement.cloneNode(true);
+    // 다운로드된 파일은 항상 깔끔한 시작 화면 상태로 열리도록 초기화
+    const sScreen = cloneDoc.querySelector('#start-screen');
+    const lScreen = cloneDoc.querySelector('#levelup-screen');
+    const gScreen = cloneDoc.querySelector('#gameover-screen');
+    const bWarn = cloneDoc.querySelector('#boss-warning');
+    const bHud = cloneDoc.querySelector('#boss-hud');
+    const fBadge = cloneDoc.querySelector('#frenzy-badge');
+    const invBar = cloneDoc.querySelector('#inventory-bar');
+
+    if (sScreen) sScreen.classList.remove('hidden');
+    if (lScreen) lScreen.classList.add('hidden');
+    if (gScreen) gScreen.classList.add('hidden');
+    if (bWarn) bWarn.classList.add('hidden');
+    if (bHud) bHud.classList.add('hidden');
+    if (fBadge) fBadge.classList.add('hidden');
+    if (invBar) invBar.innerHTML = '';
+
+    const htmlContent = '<!DOCTYPE html>\n' + cloneDoc.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'neon_survivor_v4.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('다운로드 오류:', err);
+  }
+}
+
+document.getElementById('hud-download-btn').addEventListener('click', downloadStandaloneHTML);
+document.getElementById('start-download-btn').addEventListener('click', downloadStandaloneHTML);
+document.getElementById('over-download-btn').addEventListener('click', downloadStandaloneHTML);
+
+// 엔티티 배열
 let player;
 let bullets = [];
 let enemies = [];
 let gems = [];
+let fieldItems = [];
+let lightningBolts = [];
+let shockwaves = [];
 let particles = [];
 let damageTexts = [];
 
-// 스킬 / 업그레이드 정의
+// 14종의 무기 및 패시브 아이템 정의
 const UPGRADES = [
   {
     id: 'multishot',
+    category: 'weapon',
     name: '멀티 샷',
     icon: '🔱',
-    maxLevel: 6,
-    desc: (lv) => `발사하는 마법탄 개수가 +1 증가합니다. (현재 ${lv + 1}개)`,
+    maxLevel: 7,
+    desc: (lv) => `발사하는 마법탄 개수가 +1 증가합니다. (현재 ${lv + 1}발)`,
     apply: (p) => { p.projectileCount += 1; }
   },
   {
-    id: 'firerate',
-    name: '신속의 룬',
-    icon: '⚡',
+    id: 'lightning',
+    category: 'weapon',
+    name: '연쇄 번개',
+    icon: '🌩️',
     maxLevel: 6,
-    desc: () => `공격 속도가 22% 빨라집니다.`,
-    apply: (p) => { p.fireCooldown *= 0.78; }
-  },
-  {
-    id: 'damage',
-    name: '파괴의 힘',
-    icon: '🔥',
-    maxLevel: 6,
-    desc: () => `마법탄 공격력이 +18 증가합니다.`,
-    apply: (p) => { p.damage += 18; }
-  },
-  {
-    id: 'orb',
-    name: '수호의 구체',
-    icon: '🔮',
-    maxLevel: 6,
-    desc: (lv) => lv === 0 ? `주변을 회전하며 적을 타격하는 구체를 소환합니다.` : `회전 구체 개수가 +1 증가하고 회전 속도가 빨라집니다.`,
+    desc: (lv) => lv === 0
+      ? `주기적으로 주변 적에게 연쇄 전이되는 번개를 내리칩니다.`
+      : `연쇄 번개 피해량과 전이 대상 수(+1명)가 증가합니다.`,
     apply: (p) => {
-      p.orbCount += 1;
-      p.orbSpeed += 0.55;
+      p.lightningLevel += 1;
+      p.lightningChains = 2 + p.lightningLevel;
+      p.lightningDamage += 28;
     }
   },
   {
+    id: 'aura',
+    category: 'weapon',
+    name: '화염 장판',
+    icon: '🔆',
+    maxLevel: 6,
+    desc: (lv) => lv === 0
+      ? `주변에 불타는 결계를 생성해 범위 내 적에게 지속 피해와 감속을 줍니다.`
+      : `화염 결계의 범위와 초당 화염 피해량이 크게 증가합니다.`,
+    apply: (p) => {
+      p.auraLevel += 1;
+      p.auraRadius = 85 + p.auraLevel * 22;
+      p.auraDamage += 18;
+    }
+  },
+  {
+    id: 'orb',
+    category: 'weapon',
+    name: '수호의 구체',
+    icon: '🔮',
+    maxLevel: 6,
+    desc: (lv) => lv === 0
+      ? `주변을 회전하며 적을 밀어내고 타격하는 구체를 소환합니다.`
+      : `회전 구체 개수가 +1 증가하고 회전 속도가 빨라집니다.`,
+    apply: (p) => {
+      p.orbCount += 1;
+      p.orbSpeed += 0.5;
+    }
+  },
+  {
+    id: 'pierce',
+    category: 'weapon',
+    name: '관통 화살',
+    icon: '🏹',
+    maxLevel: 5,
+    desc: () => `마법탄이 적을 +1명 더 관통하여 뒤의 적까지 타격합니다.`,
+    apply: (p) => { p.pierceCount += 1; }
+  },
+  {
+    id: 'firerate',
+    category: 'passive',
+    name: '신속의 룬',
+    icon: '⚡',
+    maxLevel: 7,
+    desc: () => `기본 마법탄 공격 속도가 20% 빨라집니다.`,
+    apply: (p) => { p.fireCooldown *= 0.8; }
+  },
+  {
+    id: 'damage',
+    category: 'passive',
+    name: '파괴의 힘',
+    icon: '🔥',
+    maxLevel: 8,
+    desc: () => `모든 공격의 기본 위력이 +20 증가합니다.`,
+    apply: (p) => { p.damage += 20; }
+  },
+  {
+    id: 'crit',
+    category: 'passive',
+    name: '치명타 비수',
+    icon: '🗡️',
+    maxLevel: 6,
+    desc: () => `치명타 확률 +12% 증가 (치명타 적중 시 2.2배 피해)`,
+    apply: (p) => { p.critChance = Math.min(0.85, p.critChance + 0.12); }
+  },
+  {
+    id: 'regen',
+    category: 'passive',
+    name: '재생의 부적',
+    icon: '🌿',
+    maxLevel: 6,
+    desc: () => `초당 체력 자동 회복량이 +2.5 증가합니다.`,
+    apply: (p) => { p.hpRegen += 2.5; }
+  },
+  {
+    id: 'aegis',
+    category: 'passive',
+    name: '성스러운 방패',
+    icon: '🛡️',
+    maxLevel: 5,
+    desc: () => `받는 피해량이 12% 감소하고 피격 시 충격파로 적을 밀쳐냅니다.`,
+    apply: (p) => {
+      p.armor = Math.min(0.65, p.armor + 0.12);
+      p.aegisLevel += 1;
+    }
+  },
+  {
+    id: 'wisdom',
+    category: 'passive',
+    name: '지식의 고서',
+    icon: '📖',
+    maxLevel: 5,
+    desc: () => `경험치 보석 획득량이 +20% 증가합니다.`,
+    apply: (p) => { p.xpMultiplier += 0.20; }
+  },
+  {
     id: 'speed',
+    category: 'passive',
     name: '바람의 장화',
     icon: '👟',
     maxLevel: 5,
-    desc: () => `이동 속도가 15% 증가합니다.`,
+    desc: () => `캐릭터 이동 속도가 15% 증가합니다.`,
     apply: (p) => { p.speed *= 1.15; }
   },
   {
     id: 'magnet',
+    category: 'passive',
     name: '자석의 고리',
     icon: '🧲',
     maxLevel: 5,
-    desc: () => `경험치 보석 획득 반경이 45% 넓어집니다.`,
+    desc: () => `경험치 보석 및 필드 아이템 흡수 반경이 45% 넓어집니다.`,
     apply: (p) => { p.pickupRadius *= 1.45; }
   },
   {
     id: 'heal',
+    category: 'passive',
     name: '생명의 성배',
     icon: '💖',
     maxLevel: 99,
-    desc: () => `최대 체력이 25 증가하고 체력을 모두 회복합니다.`,
+    desc: () => `최대 체력이 30 증가하고 체력을 100% 회복합니다.`,
     apply: (p) => {
-      p.maxHp += 25;
+      p.maxHp += 30;
       p.hp = p.maxHp;
     }
   }
 ];
+
+// 맵에 드랍되는 4종의 필드 아이템 정의
+const FIELD_ITEM_TYPES = [
+  { type: 'medkit', icon: '💖', label: '구급 상자', color: '#f43f5e' },
+  { type: 'magnet', icon: '🧲', label: '초강력 자석', color: '#38bdf8' },
+  { type: 'bomb', icon: '💣', label: '신성 폭탄', color: '#f59e0b' },
+  { type: 'frenzy', icon: '⚡', label: '광폭화 물약', color: '#a855f7' }
+];
+
+const BOSS_TITLES = [
+  '심연의 처형자',
+  '핏빛 군단장',
+  '파멸의 대공작',
+  '종말의 파괴신',
+  '혼돈의 제왕'
+];
+
+let enemySpawnTimer = 0;
+let fieldItemSpawnTimer = 14;
 
 function initGame() {
   player = {
@@ -363,10 +1604,17 @@ function initGame() {
     speed: 245,
     hp: 120,
     maxHp: 120,
+    hpRegen: 0,
+    armor: 0,
+    aegisLevel: 0,
+    aegisCooldown: 0,
     xp: 0,
     nextXp: 12,
+    xpMultiplier: 1.0,
     level: 1,
-    damage: 24,
+    damage: 25,
+    critChance: 0.05,
+    pierceCount: 0,
     fireCooldown: 0.52,
     fireTimer: 0,
     projectileCount: 1,
@@ -376,6 +1624,16 @@ function initGame() {
     orbAngle: 0,
     orbSpeed: 2.8,
     orbRadius: 95,
+    lightningLevel: 0,
+    lightningTimer: 0,
+    lightningCooldown: 2.2,
+    lightningChains: 2,
+    lightningDamage: 15,
+    auraLevel: 0,
+    auraRadius: 0,
+    auraDamage: 0,
+    auraTickTimer: 0,
+    frenzyTimer: 0,
     facing: 1,
     walkCycle: 0,
     isMoving: false,
@@ -386,17 +1644,34 @@ function initGame() {
   bullets = [];
   enemies = [];
   gems = [];
+  fieldItems = [];
+  lightningBolts = [];
+  shockwaves = [];
   particles = [];
   damageTexts = [];
   gameTime = 0;
   kills = 0;
-  enemySpawnTimer = 0;
+  bossKills = 0;
+  nextBossTime = 60;
+  bossCount = 0;
+  bossWarningTimer = 0;
+  enemySpawnTimer = 0.4;
+  fieldItemSpawnTimer = 12;
+  handlePointerUp();
 
-  // 시작 시 주변에 초기 적 무리 배치
-  for (let i = 0; i < 14; i++) {
+  bossWarning.classList.add('hidden');
+  bossHud.classList.add('hidden');
+  frenzyBadge.classList.add('hidden');
+
+  // 초기 잡몹 수를 6마리로 줄여 쾌적하게 시작
+  for (let i = 0; i < 6; i++) {
     spawnEnemy();
   }
 
+  // 시작 근처에 첫 필드 아이템 1개 배치
+  spawnFieldItem(220);
+
+  updateInventoryUI();
   updateHUD();
 }
 
@@ -426,14 +1701,30 @@ function addParticles(x, y, color, count = 8) {
   }
 }
 
-function addDamageText(x, y, text, color = '#fff') {
+function addDamageText(x, y, text, color = '#fff', isCrit = false) {
   if (damageTexts.length > 60) damageTexts.shift();
   damageTexts.push({
     x: x + (Math.random() - 0.5) * 16,
-    y: y - 14,
-    text,
-    color,
-    life: 0.55
+    y: y - 16,
+    text: isCrit ? `💥${text}!` : `${text}`,
+    color: isCrit ? '#facc15' : color,
+    isCrit,
+    life: 0.6
+  });
+}
+
+// 보유 아이템 슬롯 UI 갱신
+function updateInventoryUI() {
+  inventoryBar.innerHTML = '';
+  UPGRADES.forEach(u => {
+    const lv = player.upgradeLevels[u.id];
+    if (lv > 0 && u.id !== 'heal') {
+      const slot = document.createElement('div');
+      slot.className = 'inv-slot';
+      slot.title = u.name;
+      slot.innerHTML = `<span>${u.icon}</span><span class="inv-lv">Lv.${lv}</span>`;
+      inventoryBar.appendChild(slot);
+    }
   });
 }
 
@@ -447,6 +1738,7 @@ function drawHumanoid(ctx, x, y, options) {
     headColor = '#fde68a',
     cloakColor = null,
     armorColor = null,
+    crownColor = null,
     eyeColor = '#0f172a',
     hitFlash = false
   } = options;
@@ -475,7 +1767,7 @@ function drawHumanoid(ctx, x, y, options) {
   ctx.lineTo(-swing * 0.8, 6 - bob);
   ctx.stroke();
 
-  // 다리 (좌우 교차)
+  // 다리
   ctx.strokeStyle = fillOverride || '#1e293b';
   ctx.lineWidth = 4.5;
   ctx.beginPath();
@@ -485,12 +1777,12 @@ function drawHumanoid(ctx, x, y, options) {
   ctx.lineTo(3 + swing, 15);
   ctx.stroke();
 
-  // 망토 (플레이어 등)
+  // 망토
   if (cloakColor) {
     ctx.fillStyle = fillOverride || cloakColor;
     ctx.beginPath();
     ctx.moveTo(-2, -6 - bob);
-    ctx.lineTo(-12 - Math.abs(swing) * 0.4, 11 - bob);
+    ctx.lineTo(-13 - Math.abs(swing) * 0.4, 12 - bob);
     ctx.lineTo(-2, 10 - bob);
     ctx.closePath();
     ctx.fill();
@@ -502,12 +1794,12 @@ function drawHumanoid(ctx, x, y, options) {
   ctx.roundRect(-6, -7 - bob, 12, 15, 4);
   ctx.fill();
 
-  // 어깨 갑옷 (거대 탱커형 몬스터 등)
+  // 어깨 갑옷
   if (armorColor) {
     ctx.fillStyle = fillOverride || armorColor;
     ctx.beginPath();
-    ctx.arc(-6, -5 - bob, 5, 0, Math.PI * 2);
-    ctx.arc(6, -5 - bob, 5, 0, Math.PI * 2);
+    ctx.arc(-6, -5 - bob, 5.5, 0, Math.PI * 2);
+    ctx.arc(6, -5 - bob, 5.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -517,7 +1809,20 @@ function drawHumanoid(ctx, x, y, options) {
   ctx.arc(0, -14 - bob, 7, 0, Math.PI * 2);
   ctx.fill();
 
-  // 눈 (바라보는 방향 표시)
+  // 보스 왕관
+  if (crownColor) {
+    ctx.fillStyle = fillOverride || crownColor;
+    ctx.beginPath();
+    ctx.moveTo(-6, -19 - bob);
+    ctx.lineTo(-4, -26 - bob);
+    ctx.lineTo(0, -21 - bob);
+    ctx.lineTo(4, -26 - bob);
+    ctx.lineTo(6, -19 - bob);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 눈
   ctx.fillStyle = fillOverride || eyeColor;
   ctx.fillRect(2, -16 - bob, 2.5, 2.5);
 
@@ -532,69 +1837,148 @@ function drawHumanoid(ctx, x, y, options) {
   ctx.restore();
 }
 
-// 대량 적 스폰 로직
-let enemySpawnTimer = 0;
-const MAX_ENEMIES = 260;
+// 보스 스폰 함수 (1분마다 출현, 점점 강해짐)
+function spawnBoss() {
+  bossCount++;
+  const angle = Math.random() * Math.PI * 2;
+  const spawnDist = Math.max(canvas.width, canvas.height) * 0.52 + 40;
+  const x = player.x + Math.cos(angle) * spawnDist;
+  const y = player.y + Math.sin(angle) * spawnDist;
 
+  const hpMultiplier = Math.pow(1.65, bossCount - 1);
+  const maxHp = Math.round(900 * hpMultiplier);
+  const speed = Math.min(145, 78 + (bossCount - 1) * 9);
+  const damage = Math.round(24 + (bossCount - 1) * 8);
+  const title = BOSS_TITLES[(bossCount - 1) % BOSS_TITLES.length];
+
+  enemies.push({
+    type: 'boss',
+    bossLevel: bossCount,
+    name: `LV.${bossCount} ${title}`,
+    x, y,
+    radius: 34,
+    speed: speed,
+    hp: maxHp,
+    maxHp: maxHp,
+    damage: damage,
+    xpValue: 50 * bossCount,
+    color: '#ef4444',
+    hitFlash: 0,
+    facing: 1,
+    walkCycle: 0
+  });
+
+  bossWarningTimer = 3.2;
+  bossWarning.textContent = `⚠️ LV.${bossCount} ${title} 출현! ⚠️`;
+  bossWarning.classList.remove('hidden');
+  screenShake = 12;
+}
+
+// 일반 잡몹 스폰 (개체 수 및 빈도를 쾌적하게 조절)
 function spawnEnemy() {
   if (enemies.length >= MAX_ENEMIES) return;
 
   const angle = Math.random() * Math.PI * 2;
-  const spawnDist = Math.max(canvas.width, canvas.height) * 0.58 + 50;
+  const spawnDist = Math.max(canvas.width, canvas.height) * 0.56 + 45;
   const x = player.x + Math.cos(angle) * spawnDist;
   const y = player.y + Math.sin(angle) * spawnDist;
 
   const difficulty = 1 + gameTime / 50;
   const rand = Math.random();
 
-  if (gameTime > 25 && rand < 0.14) {
-    // 거대 중갑 기사 (보라색 탱커)
+  if (gameTime > 25 && rand < 0.15) {
     enemies.push({
       type: 'tank',
       x, y,
       radius: 22,
-      speed: 62 + Math.min(38, gameTime * 0.18),
+      speed: 62 + Math.min(35, gameTime * 0.18),
       hp: 110 * difficulty,
       maxHp: 110 * difficulty,
       damage: 18,
-      xpValue: 10,
+      xpValue: 12,
       color: '#a855f7',
       hitFlash: 0,
       facing: 1,
       walkCycle: Math.random() * 6
     });
-  } else if (gameTime > 10 && rand < 0.38) {
-    // 빠른 암살자 (주황색 돌진형)
+  } else if (gameTime > 12 && rand < 0.38) {
     enemies.push({
       type: 'runner',
       x, y,
       radius: 13,
-      speed: 138 + Math.min(55, gameTime * 0.25),
+      speed: 135 + Math.min(50, gameTime * 0.25),
       hp: 20 * difficulty,
       maxHp: 20 * difficulty,
       damage: 9,
-      xpValue: 4,
+      xpValue: 5,
       color: '#fb923c',
       hitFlash: 0,
       facing: 1,
       walkCycle: Math.random() * 6
     });
   } else {
-    // 일반 언데드 병사 (초록/붉은빛 인간형)
     enemies.push({
       type: 'normal',
       x, y,
       radius: 15,
-      speed: 90 + Math.min(48, gameTime * 0.22),
+      speed: 88 + Math.min(45, gameTime * 0.22),
       hp: 30 * difficulty,
       maxHp: 30 * difficulty,
       damage: 11,
-      xpValue: 3,
+      xpValue: 4,
       color: '#f43f5e',
       hitFlash: 0,
       facing: 1,
       walkCycle: Math.random() * 6
     });
+  }
+}
+
+// 필드 아이템 스폰 함수
+function spawnFieldItem(customDist = null) {
+  if (fieldItems.length >= 4) return;
+  const angle = Math.random() * Math.PI * 2;
+  const spawnDist = customDist || (260 + Math.random() * 340);
+  const itemDef = FIELD_ITEM_TYPES[Math.floor(Math.random() * FIELD_ITEM_TYPES.length)];
+
+  fieldItems.push({
+    ...itemDef,
+    x: player.x + Math.cos(angle) * spawnDist,
+    y: player.y + Math.sin(angle) * spawnDist,
+    radius: 16,
+    pulse: Math.random() * Math.PI * 2
+  });
+}
+
+// 필드 아이템 획득 효과 처리
+function collectFieldItem(item) {
+  addParticles(item.x, item.y, item.color, 18);
+
+  if (item.type === 'medkit') {
+    const healAmt = Math.min(player.maxHp - player.hp, 45);
+    player.hp = Math.min(player.maxHp, player.hp + 45);
+    addDamageText(player.x, player.y - 12, `체력 +${Math.round(healAmt || 45)}`, '#4ade80');
+  } else if (item.type === 'magnet') {
+    gems.forEach(g => { g.magnetized = true; });
+    addDamageText(player.x, player.y - 12, '초강력 자석 발동!', '#38bdf8');
+  } else if (item.type === 'bomb') {
+    screenShake = 14;
+    shockwaves.push({ x: player.x, y: player.y, radius: 10, maxRadius: 650, color: '#f59e0b', life: 0.45 });
+    enemies.forEach(e => {
+      if (e.type === 'boss') {
+        const dmg = Math.round(e.maxHp * 0.2);
+        e.hp -= dmg;
+        e.hitFlash = 0.15;
+        addDamageText(e.x, e.y, dmg, '#fbbf24', true);
+      } else {
+        e.hp = 0;
+      }
+    });
+    addDamageText(player.x, player.y - 12, '신성 폭탄 폭발!', '#fbbf24');
+  } else if (item.type === 'frenzy') {
+    player.frenzyTimer = 7.0;
+    frenzyBadge.classList.remove('hidden');
+    addDamageText(player.x, player.y - 12, '광폭화 모드 (7초)!', '#c084fc');
   }
 }
 
@@ -611,6 +1995,7 @@ function getNearestEnemy() {
   return nearest;
 }
 
+// 기본 마법탄 발사 (관통 및 치명타 반영)
 function fireProjectiles() {
   const target = getNearestEnemy();
   if (!target) return;
@@ -629,13 +2014,64 @@ function fireProjectiles() {
       vy: Math.sin(angle) * player.projectileSpeed,
       radius: 6,
       damage: player.damage,
+      pierceLeft: player.pierceCount,
+      hitSet: new Set(),
       life: 1.5
     });
   }
 }
 
+// 연쇄 번개 발사 스킬
+function triggerChainLightning() {
+  if (enemies.length === 0) return;
+
+  // 사거리 360 이내 가장 가까운 적 탐색
+  let currentTarget = null;
+  let minDist = 360;
+  for (const e of enemies) {
+    const d = dist(player.x, player.y, e.x, e.y);
+    if (d < minDist) {
+      minDist = d;
+      currentTarget = e;
+    }
+  }
+  if (!currentTarget) return;
+
+  const visited = new Set();
+  const points = [{ x: player.x, y: player.y - 10 }];
+  const totalDamage = player.lightningDamage + player.damage * 0.6;
+
+  for (let c = 0; c < player.lightningChains && currentTarget; c++) {
+    visited.add(currentTarget);
+    points.push({ x: currentTarget.x, y: currentTarget.y });
+
+    const isCrit = Math.random() < player.critChance;
+    const finalDmg = Math.round(totalDamage * (isCrit ? 2.2 : 1));
+    currentTarget.hp -= finalDmg;
+    currentTarget.hitFlash = 0.12;
+    addDamageText(currentTarget.x, currentTarget.y, finalDmg, '#7dd3fc', isCrit);
+    addParticles(currentTarget.x, currentTarget.y, '#38bdf8', 5);
+
+    // 다음 연쇄 대상 탐색
+    let nextTarget = null;
+    let nextMinDist = 220;
+    for (const e of enemies) {
+      if (visited.has(e) || e.hp <= 0) continue;
+      const d = dist(currentTarget.x, currentTarget.y, e.x, e.y);
+      if (d < nextMinDist) {
+        nextMinDist = d;
+        nextTarget = e;
+      }
+    }
+    currentTarget = nextTarget;
+  }
+
+  lightningBolts.push({ points, life: 0.22, maxLife: 0.22 });
+}
+
 function triggerLevelUp() {
   gameState = 'LEVELUP';
+  handlePointerUp();
   upgradeCardsContainer.innerHTML = '';
 
   const available = UPGRADES.filter(u => player.upgradeLevels[u.id] < u.maxLevel);
@@ -645,7 +2081,11 @@ function triggerLevelUp() {
     const currentLv = player.upgradeLevels[upg.id];
     const card = document.createElement('div');
     card.className = 'card';
+    const typeLabel = upg.category === 'weapon' ? '무기 / 액티브' : '패시브 / 스탯';
+    const typeClass = upg.category === 'weapon' ? 'type-weapon' : 'type-passive';
+
     card.innerHTML = `
+      <span class="card-type ${typeClass}">${typeLabel}</span>
       <div class="card-icon">${upg.icon}</div>
       <div class="card-level">${upg.id === 'heal' ? '즉시 효과' : `LV. ${currentLv} → ${currentLv + 1}`}</div>
       <div class="card-title">${upg.name}</div>
@@ -654,6 +2094,7 @@ function triggerLevelUp() {
     card.onclick = () => {
       upg.apply(player);
       player.upgradeLevels[upg.id]++;
+      updateInventoryUI();
       levelupScreen.classList.add('hidden');
       gameState = 'PLAYING';
       lastTime = performance.now();
@@ -671,13 +2112,53 @@ function updateHUD() {
   levelText.textContent = player.level;
   timerText.textContent = formatTime(gameTime);
   killText.textContent = kills;
+
+  // 보스 체력바 표시
+  const activeBosses = enemies.filter(e => e.type === 'boss');
+  if (activeBosses.length > 0) {
+    const boss = activeBosses[activeBosses.length - 1];
+    bossHud.classList.remove('hidden');
+    bossNameText.textContent = boss.name;
+    bossHpText.textContent = `${Math.max(0, Math.ceil(boss.hp)).toLocaleString()} / ${boss.maxHp.toLocaleString()}`;
+    bossHpFill.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+  } else {
+    bossHud.classList.add('hidden');
+  }
 }
 
 function update(dt) {
   gameTime += dt;
   if (screenShake > 0) screenShake = Math.max(0, screenShake - dt * 25);
+  if (player.aegisCooldown > 0) player.aegisCooldown -= dt;
 
-  // 1. 플레이어 이동 및 걷기 애니메이션
+  // 광폭화 버프 타이머
+  if (player.frenzyTimer > 0) {
+    player.frenzyTimer -= dt;
+    if (player.frenzyTimer <= 0) {
+      frenzyBadge.classList.add('hidden');
+    }
+  }
+  const frenzyMult = player.frenzyTimer > 0 ? 1.75 : 1.0;
+
+  // 체력 자동 재생 (재생의 부적)
+  if (player.hpRegen > 0 && player.hp < player.maxHp) {
+    player.hp = Math.min(player.maxHp, player.hp + player.hpRegen * dt);
+  }
+
+  if (bossWarningTimer > 0) {
+    bossWarningTimer -= dt;
+    if (bossWarningTimer <= 0) {
+      bossWarning.classList.add('hidden');
+    }
+  }
+
+  // 매 1분(60초)마다 보스 스폰
+  if (gameTime >= nextBossTime) {
+    spawnBoss();
+    nextBossTime += 60;
+  }
+
+  // 1. 플레이어 이동 (키보드 + 가상 조이스틱)
   let moveX = 0;
   let moveY = 0;
   if (keys['KeyW'] || keys['ArrowUp']) moveY -= 1;
@@ -685,42 +2166,83 @@ function update(dt) {
   if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
   if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
 
+  const currentSpeed = player.speed * (player.frenzyTimer > 0 ? 1.45 : 1.0);
+
   if (moveX !== 0 || moveY !== 0) {
     const len = Math.hypot(moveX, moveY);
-    player.x += (moveX / len) * player.speed * dt;
-    player.y += (moveY / len) * player.speed * dt;
+    player.x += (moveX / len) * currentSpeed * dt;
+    player.y += (moveY / len) * currentSpeed * dt;
     if (moveX < 0) player.facing = -1;
     if (moveX > 0) player.facing = 1;
     player.walkCycle += dt * 13;
+    player.isMoving = true;
+  } else if (joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) {
+    player.x += joystick.dx * currentSpeed * dt;
+    player.y += joystick.dy * currentSpeed * dt;
+    if (joystick.dx < -0.05) player.facing = -1;
+    if (joystick.dx > 0.05) player.facing = 1;
+    player.walkCycle += dt * 13 * Math.hypot(joystick.dx, joystick.dy);
     player.isMoving = true;
   } else {
     player.isMoving = false;
     player.walkCycle = 0;
   }
 
-  // 2. 자동 발사
-  player.fireTimer -= dt;
+  // 2. 기본 마법탄 자동 발사
+  player.fireTimer -= dt * frenzyMult;
   if (player.fireTimer <= 0 && enemies.length > 0) {
     fireProjectiles();
     player.fireTimer = player.fireCooldown;
   }
 
-  // 3. 수호의 구체 회전
-  if (player.orbCount > 0) {
-    player.orbAngle += player.orbSpeed * dt;
+  // 3. 연쇄 번개 발사
+  if (player.lightningLevel > 0) {
+    player.lightningTimer -= dt * frenzyMult;
+    if (player.lightningTimer <= 0 && enemies.length > 0) {
+      triggerChainLightning();
+      player.lightningTimer = player.lightningCooldown;
+    }
   }
 
-  // 4. 적 대량 스폰 (한 번에 무리 지어 등장)
+  // 4. 화염 장판(Inferno Aura) 지속 피해
+  if (player.auraLevel > 0) {
+    player.auraTickTimer -= dt;
+    if (player.auraTickTimer <= 0) {
+      player.auraTickTimer = 0.45;
+      const tickDmg = Math.round((player.auraDamage + player.damage * 0.25) * 0.45);
+      for (const e of enemies) {
+        if (dist(player.x, player.y, e.x, e.y) <= player.auraRadius + e.radius) {
+          e.hp -= tickDmg;
+          e.hitFlash = 0.06;
+          addDamageText(e.x, e.y, tickDmg, '#fb923c', false);
+        }
+      }
+    }
+  }
+
+  // 5. 수호의 구체 회전
+  if (player.orbCount > 0) {
+    player.orbAngle += player.orbSpeed * frenzyMult * dt;
+  }
+
+  // 6. 잡몹 스폰 (개체 수를 줄여 쾌적한 플레이 제공)
   enemySpawnTimer -= dt;
   if (enemySpawnTimer <= 0) {
-    const batchCount = 2 + Math.floor(gameTime / 15);
+    const batchCount = 1 + Math.floor(gameTime / 35);
     for (let b = 0; b < batchCount; b++) {
       spawnEnemy();
     }
-    enemySpawnTimer = Math.max(0.22, 0.75 - gameTime * 0.006);
+    enemySpawnTimer = Math.max(0.55, 1.35 - gameTime * 0.006);
   }
 
-  // 5. 총알 업데이트 및 적 충돌
+  // 7. 필드 아이템 주기적 스폰
+  fieldItemSpawnTimer -= dt;
+  if (fieldItemSpawnTimer <= 0) {
+    spawnFieldItem();
+    fieldItemSpawnTimer = 17;
+  }
+
+  // 8. 마법탄 업데이트 및 관통/치명타 충돌
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
     b.x += b.vx * dt;
@@ -734,43 +2256,76 @@ function update(dt) {
 
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
+      if (b.hitSet.has(e)) continue;
+
       if (dist(b.x, b.y, e.x, e.y) < b.radius + e.radius) {
-        e.hp -= b.damage;
+        b.hitSet.add(e);
+        const isCrit = Math.random() < player.critChance;
+        const finalDmg = Math.round(b.damage * (isCrit ? 2.2 : 1));
+        e.hp -= finalDmg;
         e.hitFlash = 0.08;
-        addDamageText(e.x, e.y, Math.round(b.damage), '#fff');
-        addParticles(b.x, b.y, '#00f2fe', 4);
-        bullets.splice(i, 1);
-        break;
+        addDamageText(e.x, e.y, finalDmg, e.type === 'boss' ? '#fbbf24' : '#fff', isCrit);
+        addParticles(b.x, b.y, isCrit ? '#facc15' : '#00f2fe', 4);
+
+        if (b.pierceLeft > 0) {
+          b.pierceLeft--;
+        } else {
+          bullets.splice(i, 1);
+          break;
+        }
       }
     }
   }
 
-  // 6. 적 이동, 겹침 방지(군집 밀어내기), 플레이어 충돌
+  // 9. 적 이동 및 플레이어 충돌
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (e.hitFlash > 0) e.hitFlash -= dt;
 
     if (e.hp <= 0) {
       kills++;
-      addParticles(e.x, e.y, e.color, 8);
-      gems.push({
-        x: e.x,
-        y: e.y,
-        value: e.xpValue,
-        radius: e.xpValue >= 10 ? 7 : 5,
-        color: e.xpValue >= 10 ? '#ffd166' : '#00f5d4'
-      });
+      if (e.type === 'boss') {
+        bossKills++;
+        screenShake = 15;
+        addParticles(e.x, e.y, '#fbbf24', 32);
+        for (let gIdx = 0; gIdx < 10; gIdx++) {
+          gems.push({
+            x: e.x + (Math.random() - 0.5) * 60,
+            y: e.y + (Math.random() - 0.5) * 60,
+            value: Math.ceil(e.xpValue / 10),
+            radius: 8,
+            color: '#f59e0b',
+            magnetized: false
+          });
+        }
+      } else {
+        addParticles(e.x, e.y, e.color, 8);
+        gems.push({
+          x: e.x,
+          y: e.y,
+          value: e.xpValue,
+          radius: e.xpValue >= 10 ? 7 : 5,
+          color: e.xpValue >= 10 ? '#ffd166' : '#00f5d4',
+          magnetized: false
+        });
+      }
       enemies.splice(i, 1);
       continue;
     }
 
     const dx = player.x - e.x;
     const dy = player.y - e.y;
+    const dToPlayer = Math.hypot(dx, dy);
     const angle = Math.atan2(dy, dx);
-    e.x += Math.cos(angle) * e.speed * dt;
-    e.y += Math.sin(angle) * e.speed * dt;
+
+    // 화염 장판 안에 있는 적은 이동 속도 25% 감소
+    const inAura = player.auraLevel > 0 && dToPlayer <= player.auraRadius + e.radius;
+    const moveSpeed = inAura ? e.speed * 0.75 : e.speed;
+
+    e.x += Math.cos(angle) * moveSpeed * dt;
+    e.y += Math.sin(angle) * moveSpeed * dt;
     e.facing = dx >= 0 ? 1 : -1;
-    e.walkCycle += dt * (e.speed * 0.11);
+    e.walkCycle += dt * (moveSpeed * 0.11);
 
     // 수호의 구체 충돌
     if (player.orbCount > 0) {
@@ -781,16 +2336,31 @@ function update(dt) {
         if (dist(ox, oy, e.x, e.y) < 12 + e.radius) {
           e.hp -= player.damage * 1.25 * dt * 10;
           e.hitFlash = 0.05;
-          e.x -= Math.cos(angle) * 140 * dt;
-          e.y -= Math.sin(angle) * 140 * dt;
+          const knockback = e.type === 'boss' ? 20 : 140;
+          e.x -= Math.cos(angle) * knockback * dt;
+          e.y -= Math.sin(angle) * knockback * dt;
         }
       }
     }
 
-    // 플레이어 피격
-    if (dist(player.x, player.y, e.x, e.y) < player.radius + e.radius - 2) {
-      player.hp -= e.damage * dt * 2.2;
-      screenShake = 5;
+    // 플레이어 피격 (성스러운 방패 피해 감소 및 충격파 반영)
+    if (dToPlayer < player.radius + e.radius - 2) {
+      const incomingDmg = e.damage * (1 - player.armor) * dt * 2.2;
+      player.hp -= incomingDmg;
+      screenShake = e.type === 'boss' ? 8 : 4;
+
+      if (player.aegisLevel > 0 && player.aegisCooldown <= 0) {
+        player.aegisCooldown = 2.0;
+        shockwaves.push({ x: player.x, y: player.y, radius: 10, maxRadius: 150, color: '#38bdf8', life: 0.3 });
+        enemies.forEach(other => {
+          if (other.type !== 'boss' && dist(player.x, player.y, other.x, other.y) < 150) {
+            const pushAng = Math.atan2(other.y - player.y, other.x - player.x);
+            other.x += Math.cos(pushAng) * 75;
+            other.y += Math.sin(pushAng) * 75;
+          }
+        });
+      }
+
       if (player.hp <= 0) {
         player.hp = 0;
         gameOver();
@@ -799,19 +2369,38 @@ function update(dt) {
     }
   }
 
-  // 7. 경험치 보석 흡수
+  // 10. 필드 아이템 획득 체크
+  for (let i = fieldItems.length - 1; i >= 0; i--) {
+    const item = fieldItems[i];
+    item.pulse += dt * 4;
+    const d = dist(player.x, player.y, item.x, item.y);
+
+    if (d < player.pickupRadius * 0.85) {
+      const ang = Math.atan2(player.y - item.y, player.x - item.x);
+      item.x += Math.cos(ang) * 320 * dt;
+      item.y += Math.sin(ang) * 320 * dt;
+    }
+
+    if (d < player.radius + item.radius + 6) {
+      collectFieldItem(item);
+      fieldItems.splice(i, 1);
+    }
+  }
+
+  // 11. 경험치 보석 흡수 (지식의 고서 경험치 배율 반영)
   for (let i = gems.length - 1; i >= 0; i--) {
     const g = gems[i];
     const d = dist(player.x, player.y, g.x, g.y);
 
-    if (d < player.pickupRadius) {
+    if (g.magnetized || d < player.pickupRadius) {
       const angle = Math.atan2(player.y - g.y, player.x - g.x);
-      g.x += Math.cos(angle) * 450 * dt;
-      g.y += Math.sin(angle) * 450 * dt;
+      const pullSpeed = g.magnetized ? 680 : 450;
+      g.x += Math.cos(angle) * pullSpeed * dt;
+      g.y += Math.sin(angle) * pullSpeed * dt;
     }
 
     if (d < player.radius + g.radius + 6) {
-      player.xp += g.value;
+      player.xp += g.value * player.xpMultiplier;
       gems.splice(i, 1);
 
       if (player.xp >= player.nextXp) {
@@ -825,7 +2414,19 @@ function update(dt) {
     }
   }
 
-  // 8. 파티클 & 데미지 텍스트 업데이트
+  // 12. 이펙트 업데이트 (번개, 충격파, 파티클, 텍스트)
+  for (let i = lightningBolts.length - 1; i >= 0; i--) {
+    lightningBolts[i].life -= dt;
+    if (lightningBolts[i].life <= 0) lightningBolts.splice(i, 1);
+  }
+
+  for (let i = shockwaves.length - 1; i >= 0; i--) {
+    const sw = shockwaves[i];
+    sw.life -= dt;
+    sw.radius += (sw.maxRadius - sw.radius) * 10 * dt;
+    if (sw.life <= 0) shockwaves.splice(i, 1);
+  }
+
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx * dt;
@@ -842,6 +2443,23 @@ function update(dt) {
   }
 
   updateHUD();
+}
+
+// 개별 적 머리 위 미니 체력바 그리기
+function drawEnemyHpBar(ctx, e) {
+  if (e.hp >= e.maxHp && e.type !== 'boss') return;
+
+  const isBoss = e.type === 'boss';
+  const barW = isBoss ? 68 : (e.type === 'tank' ? 38 : 26);
+  const barH = isBoss ? 7 : 4;
+  const offsetY = isBoss ? -52 : (e.type === 'tank' ? -34 : -24);
+  const pct = Math.max(0, e.hp / e.maxHp);
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.fillRect(e.x - barW / 2 - 1, e.y + offsetY - 1, barW + 2, barH + 2);
+
+  ctx.fillStyle = isBoss ? '#f59e0b' : '#ef4444';
+  ctx.fillRect(e.x - barW / 2, e.y + offsetY, barW * pct, barH);
 }
 
 function draw() {
@@ -882,6 +2500,59 @@ function draw() {
   ctx.strokeStyle = 'rgba(0, 242, 254, 0.08)';
   ctx.stroke();
 
+  // 화염 장판(Inferno Aura) 결계 렌더링
+  if (player.auraLevel > 0) {
+    const grad = ctx.createRadialGradient(player.x, player.y, player.auraRadius * 0.2, player.x, player.y, player.auraRadius);
+    grad.addColorStop(0, 'rgba(249, 115, 22, 0.04)');
+    grad.addColorStop(0.75, 'rgba(234, 88, 12, 0.16)');
+    grad.addColorStop(1, 'rgba(239, 68, 68, 0.35)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.auraRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 충격파 렌더링
+  for (const sw of shockwaves) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, sw.life * 2);
+    ctx.strokeStyle = sw.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 필드 아이템 렌더링
+  for (const item of fieldItems) {
+    const bobY = Math.sin(item.pulse) * 4;
+    const glowR = 20 + Math.sin(item.pulse * 1.5) * 4;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(item.x, item.y + bobY, glowR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.icon, item.x, item.y + bobY);
+
+    ctx.font = 'bold 11px "Noto Sans KR", sans-serif';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(item.label, item.x, item.y + bobY + 24);
+    ctx.restore();
+  }
+
   // 경험치 보석
   for (const g of gems) {
     ctx.beginPath();
@@ -910,7 +2581,26 @@ function draw() {
   for (const item of renderList) {
     if (item.kind === 'enemy') {
       const e = item.data;
-      if (e.type === 'tank') {
+      if (e.type === 'boss') {
+        ctx.beginPath();
+        ctx.arc(e.x, e.y + 8, 36, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        drawHumanoid(ctx, e.x, e.y, {
+          scale: 2.25,
+          facing: e.facing,
+          walkCycle: e.walkCycle,
+          bodyColor: '#991b1b',
+          headColor: '#fca5a5',
+          cloakColor: '#450a0a',
+          armorColor: '#f59e0b',
+          crownColor: '#fbbf24',
+          eyeColor: '#fef08a',
+          hitFlash: e.hitFlash > 0
+        });
+      } else if (e.type === 'tank') {
         drawHumanoid(ctx, e.x, e.y, {
           scale: 1.45,
           facing: e.facing,
@@ -943,8 +2633,18 @@ function draw() {
           hitFlash: e.hitFlash > 0
         });
       }
+      drawEnemyHpBar(ctx, e);
     } else {
-      // 플레이어 그리기 (파란 망토를 두른 인간 헌터)
+      // 광폭화 상태일 때 붉은/보라 오라 표시
+      if (player.frenzyTimer > 0) {
+        ctx.beginPath();
+        ctx.arc(player.x, player.y + 4, 24, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(192, 132, 252, 0.75)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // 플레이어 그리기
       drawHumanoid(ctx, player.x, player.y, {
         scale: 1.1,
         facing: player.facing,
@@ -967,13 +2667,38 @@ function draw() {
     }
   }
 
+  // 연쇄 번개 이펙트 렌더링
+  for (const bolt of lightningBolts) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, bolt.life / bolt.maxLife);
+    ctx.strokeStyle = '#7dd3fc';
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let i = 0; i < bolt.points.length; i++) {
+      const pt = bolt.points[i];
+      if (i === 0) {
+        ctx.moveTo(pt.x, pt.y);
+      } else {
+        const prev = bolt.points[i - 1];
+        const midX = (prev.x + pt.x) / 2 + (Math.random() - 0.5) * 24;
+        const midY = (prev.y + pt.y) / 2 + (Math.random() - 0.5) * 24;
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(pt.x, pt.y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // 총알
   for (const b of bullets) {
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#00f2fe';
+    ctx.fillStyle = b.pierceLeft > 0 ? '#fde047' : '#00f2fe';
     ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00f2fe';
+    ctx.shadowColor = b.pierceLeft > 0 ? '#fde047' : '#00f2fe';
     ctx.fill();
     ctx.shadowBlur = 0;
   }
@@ -995,23 +2720,45 @@ function draw() {
   }
 
   // 데미지 텍스트
-  ctx.font = 'bold 14px sans-serif';
   ctx.textAlign = 'center';
   for (const t of damageTexts) {
     ctx.globalAlpha = Math.min(1, t.life * 2);
+    ctx.font = t.isCrit ? '900 16px Inter, sans-serif' : 'bold 13px Inter, sans-serif';
     ctx.fillStyle = t.color;
     ctx.fillText(t.text, t.x, t.y);
   }
   ctx.globalAlpha = 1;
 
   ctx.restore();
+
+  // 가상 조이스틱 렌더링 (드래그/터치 시)
+  if (joystick.active) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(joystick.originX, joystick.originY, joystick.maxRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.strokeStyle = 'rgba(79, 172, 254, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    const knobX = joystick.originX + joystick.dx * joystick.maxRadius;
+    const knobY = joystick.originY + joystick.dy * joystick.maxRadius;
+    ctx.beginPath();
+    ctx.arc(knobX, knobY, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(79, 172, 254, 0.65)';
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function gameOver() {
   gameState = 'GAMEOVER';
+  handlePointerUp();
   document.getElementById('final-time').textContent = formatTime(gameTime);
   document.getElementById('final-level').textContent = player.level;
   document.getElementById('final-kills').textContent = kills;
+  document.getElementById('final-bosses').textContent = bossKills;
   gameoverScreen.classList.remove('hidden');
 }
 
@@ -1029,6 +2776,11 @@ function gameLoop(timestamp) {
   }
 }
 
+window.onload = () => {
+  initGame();
+  draw();
+};
+
 document.getElementById('start-btn').addEventListener('click', () => {
   startScreen.classList.add('hidden');
   initGame();
@@ -1045,5 +2797,5 @@ document.getElementById('restart-btn').addEventListener('click', () => {
   requestAnimationFrame(gameLoop);
 });
 </script>
-</body>
-</html>
+
+</body></html>
