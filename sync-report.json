@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T01:19:51.060Z",
+  "updatedAt": "2026-11-24T01:28:53.407Z",
   "skipped": [
     {
       "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
@@ -15,11 +15,6 @@
       "sourceName": "철권 스타일 격투 게임 제작 - Google Gemini - 3103김재훈.html",
       "driveId": "140hd6hYYp1eH16gmnvfI2gQiHKBYmP-K",
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)"
-    },
-    {
-      "sourceName": "fc_27_web_edition - 학생서민영.html",
-      "driveId": "15hrNcTAJYzkOr5OpuNNn-KIuYgwew3mv",
-      "reason": "파일명에서 학번·이름을 찾지 못함"
     }
   ]
 }

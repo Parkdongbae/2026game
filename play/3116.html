@@ -1,0 +1,2805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC 27 3D Web Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #070b14;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        .font-broadcast {
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: 0.04em;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.45); }
+            50% { box-shadow: 0 0 32px rgba(16, 185, 129, 0.85); }
+        }
+        .btn-kickoff {
+            animation: pulseGlow 2.2s infinite;
+        }
+        @keyframes goalSlide {
+            0% { transform: scale(0.7) translateY(20px); opacity: 0; }
+            15% { transform: scale(1.06) translateY(0); opacity: 1; }
+            85% { transform: scale(1) translateY(0); opacity: 1; }
+            100% { transform: scale(0.95) translateY(-15px); opacity: 0; }
+        }
+        .goal-banner-anim {
+            animation: goalSlide 2.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full bg-slate-950">
+
+    <!-- Main Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top Broadcast HUD (Visible during match) -->
+    <div id="hudTop" class="hidden fixed top-3 left-3 right-3 z-20 flex items-start justify-between pointer-events-none">
+        <!-- Scoreboard -->
+        <div class="flex items-center bg-slate-950/90 border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+            <div class="bg-emerald-500 text-slate-950 font-broadcast font-bold px-2.5 py-1.5 text-xs tracking-wider">
+                FC 27 3D
+            </div>
+            <!-- Home Team -->
+            <div class="flex items-center gap-2 px-3 py-1.5 border-r border-slate-800">
+                <span id="hudHomeBadge" class="w-3.5 h-3.5 rounded-full border border-white/50"></span>
+                <span id="hudHomeCode" class="font-broadcast font-bold text-sm text-white">RMA</span>
+                <span id="hudHomeScore" class="font-broadcast font-bold text-lg text-emerald-400 ml-1">0</span>
+            </div>
+            <!-- Away Team -->
+            <div class="flex items-center gap-2 px-3 py-1.5 border-r border-slate-800">
+                <span id="hudAwayScore" class="font-broadcast font-bold text-lg text-amber-400 mr-1">0</span>
+                <span id="hudAwayCode" class="font-broadcast font-bold text-sm text-white">MCI</span>
+                <span id="hudAwayBadge" class="w-3.5 h-3.5 rounded-full border border-white/50"></span>
+            </div>
+            <!-- Clock -->
+            <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/90">
+                <span id="hudHalfBadge" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">1H</span>
+                <span id="hudClock" class="font-broadcast font-bold text-base text-white tabular-nums">00:00</span>
+                <span id="hudAddedTime" class="hidden text-xs font-bold text-emerald-400">+2'</span>
+            </div>
+        </div>
+
+        <!-- Set Piece / Status Pill -->
+        <div id="hudStatusBanner" class="hidden px-4 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/50 text-emerald-300 font-broadcast text-sm tracking-wider shadow-lg">
+            KICK OFF
+        </div>
+
+        <!-- Right Controls & Radar -->
+        <div class="flex items-start gap-2 pointer-events-auto">
+            <button id="btnSoundToggle" class="px-2.5 py-1.5 rounded-lg bg-slate-900/85 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 transition">
+                🔊 ON
+            </button>
+            <button id="btnPauseMenu" class="px-2.5 py-1.5 rounded-lg bg-slate-900/85 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 transition">
+                메뉴
+            </button>
+            <!-- Mini Radar -->
+            <div class="hidden sm:block w-44 h-28 rounded-xl overflow-hidden border border-slate-700/80 bg-emerald-950/85 shadow-2xl">
+                <canvas id="radarCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Player Bar & Shot Gauge (Visible during match) -->
+    <div id="hudBottom" class="hidden fixed bottom-3 left-3 right-3 z-20 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none">
+        <!-- Active Player Card -->
+        <div class="flex items-center gap-3 bg-slate-950/90 border border-slate-700/80 rounded-xl px-3.5 py-2 shadow-xl backdrop-blur-md">
+            <div id="hudPlayerNumber" class="w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-broadcast font-bold text-base flex items-center justify-center">
+                9
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span id="hudPlayerName" class="font-bold text-xs text-white">STRIKER</span>
+                    <span id="hudFinesseBadge" class="hidden text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-600 text-white">Z 감아차기</span>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="w-32 h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
+                    <div id="hudStaminaBar" class="h-full bg-emerald-400 transition-all duration-75" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shot Power & Timed Finishing Gauge -->
+        <div id="shotGaugeWrapper" class="hidden flex flex-col items-center bg-slate-950/90 border border-slate-700 rounded-xl px-4 py-2 shadow-2xl">
+            <div class="flex items-center justify-between w-48 text-[10px] font-bold mb-1">
+                <span id="shotTypeLabel" class="text-amber-300">SHOT POWER</span>
+                <span id="timedZoneLabel" class="text-emerald-400">GREEN ZONE</span>
+            </div>
+            <div class="relative w-48 h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-600">
+                <!-- Timed finishing target zone (72% - 88%) -->
+                <div class="absolute top-0 bottom-0 bg-emerald-500/40 border-x border-emerald-300" style="left: 72%; width: 16%;"></div>
+                <div id="shotGaugeFill" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Quick Key Guide -->
+        <div class="hidden lg:flex items-center gap-2 bg-slate-950/85 border border-slate-800 rounded-xl px-3 py-2 text-[11px] text-slate-300">
+            <span><b class="text-white">방향키</b> 이동</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-emerald-400">E</b> 질주</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-sky-400">S</b> 패스/전환</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-sky-400">W</b> 스루</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-sky-400">A</b> 로빙/태클</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-amber-400">D</b> 슛/슬라이딩</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-purple-400">Z+D</b> 감아차기</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-pink-400">Q</b> 침투</span>
+            <span class="text-slate-600">|</span>
+            <span><b class="text-slate-200">드래그/R</b> 시점</span>
+        </div>
+    </div>
+
+    <!-- Goal Celebration Overlay -->
+    <div id="goalOverlay" class="hidden fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+        <div class="goal-banner-anim bg-slate-950/95 border-2 border-emerald-400 rounded-2xl px-10 py-6 text-center shadow-2xl">
+            <div class="text-xs font-bold tracking-[0.3em] text-emerald-400 uppercase mb-1">EA SPORTS FC 27</div>
+            <div class="font-broadcast text-5xl sm:text-6xl font-bold text-white tracking-wider">GOAL!</div>
+            <div id="goalScorerText" class="text-sm sm:text-base font-semibold text-slate-200 mt-2">RMA 1 - 0 MCI</div>
+        </div>
+    </div>
+
+    <!-- Kickoff Main Menu Overlay -->
+    <div id="menuOverlay" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 overflow-y-auto">
+        <div class="w-full max-w-4xl bg-slate-900/95 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden my-auto">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-slate-900 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-bold tracking-widest text-emerald-200 uppercase">NEXT-GEN 3D WEB FOOTBALL</div>
+                    <h1 class="font-broadcast text-3xl sm:text-4xl font-bold text-white tracking-wide">EA SPORTS FC 27 3D</h1>
+                </div>
+                <span class="px-3 py-1 rounded-full bg-slate-950/60 border border-white/20 text-xs font-bold text-emerald-300">
+                    3D TELE BROADCAST
+                </span>
+            </div>
+
+            <!-- Team & Settings Grid -->
+            <div class="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Home Team Selector -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">HOME (내 팀)</span>
+                        <span id="homeOvr" class="font-broadcast text-lg font-bold text-white">OVR 90</span>
+                    </div>
+                    <select id="selectHomeTeam" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500"></select>
+                    <div id="homeStatsRow" class="grid grid-cols-3 gap-2 mt-3 text-center text-xs"></div>
+                </div>
+
+                <!-- Away Team Selector -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400">AWAY (상대 AI)</span>
+                        <span id="awayOvr" class="font-broadcast text-lg font-bold text-white">OVR 91</span>
+                    </div>
+                    <select id="selectAwayTeam" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-amber-500"></select>
+                    <div id="awayStatsRow" class="grid grid-cols-3 gap-2 mt-3 text-center text-xs"></div>
+                </div>
+            </div>
+
+            <!-- Match Options -->
+            <div class="px-5 sm:px-6 pb-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div class="bg-slate-950/70 border border-emerald-500/40 rounded-xl p-3">
+                    <label class="block text-[11px] font-bold text-emerald-400 uppercase mb-1">게임 모드</label>
+                    <select id="selectGameMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white">
+                        <option value="1p" selected>1인용 (VS AI)</option>
+                        <option value="2p">2인용 (1P vs 2P)</option>
+                    </select>
+                </div>
+                <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">포메이션</label>
+                    <select id="selectFormation" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-white">
+                        <option value="4-3-3">4-3-3 공격형</option>
+                        <option value="4-4-2">4-4-2 밸런스</option>
+                        <option value="4-2-3-1">4-2-3-1 점유율</option>
+                    </select>
+                </div>
+                <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">AI 난이도</label>
+                    <select id="selectDifficulty" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-white">
+                        <option value="semipro">세미프로 (입문)</option>
+                        <option value="worldclass" selected>월드클래스 (표준)</option>
+                        <option value="legendary">레전더리 (고수)</option>
+                    </select>
+                </div>
+                <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">전/후반 시간</label>
+                    <select id="selectDuration" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-white">
+                        <option value="60">전반 1분 / 후반 1분</option>
+                        <option value="90" selected>전반 1.5분 / 후반 1.5분</option>
+                        <option value="120">전반 2분 / 후반 2분</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Controls Summary Card -->
+            <div class="mx-5 sm:mx-6 mb-5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <div class="font-bold text-emerald-400 mb-1">🎮 1P (HOME) 조작법</div>
+                    <div>• <b>방향키</b>: 이동 / <b>E</b>: 질주 / <b>Q</b>: 아군 침투</div>
+                    <div>• <b>S</b>: 패스·수비전환 / <b>W</b>: 스루 / <b>A</b>: 로빙·태클</div>
+                    <div>• <b>D</b>: 슛·슬라이딩 / <b class="text-purple-400">Z + D</b>: 감아차기</div>
+                </div>
+                <div>
+                    <div class="font-bold text-amber-400 mb-1">🕹️ 2P (AWAY 친구 대전) 조작법</div>
+                    <div>• <b>I K J L</b>: 이동 / <b>U</b>: 질주 / <b>O</b>: 아군 침투</div>
+                    <div>• <b>N</b>: 패스·수비전환 / <b>Y</b>: 스루 / <b>H</b>: 로빙·태클</div>
+                    <div>• <b>M</b>: 슛·슬라이딩 / <b class="text-purple-400">B + M</b>: 감아차기</div>
+                </div>
+            </div>
+
+            <!-- Controls Summary Card -->
+            <div class="mx-5 sm:mx-6 mb-5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                    <div class="font-bold text-emerald-400 mb-1">⚽ 공격 조작 (공 소유 시)</div>
+                    <div>• <b>방향키</b>: 드리블 이동 / <b>E</b>: 전력 질주</div>
+                    <div>• <b>S</b>: 정밀 락온 패스 / <b>W</b>: 공간 스루패스 / <b>A</b>: 로빙 크로스</div>
+                    <div>• <b>D</b>: 일반 슛 / <b class="text-purple-400">Z + D</b>: 감아차기 / <b class="text-pink-400">Q</b>: 아군 침투 지시</div>
+                </div>
+                <div>
+                    <div class="font-bold text-amber-400 mb-1">🛡️ 수비 조작 (공 미소유 시)</div>
+                    <div>• <b>S</b> 또는 <b>Shift</b>: 가까운 수비수로 커서 전환</div>
+                    <div>• <b>A</b> 또는 <b>Space</b>: 스탠딩 태클 / <b>D</b>: 슬라이딩 태클</div>
+                    <div>• <b>E</b>: 수비 전력 질주 / <b>W</b>: 골키퍼 전진 압박</div>
+                </div>
+            </div>
+
+            <!-- Start Button -->
+            <div class="px-5 sm:px-6 pb-6">
+                <button id="btnStartMatch" class="btn-kickoff w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-broadcast text-2xl font-bold tracking-wider transition cursor-pointer">
+                    킥오프 (KICK OFF)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Halftime / Fulltime Match Report Modal -->
+    <div id="reportOverlay" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+        <div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl text-center">
+            <div id="reportSubtitle" class="text-xs font-bold tracking-widest text-emerald-400 uppercase">HALF TIME</div>
+            <h2 id="reportTitle" class="font-broadcast text-3xl font-bold text-white mt-1">전반전 종료</h2>
+
+            <!-- Score Display -->
+            <div class="my-5 py-4 px-6 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-around">
+                <div>
+                    <div id="repHomeName" class="text-xs font-bold text-slate-400">HOME</div>
+                    <div id="repHomeScore" class="font-broadcast text-4xl font-bold text-emerald-400">0</div>
+                </div>
+                <div class="font-broadcast text-xl text-slate-500">VS</div>
+                <div>
+                    <div id="repAwayName" class="text-xs font-bold text-slate-400">AWAY</div>
+                    <div id="repAwayScore" class="font-broadcast text-4xl font-bold text-amber-400">0</div>
+                </div>
+            </div>
+
+            <!-- Match Stats -->
+            <div class="space-y-3 text-xs mb-6">
+                <div>
+                    <div class="flex justify-between font-bold text-slate-300 mb-1">
+                        <span id="statHomePoss">50%</span>
+                        <span class="text-slate-400">점유율 (POSSESSION)</span>
+                        <span id="statAwayPoss">50%</span>
+                    </div>
+                    <div class="w-full h-2 bg-amber-500/80 rounded-full overflow-hidden">
+                        <div id="statPossBar" class="h-full bg-emerald-400" style="width: 50%;"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-slate-800 font-semibold">
+                    <span id="statHomeShots" class="text-emerald-400">0</span>
+                    <span class="text-slate-400">슈팅 (SHOTS)</span>
+                    <span id="statAwayShots" class="text-amber-400">0</span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-slate-800 font-semibold">
+                    <span id="statHomePasses" class="text-emerald-400">0</span>
+                    <span class="text-slate-400">패스 성공 (PASSES)</span>
+                    <span id="statAwayPasses" class="text-amber-400">0</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btnReportPrimary" class="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-broadcast text-lg font-bold tracking-wider transition cursor-pointer">
+                    후반전 시작
+                </button>
+                <button id="btnReportMenu" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition cursor-pointer">
+                    메인 메뉴
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        // =========================================================================
+        // 1. MATCH CONSTANTS, TEAMS & TACTICAL FORMATIONS
+        // =========================================================================
+        const PITCH = {
+            w: 1600,
+            h: 1000,
+            centerCircleR: 130,
+            penaltyW: 240,
+            penaltyH: 520,
+            sixYardW: 85,
+            sixYardH: 240,
+            goalW: 48,
+            goalH: 152
+        };
+
+        const TEAMS = [
+            {
+                name: 'Real Madrid',
+                code: 'RMA',
+                primary: '#ffffff',
+                secondary: '#d97706',
+                gk: '#10b981',
+                att: 93,
+                mid: 90,
+                def: 88,
+                names: ['COURTOIS', 'CARVAJAL', 'RUDIGER', 'MILITAO', 'MENDY', 'TCHOUAMENI', 'VALVERDE', 'BELLINGHAM', 'RODRYGO', 'MBAPPE', 'VINICIUS JR']
+            },
+            {
+                name: 'Manchester City',
+                code: 'MCI',
+                primary: '#38bdf8',
+                secondary: '#ffffff',
+                gk: '#f59e0b',
+                att: 92,
+                mid: 92,
+                def: 89,
+                names: ['EDERSON', 'WALKER', 'DIAS', 'GVARDIOL', 'AKE', 'RODRI', 'DE BRUYNE', 'BERNARDO', 'FODEN', 'HAALAND', 'DOKU']
+            },
+            {
+                name: 'FC Barcelona',
+                code: 'BAR',
+                primary: '#1d4ed8',
+                secondary: '#dc2626',
+                gk: '#84cc16',
+                att: 90,
+                mid: 90,
+                def: 87,
+                names: ['TER STEGEN', 'KOUNDE', 'ARAUJO', 'CUBARSI', 'BALDE', 'DE JONG', 'PEDRI', 'OLMO', 'YAMAL', 'LEWANDOWSKI', 'RAPHINHA']
+            },
+            {
+                name: 'Bayern Munich',
+                code: 'BAY',
+                primary: '#dc2626',
+                secondary: '#ffffff',
+                gk: '#06b6d4',
+                att: 91,
+                mid: 89,
+                def: 88,
+                names: ['NEUER', 'KIMMICH', 'UPAMECANO', 'KIM MIN-JAE', 'DAVIES', 'PALHINHA', 'GORETZKA', 'MUSIALA', 'OLISE', 'KANE', 'SANE']
+            },
+            {
+                name: 'Arsenal',
+                code: 'ARS',
+                primary: '#ef4444',
+                secondary: '#ffffff',
+                gk: '#eab308',
+                att: 88,
+                mid: 90,
+                def: 91,
+                names: ['RAYA', 'WHITE', 'SALIBA', 'GABRIEL', 'TIMBER', 'RICE', 'ODEGAARD', 'MERINO', 'SAKA', 'HAVERTZ', 'MARTINELLI']
+            },
+            {
+                name: 'Paris Saint-Germain',
+                code: 'PSG',
+                primary: '#1e3a8a',
+                secondary: '#ef4444',
+                gk: '#14b8a6',
+                att: 89,
+                mid: 88,
+                def: 87,
+                names: ['DONNARUMMA', 'HAKIMI', 'MARQUINHOS', 'PACHO', 'MENDES', 'VITINHA', 'NEVES', 'ZAIRE-EMERY', 'DEMBELE', 'RAMOS', 'BARCOLA']
+            },
+            {
+                name: 'Tottenham Hotspur',
+                code: 'TOT',
+                primary: '#f8fafc',
+                secondary: '#1e293b',
+                gk: '#22c55e',
+                att: 88,
+                mid: 86,
+                def: 85,
+                names: ['VICARIO', 'PORRO', 'ROMERO', 'VAN DE VEN', 'UDOGIE', 'BENTANCUR', 'MADDISON', 'KULUSEVSKI', 'JOHNSON', 'SOLANKE', 'SON HEUNG-MIN']
+            },
+            {
+                name: 'Korea Republic',
+                code: 'KOR',
+                primary: '#e11d48',
+                secondary: '#0f172a',
+                gk: '#eab308',
+                att: 86,
+                mid: 85,
+                def: 84,
+                names: ['JO HYEON-WOO', 'SEOL YOUNG-WOO', 'KIM MIN-JAE', 'CHO YU-MIN', 'LEE MYUNG-JAE', 'HWANG IN-BEOM', 'PARK YONG-WOO', 'LEE JAE-SUNG', 'LEE KANG-IN', 'OH SE-HUN', 'SON HEUNG-MIN']
+            }
+        ];
+
+        const FORMATIONS = {
+            '4-3-3': [
+                { role: 'GK', x: 0.04, y: 0.50 },
+                { role: 'RB', x: 0.19, y: 0.84 },
+                { role: 'CB', x: 0.16, y: 0.63 },
+                { role: 'CB', x: 0.16, y: 0.37 },
+                { role: 'LB', x: 0.19, y: 0.16 },
+                { role: 'CDM', x: 0.31, y: 0.50 },
+                { role: 'CM', x: 0.37, y: 0.72 },
+                { role: 'CM', x: 0.37, y: 0.28 },
+                { role: 'RW', x: 0.46, y: 0.82 },
+                { role: 'ST', x: 0.48, y: 0.50 },
+                { role: 'LW', x: 0.46, y: 0.18 }
+            ],
+            '4-4-2': [
+                { role: 'GK', x: 0.04, y: 0.50 },
+                { role: 'RB', x: 0.18, y: 0.84 },
+                { role: 'CB', x: 0.16, y: 0.63 },
+                { role: 'CB', x: 0.16, y: 0.37 },
+                { role: 'LB', x: 0.18, y: 0.16 },
+                { role: 'RM', x: 0.35, y: 0.84 },
+                { role: 'CM', x: 0.33, y: 0.61 },
+                { role: 'CM', x: 0.33, y: 0.39 },
+                { role: 'LM', x: 0.35, y: 0.16 },
+                { role: 'ST', x: 0.47, y: 0.62 },
+                { role: 'ST', x: 0.47, y: 0.38 }
+            ],
+            '4-2-3-1': [
+                { role: 'GK', x: 0.04, y: 0.50 },
+                { role: 'RB', x: 0.18, y: 0.84 },
+                { role: 'CB', x: 0.16, y: 0.63 },
+                { role: 'CB', x: 0.16, y: 0.37 },
+                { role: 'LB', x: 0.18, y: 0.16 },
+                { role: 'CDM', x: 0.29, y: 0.63 },
+                { role: 'CDM', x: 0.29, y: 0.37 },
+                { role: 'RAM', x: 0.41, y: 0.80 },
+                { role: 'CAM', x: 0.40, y: 0.50 },
+                { role: 'LAM', x: 0.41, y: 0.20 },
+                { role: 'ST', x: 0.48, y: 0.50 }
+            ]
+        };
+
+        const DIFFICULTY_PARAMS = {
+            semipro: { aiSpeed: 0.78, gkReflex: 0.72, shotAcc: 0.75 },
+            worldclass: { aiSpeed: 0.92, gkReflex: 0.88, shotAcc: 0.90 },
+            legendary: { aiSpeed: 1.04, gkReflex: 1.00, shotAcc: 1.00 }
+        };
+
+        // =========================================================================
+        // 2. WEB AUDIO SYNTHESIZER (REALISTIC STADIUM & BALL PHYSICS AUDIO)
+        // =========================================================================
+        const sound = {
+            ctx: null,
+            enabled: true,
+            crowdGain: null,
+            crowdStarted: false,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                if (this.ctx && !this.crowdStarted) {
+                    this.startCrowdAmbience();
+                }
+            },
+            createNoiseBuffer(durationSec) {
+                const length = Math.floor(this.ctx.sampleRate * durationSec);
+                const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                // Pink-ish warm noise
+                let b0 = 0, b1 = 0, b2 = 0;
+                for (let i = 0; i < length; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.997 * b0 + white * 0.029;
+                    b1 = 0.985 * b1 + white * 0.032;
+                    b2 = 0.950 * b2 + white * 0.048;
+                    data[i] = (b0 + b1 + b2 + white * 0.18) * 0.5;
+                }
+                return buffer;
+            },
+            startCrowdAmbience() {
+                if (!this.ctx || this.crowdStarted) return;
+                this.crowdStarted = true;
+                const buffer = this.createNoiseBuffer(4.0);
+                const src = this.ctx.createBufferSource();
+                src.buffer = buffer;
+                src.loop = true;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 340;
+                filter.Q.value = 0.65;
+
+                this.crowdGain = this.ctx.createGain();
+                this.crowdGain.gain.value = this.enabled ? 0.13 : 0;
+
+                src.connect(filter);
+                filter.connect(this.crowdGain);
+                this.crowdGain.connect(this.ctx.destination);
+                src.start();
+            },
+            setMuted(muted) {
+                this.enabled = !muted;
+                if (this.crowdGain && this.ctx) {
+                    this.crowdGain.gain.setTargetAtTime(this.enabled ? 0.13 : 0, this.ctx.currentTime, 0.08);
+                }
+            },
+            playKick(intensity = 0.7) {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // 1. Deep leather ball body thump
+                const osc = this.ctx.createOscillator();
+                const oscGain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(125 + intensity * 45, now);
+                osc.frequency.exponentialRampToValueAtTime(34, now + 0.14);
+                oscGain.gain.setValueAtTime(0.45 * intensity, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(oscGain);
+                oscGain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+
+                // 2. Crisp boot-to-leather impact transient
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.09);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(680 + intensity * 350, now);
+                filter.Q.value = 1.1;
+                const nGain = this.ctx.createGain();
+                nGain.gain.setValueAtTime(0.32 * intensity, now);
+                nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+                noise.connect(filter);
+                filter.connect(nGain);
+                nGain.connect(this.ctx.destination);
+                noise.start(now);
+            },
+            playWhistle(long = false) {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const dur = long ? 0.68 : 0.34;
+
+                // Dual-tone stadium referee whistle with pea trill modulation
+                const carrier = this.ctx.createOscillator();
+                const carrier2 = this.ctx.createOscillator();
+                const trill = this.ctx.createOscillator();
+                const trillGain = this.ctx.createGain();
+                const masterGain = this.ctx.createGain();
+
+                carrier.type = 'sine';
+                carrier.frequency.setValueAtTime(2720, now);
+                carrier2.type = 'sine';
+                carrier2.frequency.setValueAtTime(2890, now);
+
+                // 36Hz pea trill modulation
+                trill.type = 'sine';
+                trill.frequency.setValueAtTime(36, now);
+                trillGain.gain.setValueAtTime(85, now);
+                trill.connect(trillGain);
+                trillGain.connect(carrier.frequency);
+                trillGain.connect(carrier2.frequency);
+
+                masterGain.gain.setValueAtTime(0.001, now);
+                masterGain.gain.linearRampToValueAtTime(0.11, now + 0.025);
+                masterGain.gain.setValueAtTime(0.10, now + dur - 0.05);
+                masterGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                carrier.connect(masterGain);
+                carrier2.connect(masterGain);
+                masterGain.connect(this.ctx.destination);
+
+                carrier.start(now);
+                carrier2.start(now);
+                trill.start(now);
+                carrier.stop(now + dur + 0.02);
+                carrier2.stop(now + dur + 0.02);
+                trill.stop(now + dur + 0.02);
+            },
+            playTrap() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                // Realistic soft boot sole ball-trap thud ("탁!")
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(165, now);
+                osc.frequency.exponentialRampToValueAtTime(48, now + 0.065);
+                gain.gain.setValueAtTime(0.32, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.075);
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.045);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 950;
+                const nGain = this.ctx.createGain();
+                nGain.gain.setValueAtTime(0.22, now);
+                nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+                noise.connect(filter);
+                filter.connect(nGain);
+                nGain.connect(this.ctx.destination);
+                noise.start(now);
+            },
+            playNetSwish() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                // Realistic nylon net rustle & rattle
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.36);
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1350, now);
+                filter.frequency.exponentialRampToValueAtTime(620, now + 0.34);
+                filter.Q.value = 1.2;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.55, now);
+                gain.gain.exponentialRampToValueAtTime(0.008, now + 0.35);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start(now);
+            },
+            playGoalCheer() {
+                if (!this.enabled || !this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // 1. Massive Stadium Crowd Roar Surge (No cheesy synth beep!)
+                const roar = this.ctx.createBufferSource();
+                roar.buffer = this.createNoiseBuffer(2.4);
+                const roarFilter = this.ctx.createBiquadFilter();
+                roarFilter.type = 'bandpass';
+                roarFilter.frequency.setValueAtTime(420, now);
+                roarFilter.frequency.linearRampToValueAtTime(780, now + 0.45);
+                roarFilter.frequency.linearRampToValueAtTime(520, now + 2.3);
+                roarFilter.Q.value = 0.55;
+
+                const roarGain = this.ctx.createGain();
+                roarGain.gain.setValueAtTime(0.02, now);
+                roarGain.gain.linearRampToValueAtTime(0.58, now + 0.28);
+                roarGain.gain.setValueAtTime(0.52, now + 1.35);
+                roarGain.gain.exponentialRampToValueAtTime(0.01, now + 2.35);
+
+                roar.connect(roarFilter);
+                roarFilter.connect(roarGain);
+                roarGain.connect(this.ctx.destination);
+                roar.start(now);
+
+                // 2. Deep Stadium Goal Horn
+                const horn = this.ctx.createOscillator();
+                const horn2 = this.ctx.createOscillator();
+                const hornFilter = this.ctx.createBiquadFilter();
+                const hornGain = this.ctx.createGain();
+
+                horn.type = 'sawtooth';
+                horn.frequency.setValueAtTime(130.81, now + 0.1); // C3
+                horn2.type = 'sawtooth';
+                horn2.frequency.setValueAtTime(164.81, now + 0.1); // E3
+
+                hornFilter.type = 'lowpass';
+                hornFilter.frequency.value = 480;
+
+                hornGain.gain.setValueAtTime(0.001, now + 0.1);
+                hornGain.gain.linearRampToValueAtTime(0.14, now + 0.22);
+                hornGain.gain.setValueAtTime(0.13, now + 1.15);
+                hornGain.gain.exponentialRampToValueAtTime(0.001, now + 1.55);
+
+                horn.connect(hornFilter);
+                horn2.connect(hornFilter);
+                hornFilter.connect(hornGain);
+                hornGain.connect(this.ctx.destination);
+
+                horn.start(now + 0.1);
+                horn2.start(now + 0.1);
+                horn.stop(now + 1.6);
+                horn2.stop(now + 1.6);
+            }
+        };
+
+        // =========================================================================
+        // 3. GAME STATE & 3D SCENE SETUP (THREE.JS)
+        // =========================================================================
+        const canvas = document.getElementById('gameCanvas');
+        const radarCanvas = document.getElementById('radarCanvas');
+        const radarCtx = radarCanvas.getContext('2d');
+
+        // Three.js Renderer, Scene & Broadcast Camera
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x060b16);
+        scene.fog = new THREE.FogExp2(0x060b16, 0.00028);
+
+        const camera3D = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 10, 6500);
+
+        // Stadium Lighting
+        const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.72);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.95);
+        sunLight.position.set(180, 920, 460);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 100;
+        sunLight.shadow.camera.far = 2500;
+        const dShadow = 1050;
+        sunLight.shadow.camera.left = -dShadow;
+        sunLight.shadow.camera.right = dShadow;
+        sunLight.shadow.camera.top = dShadow;
+        sunLight.shadow.camera.bottom = -dShadow;
+        scene.add(sunLight);
+
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+        fillLight.position.set(-400, 600, -500);
+        scene.add(fillLight);
+
+        // Helper: Convert World 2D (0..1600, 0..1000) to 3D Pitch Coordinates (-800..800, y, -500..500)
+        function to3DX(wx) { return wx - PITCH.w / 2; }
+        function to3DZ(wy) { return wy - PITCH.h / 2; }
+
+        // Build 3D Stadium Pitch, Lines, Goals & Nets
+        const netMeshes = { left: null, right: null };
+
+        function build3DPitch() {
+            // Outer Stadium Floor
+            const outerGeo = new THREE.PlaneGeometry(3400, 2600);
+            const outerMat = new THREE.MeshStandardMaterial({ color: 0x0b1324, roughness: 0.9 });
+            const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+            outerMesh.rotation.x = -Math.PI / 2;
+            outerMesh.position.y = -2;
+            scene.add(outerMesh);
+
+            // Pitch Grass Texture with Procedural Stripes
+            const pitchTexCanvas = document.createElement('canvas');
+            pitchTexCanvas.width = 1600;
+            pitchTexCanvas.height = 1000;
+            const pctx = pitchTexCanvas.getContext('2d');
+
+            const stripeCount = 16;
+            const stripeW = 1600 / stripeCount;
+            for (let i = 0; i < stripeCount; i++) {
+                pctx.fillStyle = i % 2 === 0 ? '#16803c' : '#146c34';
+                pctx.fillRect(i * stripeW, 0, stripeW + 1, 1000);
+            }
+
+            // Crisp Pitch Lines drawn onto Grass Texture
+            pctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+            pctx.lineWidth = 4;
+            pctx.strokeRect(4, 4, 1592, 992);
+
+            // Halfway line & Center circle
+            pctx.beginPath();
+            pctx.moveTo(800, 0);
+            pctx.lineTo(800, 1000);
+            pctx.stroke();
+
+            pctx.beginPath();
+            pctx.arc(800, 500, PITCH.centerCircleR, 0, Math.PI * 2);
+            pctx.stroke();
+
+            pctx.fillStyle = '#ffffff';
+            pctx.beginPath();
+            pctx.arc(800, 500, 7, 0, Math.PI * 2);
+            pctx.fill();
+
+            // Penalty Boxes & Six-Yard Boxes
+            pctx.strokeRect(4, (1000 - PITCH.penaltyH) / 2, PITCH.penaltyW, PITCH.penaltyH);
+            pctx.strokeRect(1596 - PITCH.penaltyW, (1000 - PITCH.penaltyH) / 2, PITCH.penaltyW, PITCH.penaltyH);
+            pctx.strokeRect(4, (1000 - PITCH.sixYardH) / 2, PITCH.sixYardW, PITCH.sixYardH);
+            pctx.strokeRect(1596 - PITCH.sixYardW, (1000 - PITCH.sixYardH) / 2, PITCH.sixYardW, PITCH.sixYardH);
+
+            // Penalty Arcs
+            pctx.beginPath();
+            pctx.arc(165, 500, 95, -0.78, 0.78);
+            pctx.stroke();
+            pctx.beginPath();
+            pctx.arc(1600 - 165, 500, 95, Math.PI - 0.78, Math.PI + 0.78);
+            pctx.stroke();
+
+            const pitchTexture = new THREE.CanvasTexture(pitchTexCanvas);
+            pitchTexture.anisotropy = 8;
+
+            const pitchGeo = new THREE.PlaneGeometry(PITCH.w + 80, PITCH.h + 80);
+            const pitchMat = new THREE.MeshStandardMaterial({ map: pitchTexture, roughness: 0.82 });
+            const pitchMesh = new THREE.Mesh(pitchGeo, pitchMat);
+            pitchMesh.rotation.x = -Math.PI / 2;
+            pitchMesh.receiveShadow = true;
+            scene.add(pitchMesh);
+
+            // Stadium Perimeter Advertising Boards
+            const adGeoLong = new THREE.BoxGeometry(PITCH.w + 160, 26, 12);
+            const adMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0x064e3b, emissiveIntensity: 0.45 });
+            const northAd = new THREE.Mesh(adGeoLong, adMat);
+            northAd.position.set(0, 13, -PITCH.h / 2 - 75);
+            scene.add(northAd);
+
+            // Build Left & Right 3D Goal Frames + Nets
+            create3DGoal('left', -PITCH.w / 2);
+            create3DGoal('right', PITCH.w / 2);
+        }
+
+        function create3DGoal(side, goalX) {
+            const isLeft = side === 'left';
+            const dir = isLeft ? -1 : 1;
+            const goalHeight = 76;
+            const goalDepth = PITCH.goalW + 14;
+            const goalWidth = PITCH.goalH;
+
+            const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.2 });
+            const postRadius = 3.6;
+
+            const goalGroup = new THREE.Group();
+
+            // Left & Right Goalposts
+            const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalHeight, 12);
+            const post1 = new THREE.Mesh(postGeo, postMat);
+            post1.position.set(goalX, goalHeight / 2, -goalWidth / 2);
+            post1.castShadow = true;
+            goalGroup.add(post1);
+
+            const post2 = new THREE.Mesh(postGeo, postMat);
+            post2.position.set(goalX, goalHeight / 2, goalWidth / 2);
+            post2.castShadow = true;
+            goalGroup.add(post2);
+
+            // Crossbar
+            const barGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalWidth + postRadius * 2, 12);
+            const crossbar = new THREE.Mesh(barGeo, postMat);
+            crossbar.rotation.x = Math.PI / 2;
+            crossbar.position.set(goalX, goalHeight, 0);
+            crossbar.castShadow = true;
+            goalGroup.add(crossbar);
+
+            // Back Net Mesh
+            const netGeo = new THREE.BoxGeometry(goalDepth, goalHeight - 2, goalWidth - 4);
+            const netMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.32
+            });
+            const netMesh = new THREE.Mesh(netGeo, netMat);
+            netMesh.position.set(goalX + dir * (goalDepth / 2), (goalHeight - 2) / 2, 0);
+            goalGroup.add(netMesh);
+            netMeshes[side] = netMesh;
+
+            scene.add(goalGroup);
+        }
+
+        build3DPitch();
+
+        // 3D Ball & Ground Shadow Ring
+        const ball3DGroup = new THREE.Group();
+        const ballGeo = new THREE.SphereGeometry(8.5, 20, 20);
+        const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+        const ballMesh = new THREE.Mesh(ballGeo, ballMat);
+        ballMesh.castShadow = true;
+        ball3DGroup.add(ballMesh);
+
+        // Dark stripe band on ball so spin is visible in 3D
+        const bandGeo = new THREE.TorusGeometry(8.4, 1.3, 8, 20);
+        const bandMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+        const bandMesh = new THREE.Mesh(bandGeo, bandMat);
+        ball3DGroup.add(bandMesh);
+        scene.add(ball3DGroup);
+
+        const ballShadowGeo = new THREE.CircleGeometry(9, 16);
+        const ballShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42 });
+        const ballShadowMesh = new THREE.Mesh(ballShadowGeo, ballShadowMat);
+        ballShadowMesh.rotation.x = -Math.PI / 2;
+        ballShadowMesh.position.y = 0.6;
+        scene.add(ballShadowMesh);
+
+        // 3D Tactical Pass & Finesse Curve Guide Lines
+        const passGuideLine = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+            new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
+        );
+        passGuideLine.visible = false;
+        scene.add(passGuideLine);
+
+        const passTargetRing = new THREE.Mesh(
+            new THREE.RingGeometry(15, 20, 24),
+            new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+        );
+        passTargetRing.rotation.x = -Math.PI / 2;
+        passTargetRing.position.y = 1.2;
+        passTargetRing.visible = false;
+        scene.add(passTargetRing);
+
+        const curvePoints = Array.from({ length: 25 }, () => new THREE.Vector3());
+        const finesseGuideLine = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints(curvePoints),
+            new THREE.LineBasicMaterial({ color: 0xc084fc, transparent: true, opacity: 0.9 })
+        );
+        finesseGuideLine.visible = false;
+        scene.add(finesseGuideLine);
+
+        // Player 3D Meshes Pool
+        const playerMeshes = new Map();
+
+        function clearPlayer3DMeshes() {
+            playerMeshes.forEach(obj => scene.remove(obj.group));
+            playerMeshes.clear();
+        }
+
+        function createPlayerNumberTexture(num, bgHex) {
+            const c = document.createElement('canvas');
+            c.width = 64;
+            c.height = 64;
+            const cx = c.getContext('2d');
+            cx.fillStyle = bgHex;
+            cx.fillRect(0, 0, 64, 64);
+            cx.fillStyle = (bgHex.toLowerCase() === '#ffffff') ? '#0f172a' : '#ffffff';
+            cx.font = 'bold 34px Inter, sans-serif';
+            cx.textAlign = 'center';
+            cx.textBaseline = 'middle';
+            cx.fillText(String(num), 32, 34);
+            return new THREE.CanvasTexture(c);
+        }
+
+        function buildPlayer3DMesh(p) {
+            const teamObj = p.team === 'home' ? state.homeTeam : state.awayTeam;
+            const bodyHex = p.isGK ? teamObj.gk : teamObj.primary;
+            const shortHex = p.isGK ? '#111827' : teamObj.secondary;
+
+            const group = new THREE.Group();
+
+            // Ground Shadow
+            const sh = new THREE.Mesh(
+                new THREE.CircleGeometry(13, 16),
+                new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
+            );
+            sh.rotation.x = -Math.PI / 2;
+            sh.position.y = 0.5;
+            group.add(sh);
+
+            // Controlled Player Emerald Cursor Ring + Floating 3D Arrow
+            const cursorColor = p.team === 'home' ? 0x10b981 : 0xf59e0b;
+            const cursorRing = new THREE.Mesh(
+                new THREE.RingGeometry(16, 21, 28),
+                new THREE.MeshBasicMaterial({ color: cursorColor, side: THREE.DoubleSide })
+            );
+            cursorRing.rotation.x = -Math.PI / 2;
+            cursorRing.position.y = 1.0;
+            cursorRing.visible = false;
+            group.add(cursorRing);
+
+            const cursorArrow = new THREE.Mesh(
+                new THREE.ConeGeometry(5.5, 11, 4),
+                new THREE.MeshBasicMaterial({ color: cursorColor })
+            );
+            cursorArrow.rotation.x = Math.PI;
+            cursorArrow.position.y = 58;
+            cursorArrow.visible = false;
+            group.add(cursorArrow);
+
+            // Q-Run Pink Ring
+            const runRing = new THREE.Mesh(
+                new THREE.RingGeometry(18, 22, 24),
+                new THREE.MeshBasicMaterial({ color: 0xf472b6, side: THREE.DoubleSide })
+            );
+            runRing.rotation.x = -Math.PI / 2;
+            runRing.position.y = 1.1;
+            runRing.visible = false;
+            group.add(runRing);
+
+            // Body Pivot (rotates to facing direction & tilts on slide tackle)
+            const bodyPivot = new THREE.Group();
+
+            // Legs
+            const legGeo = new THREE.CylinderGeometry(2.6, 2.3, 14, 8);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d });
+            const leftLeg = new THREE.Mesh(legGeo, legMat);
+            leftLeg.position.set(0, 7, -4);
+            leftLeg.castShadow = true;
+            bodyPivot.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeo, legMat);
+            rightLeg.position.set(0, 7, 4);
+            rightLeg.castShadow = true;
+            bodyPivot.add(rightLeg);
+
+            // Shorts
+            const shortsGeo = new THREE.CylinderGeometry(6.2, 6.8, 8, 12);
+            const shortsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shortHex) });
+            const shorts = new THREE.Mesh(shortsGeo, shortsMat);
+            shorts.position.y = 15;
+            shorts.castShadow = true;
+            bodyPivot.add(shorts);
+
+            // Jersey Torso with Number Badge
+            const numTex = createPlayerNumberTexture(p.number, bodyHex);
+            const torsoGeo = new THREE.CylinderGeometry(7.2, 6.2, 16, 14);
+            const torsoMat = new THREE.MeshStandardMaterial({ map: numTex, roughness: 0.6 });
+            const torso = new THREE.Mesh(torsoGeo, torsoMat);
+            torso.position.y = 26;
+            torso.castShadow = true;
+            bodyPivot.add(torso);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(5.2, 14, 14);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 39;
+            head.castShadow = true;
+            bodyPivot.add(head);
+
+            group.add(bodyPivot);
+            scene.add(group);
+
+            playerMeshes.set(p.id, { group, bodyPivot, leftLeg, rightLeg, cursorRing, cursorArrow, runRing });
+        }
+
+        const state = {
+            screen: 'menu', // 'menu' | 'playing' | 'goal' | 'halftime' | 'fulltime'
+            gameMode: '1p', // '1p' | '2p'
+            homeTeam: TEAMS[0],
+            awayTeam: TEAMS[1],
+            formation: '4-3-3',
+            difficulty: 'worldclass',
+            halfDurationSec: 90,
+            half: 1,
+            elapsedMatchSec: 0,
+            addedTimeMin: 2,
+            homeScore: 0,
+            awayScore: 0,
+            setPiece: null, // null | { type: 'kickoff'|'throwin'|'goalkick'|'corner', team: 'home'|'away', x, y, timer }
+            goalTimer: 0,
+            netRipple: { side: null, timer: 0, y: 500 },
+            camera: { x: 800, y: 500, yawOffset: 0, pitchOffset: 0 },
+            players: [],
+            controlledPlayer: null,
+            controlledPlayerP2: null,
+            passPreviewTarget: null,
+            shotCharge: { active: false, power: 0, isFinesse: false },
+            shotChargeP2: { active: false, power: 0, isFinesse: false },
+            gkRush: false,
+            gkRushP2: false,
+            stats: {
+                homePossTime: 1,
+                awayPossTime: 1,
+                homeShots: 0,
+                awayShots: 0,
+                homePasses: 0,
+                awayPasses: 0
+            },
+            ball: {
+                x: 800,
+                y: 500,
+                z: 0,
+                vx: 0,
+                vy: 0,
+                vz: 0,
+                spin: 0,
+                owner: null,
+                passTarget: null,
+                passTargetX: 800,
+                passTargetY: 500,
+                passLockTimer: 0,
+                isLobPass: false,
+                isShot: false,
+                isFinesseShot: false,
+                lastTouchTeam: 'home',
+                lastTouchPlayer: null
+            }
+        };
+
+        // Mouse Drag Camera Orbit & 'R' Key Reset
+        let isDraggingCam = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDraggingCam = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+        window.addEventListener('mouseup', () => { isDraggingCam = false; });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingCam) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            state.camera.yawOffset = Math.max(-0.65, Math.min(0.65, state.camera.yawOffset - dx * 0.004));
+            state.camera.pitchOffset = Math.max(-180, Math.min(220, state.camera.pitchOffset + dy * 0.7));
+        });
+
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false,
+            KeyE: false,
+            KeyZ: false,
+            KeyW: false,
+            // 2P Movement & Modifiers (IKJL + U + B + Y)
+            KeyI: false,
+            KeyK: false,
+            KeyJ: false,
+            KeyL: false,
+            KeyU: false,
+            KeyB: false,
+            KeyY: false
+        };
+
+        // =========================================================================
+        // 4. UI INITIALIZATION & EVENT LISTENERS
+        // =========================================================================
+        const selectHomeTeam = document.getElementById('selectHomeTeam');
+        const selectAwayTeam = document.getElementById('selectAwayTeam');
+
+        function populateTeamSelects() {
+            TEAMS.forEach((team, idx) => {
+                const opt1 = new Option(`${team.name} (${team.code})`, idx);
+                const opt2 = new Option(`${team.name} (${team.code})`, idx);
+                selectHomeTeam.add(opt1);
+                selectAwayTeam.add(opt2);
+            });
+            selectHomeTeam.selectedIndex = 0;
+            selectAwayTeam.selectedIndex = 1;
+            updateMenuTeamCards();
+        }
+
+        function updateMenuTeamCards() {
+            const h = TEAMS[selectHomeTeam.selectedIndex];
+            const a = TEAMS[selectAwayTeam.selectedIndex];
+            const hOvr = Math.round((h.att + h.mid + h.def) / 3);
+            const aOvr = Math.round((a.att + a.mid + a.def) / 3);
+            document.getElementById('homeOvr').textContent = `OVR ${hOvr}`;
+            document.getElementById('awayOvr').textContent = `OVR ${aOvr}`;
+
+            const renderStats = (t) => `
+                <div class="bg-slate-900 rounded-lg py-1.5 border border-slate-800"><span class="text-slate-400">ATT</span> <b class="text-white">${t.att}</b></div>
+                <div class="bg-slate-900 rounded-lg py-1.5 border border-slate-800"><span class="text-slate-400">MID</span> <b class="text-white">${t.mid}</b></div>
+                <div class="bg-slate-900 rounded-lg py-1.5 border border-slate-800"><span class="text-slate-400">DEF</span> <b class="text-white">${t.def}</b></div>
+            `;
+            document.getElementById('homeStatsRow').innerHTML = renderStats(h);
+            document.getElementById('awayStatsRow').innerHTML = renderStats(a);
+        }
+
+        selectHomeTeam.addEventListener('change', updateMenuTeamCards);
+        selectAwayTeam.addEventListener('change', updateMenuTeamCards);
+
+        document.getElementById('btnStartMatch').addEventListener('click', () => {
+            sound.init();
+            startNewMatch();
+        });
+        document.getElementById('btnPauseMenu').addEventListener('click', quitToMenu);
+        document.getElementById('btnReportMenu').addEventListener('click', quitToMenu);
+        document.getElementById('btnReportPrimary').addEventListener('click', () => {
+            sound.init();
+            if (state.half === 1) startSecondHalf();
+            else startNewMatch();
+        });
+        document.getElementById('btnSoundToggle').addEventListener('click', (e) => {
+            sound.init();
+            sound.setMuted(sound.enabled);
+            e.target.textContent = sound.enabled ? '🔊 ON' : '🔇 OFF';
+        });
+
+        // Keyboard Listeners (1P + 2P Local Multiplayer Layout)
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+            if (e.code in keys) keys[e.code] = true;
+            if (e.code === 'KeyR') {
+                state.camera.yawOffset = 0;
+                state.camera.pitchOffset = 0;
+            }
+
+            if (state.screen !== 'playing' || e.repeat) return;
+
+            const carrier = state.ball.owner;
+            const p1HasBall = carrier && carrier.team === 'home';
+            const p2HasBall = carrier && carrier.team === 'away';
+
+            // 1P Controls (Home Team)
+            if (p1HasBall) {
+                if (e.code === 'KeyS') {
+                    executePass(carrier, 'ground');
+                } else if (e.code === 'KeyW') {
+                    executePass(carrier, 'through');
+                } else if (e.code === 'KeyA') {
+                    executePass(carrier, 'lob');
+                } else if (e.code === 'KeyD') {
+                    state.shotCharge.active = true;
+                    state.shotCharge.power = 0.25;
+                    state.shotCharge.isFinesse = keys.KeyZ;
+                } else if (e.code === 'KeyQ') {
+                    triggerTeammateRun(carrier);
+                }
+            } else {
+                if (e.code === 'KeyS' || e.code === 'ShiftLeft') {
+                    switchControlledPlayer('home');
+                } else if (e.code === 'KeyA' || e.code === 'Space') {
+                    if (state.controlledPlayer) executeTackle(state.controlledPlayer, false);
+                } else if (e.code === 'KeyD') {
+                    if (state.controlledPlayer) executeTackle(state.controlledPlayer, true);
+                } else if (e.code === 'KeyW') {
+                    state.gkRush = true;
+                }
+            }
+
+            // 2P Controls (Away Team when 2P mode is active)
+            if (state.gameMode === '2p') {
+                if (p2HasBall) {
+                    if (e.code === 'KeyN') {
+                        executePass(carrier, 'ground');
+                    } else if (e.code === 'KeyY') {
+                        executePass(carrier, 'through');
+                    } else if (e.code === 'KeyH') {
+                        executePass(carrier, 'lob');
+                    } else if (e.code === 'KeyM') {
+                        state.shotChargeP2.active = true;
+                        state.shotChargeP2.power = 0.25;
+                        state.shotChargeP2.isFinesse = keys.KeyB;
+                    } else if (e.code === 'KeyO') {
+                        triggerTeammateRun(carrier);
+                    }
+                } else {
+                    if (e.code === 'KeyN' || e.code === 'ShiftRight') {
+                        switchControlledPlayer('away');
+                    } else if (e.code === 'KeyH') {
+                        if (state.controlledPlayerP2) executeTackle(state.controlledPlayerP2, false);
+                    } else if (e.code === 'KeyM') {
+                        if (state.controlledPlayerP2) executeTackle(state.controlledPlayerP2, true);
+                    } else if (e.code === 'KeyY') {
+                        state.gkRushP2 = true;
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code in keys) keys[e.code] = false;
+            if (e.code === 'KeyW') state.gkRush = false;
+            if (e.code === 'KeyY') state.gkRushP2 = false;
+
+            if (e.code === 'KeyD' && state.shotCharge.active) {
+                const power = state.shotCharge.power;
+                const isFinesse = state.shotCharge.isFinesse || keys.KeyZ;
+                state.shotCharge.active = false;
+                state.shotCharge.power = 0;
+                if (state.screen === 'playing' && state.ball.owner && state.ball.owner.team === 'home') {
+                    executeShot(state.ball.owner, power, isFinesse);
+                }
+            }
+
+            if (e.code === 'KeyM' && state.shotChargeP2.active) {
+                const power = state.shotChargeP2.power;
+                const isFinesse = state.shotChargeP2.isFinesse || keys.KeyB;
+                state.shotChargeP2.active = false;
+                state.shotChargeP2.power = 0;
+                if (state.screen === 'playing' && state.ball.owner && state.ball.owner.team === 'away') {
+                    executeShot(state.ball.owner, power, isFinesse);
+                }
+            }
+        });
+
+        // =========================================================================
+        // 5. MATCH FLOW, SQUADS & SET PIECES
+        // =========================================================================
+        function getHomeAttackDir() {
+            return state.half === 1 ? 1 : -1;
+        }
+
+        function getAnchorPosition(p) {
+            const homeDir = getHomeAttackDir();
+            if (p.team === 'home') {
+                return {
+                    x: (homeDir === 1 ? p.relX : 1 - p.relX) * PITCH.w,
+                    y: (homeDir === 1 ? p.relY : 1 - p.relY) * PITCH.h
+                };
+            } else {
+                return {
+                    x: (homeDir === 1 ? 1 - p.relX : p.relX) * PITCH.w,
+                    y: (homeDir === 1 ? 1 - p.relY : p.relY) * PITCH.h
+                };
+            }
+        }
+
+        function startNewMatch() {
+            state.gameMode = document.getElementById('selectGameMode').value;
+            state.homeTeam = TEAMS[selectHomeTeam.selectedIndex];
+            state.awayTeam = TEAMS[selectAwayTeam.selectedIndex];
+            state.formation = document.getElementById('selectFormation').value;
+            state.difficulty = document.getElementById('selectDifficulty').value;
+            state.halfDurationSec = parseInt(document.getElementById('selectDuration').value, 10) || 90;
+
+            state.half = 1;
+            state.elapsedMatchSec = 0;
+            state.homeScore = 0;
+            state.awayScore = 0;
+            state.stats = {
+                homePossTime: 1,
+                awayPossTime: 1,
+                homeShots: 0,
+                awayShots: 0,
+                homePasses: 0,
+                awayPasses: 0
+            };
+
+            document.getElementById('hudHomeCode').textContent = state.homeTeam.code;
+            document.getElementById('hudAwayCode').textContent = state.awayTeam.code;
+            document.getElementById('hudHomeBadge').style.backgroundColor = state.homeTeam.primary;
+            document.getElementById('hudAwayBadge').style.backgroundColor = state.awayTeam.primary;
+
+            document.getElementById('menuOverlay').classList.add('hidden');
+            document.getElementById('reportOverlay').classList.add('hidden');
+            document.getElementById('hudTop').classList.remove('hidden');
+            document.getElementById('hudBottom').classList.remove('hidden');
+
+            createSquads();
+            setupKickoff('home');
+            state.screen = 'playing';
+            sound.playWhistle(false);
+        }
+
+        function startSecondHalf() {
+            state.half = 2;
+            state.elapsedMatchSec = state.halfDurationSec;
+            document.getElementById('reportOverlay').classList.add('hidden');
+            setupKickoff('away');
+            state.screen = 'playing';
+            sound.playWhistle(false);
+        }
+
+        function quitToMenu() {
+            state.screen = 'menu';
+            state.shotCharge.active = false;
+            state.shotChargeP2.active = false;
+            document.getElementById('hudTop').classList.add('hidden');
+            document.getElementById('hudBottom').classList.add('hidden');
+            document.getElementById('reportOverlay').classList.add('hidden');
+            document.getElementById('goalOverlay').classList.add('hidden');
+            document.getElementById('menuOverlay').classList.remove('hidden');
+        }
+
+        function createSquads() {
+            state.players = [];
+            clearPlayer3DMeshes();
+            const formCoords = FORMATIONS[state.formation];
+
+            // Home Squad (Left to Right in 1H, Right to Left in 2H)
+            formCoords.forEach((slot, idx) => {
+                const rating = slot.role === 'GK' ? state.homeTeam.def :
+                    ['CB', 'RB', 'LB'].includes(slot.role) ? state.homeTeam.def :
+                    ['CDM', 'CM', 'CAM', 'RM', 'LM', 'RAM', 'LAM'].includes(slot.role) ? state.homeTeam.mid :
+                    state.homeTeam.att;
+
+                const playerObj = {
+                    id: `home_${idx}`,
+                    team: 'home',
+                    number: idx + 1,
+                    name: state.homeTeam.names[idx] || `PLAYER ${idx + 1}`,
+                    role: slot.role,
+                    isGK: slot.role === 'GK',
+                    relX: slot.x,
+                    relY: slot.y,
+                    x: slot.x * PITCH.w,
+                    y: slot.y * PITCH.h,
+                    vx: 0,
+                    vy: 0,
+                    facing: 0,
+                    rating,
+                    stamina: 100,
+                    tackleCooldown: 0,
+                    stunTimer: 0,
+                    slideTimer: 0,
+                    runTimer: 0,
+                    aiActionCooldown: 0
+                };
+                state.players.push(playerObj);
+                buildPlayer3DMesh(playerObj);
+            });
+
+            // Away Squad
+            formCoords.forEach((slot, idx) => {
+                const rating = slot.role === 'GK' ? state.awayTeam.def :
+                    ['CB', 'RB', 'LB'].includes(slot.role) ? state.awayTeam.def :
+                    ['CDM', 'CM', 'CAM', 'RM', 'LM', 'RAM', 'LAM'].includes(slot.role) ? state.awayTeam.mid :
+                    state.awayTeam.att;
+
+                const playerObj = {
+                    id: `away_${idx}`,
+                    team: 'away',
+                    number: idx + 1,
+                    name: state.awayTeam.names[idx] || `CPU ${idx + 1}`,
+                    role: slot.role,
+                    isGK: slot.role === 'GK',
+                    relX: slot.x,
+                    relY: slot.y,
+                    x: (1 - slot.x) * PITCH.w,
+                    y: (1 - slot.y) * PITCH.h,
+                    vx: 0,
+                    vy: 0,
+                    facing: Math.PI,
+                    rating,
+                    stamina: 100,
+                    tackleCooldown: 0,
+                    stunTimer: 0,
+                    slideTimer: 0,
+                    runTimer: 0,
+                    aiActionCooldown: 0
+                };
+                state.players.push(playerObj);
+                buildPlayer3DMesh(playerObj);
+            });
+        }
+
+        function setupKickoff(kickoffTeam) {
+            const cx = PITCH.w / 2;
+            const cy = PITCH.h / 2;
+            const homeDir = getHomeAttackDir();
+
+            state.players.forEach(p => {
+                const anchor = getAnchorPosition(p);
+                p.x = anchor.x;
+                p.y = anchor.y;
+                p.vx = 0;
+                p.vy = 0;
+                p.stunTimer = 0;
+                p.slideTimer = 0;
+                p.runTimer = 0;
+
+                const isLeftSideTeam = (p.team === 'home' && homeDir === 1) || (p.team === 'away' && homeDir === -1);
+
+                // Keep players strictly in their own half before kickoff
+                if (isLeftSideTeam) {
+                    if (p.x > cx - 28) p.x = cx - 28;
+                } else {
+                    if (p.x < cx + 28) p.x = cx + 28;
+                }
+
+                // Keep defending team outside center circle
+                if (p.team !== kickoffTeam) {
+                    const dx = p.x - cx;
+                    const dy = p.y - cy;
+                    const dist = Math.hypot(dx, dy);
+                    const minD = PITCH.centerCircleR + 30;
+                    if (dist < minD) {
+                        const ang = dist > 1 ? Math.atan2(dy, dx) : (isLeftSideTeam ? Math.PI : 0);
+                        p.x = cx + Math.cos(ang) * minD;
+                        p.y = cy + Math.sin(ang) * minD;
+                    }
+                }
+            });
+
+            // Place striker on center spot
+            const kicker = state.players.find(p => p.team === kickoffTeam && !p.isGK && p.role === 'ST') ||
+                state.players.find(p => p.team === kickoffTeam && !p.isGK);
+
+            if (kicker) {
+                kicker.x = cx;
+                kicker.y = cy;
+                kicker.facing = (kickoffTeam === 'home') ? (homeDir === 1 ? 0 : Math.PI) : (homeDir === 1 ? Math.PI : 0);
+                snapBallToPlayer(kicker);
+            }
+
+            state.setPiece = { type: 'kickoff', team: kickoffTeam, x: cx, y: cy, timer: 1.35 };
+        }
+
+        function setupSetPiece(type, team, x, y) {
+            const clampedX = Math.max(14, Math.min(PITCH.w - 14, x));
+            const clampedY = Math.max(14, Math.min(PITCH.h - 14, y));
+
+            let taker = null;
+            if (type === 'goalkick') {
+                taker = state.players.find(p => p.team === team && p.isGK);
+            } else {
+                let bestD = Infinity;
+                for (const p of state.players) {
+                    if (p.team === team && !p.isGK) {
+                        const d = Math.hypot(p.x - clampedX, p.y - clampedY);
+                        if (d < bestD) {
+                            bestD = d;
+                            taker = p;
+                        }
+                    }
+                }
+            }
+
+            if (taker) {
+                taker.x = clampedX;
+                taker.y = clampedY;
+                taker.vx = 0;
+                taker.vy = 0;
+                // Aim taker inward toward the pitch center
+                taker.facing = Math.atan2(PITCH.h / 2 - clampedY, PITCH.w / 2 - clampedX);
+                snapBallToPlayer(taker);
+            }
+
+            // During corner kicks, bring attackers and defenders into the penalty box!
+            if (type === 'corner') {
+                const isRightCorner = clampedX > PITCH.w / 2;
+                const boxTargetX = isRightCorner ? PITCH.w - 140 : 140;
+                let atkIdx = 0;
+                let defIdx = 0;
+                for (const p of state.players) {
+                    if (p === taker || p.isGK) continue;
+                    if (p.team === team && ['ST', 'LW', 'RW', 'CAM', 'CB'].includes(p.role)) {
+                        p.x = boxTargetX + (isRightCorner ? -1 : 1) * (20 + (atkIdx % 2) * 55);
+                        p.y = PITCH.h / 2 - 110 + atkIdx * 55;
+                        atkIdx++;
+                    } else if (p.team !== team) {
+                        if (['CB', 'CDM', 'RB', 'LB'].includes(p.role)) {
+                            p.x = boxTargetX + (isRightCorner ? 1 : -1) * (15 + (defIdx % 2) * 35);
+                            p.y = PITCH.h / 2 - 100 + defIdx * 50;
+                            defIdx++;
+                        } else {
+                            // Keep non-box defenders at least 95px away from the corner taker
+                            const d = Math.hypot(p.x - clampedX, p.y - clampedY);
+                            if (d < 110) {
+                                p.x = PITCH.w / 2;
+                                p.y = PITCH.h / 2;
+                            }
+                        }
+                    }
+                }
+            } else if (type === 'throwin') {
+                // Keep opponents at least 75px away from throw-in taker
+                for (const p of state.players) {
+                    if (p.team !== team && !p.isGK) {
+                        const d = Math.hypot(p.x - clampedX, p.y - clampedY);
+                        if (d < 85) {
+                            const ang = Math.atan2(PITCH.h / 2 - clampedY, PITCH.w / 2 - clampedX);
+                            p.x = clampedX + Math.cos(ang) * 95;
+                            p.y = clampedY + Math.sin(ang) * 95;
+                        }
+                    }
+                }
+            }
+
+            state.setPiece = { type, team, x: clampedX, y: clampedY, timer: 1.25 };
+            sound.playWhistle(false);
+        }
+
+        function snapBallToPlayer(player) {
+            state.ball.owner = player;
+            state.ball.passTarget = null;
+            state.ball.passLockTimer = 0;
+            state.ball.isLobPass = false;
+            state.ball.isShot = false;
+            state.ball.isFinesseShot = false;
+            state.ball.vx = 0;
+            state.ball.vy = 0;
+            state.ball.vz = 0;
+            state.ball.z = 0;
+            state.ball.spin = 0;
+            state.ball.lastTouchTeam = player.team;
+            state.ball.lastTouchPlayer = player;
+
+            if (player.team === 'home') {
+                state.controlledPlayer = player;
+            } else if (state.gameMode === '2p') {
+                state.controlledPlayerP2 = player;
+            }
+        }
+
+        // =========================================================================
+        // 6. PASSING, SHOOTING, TACKLING & HELPERS
+        // =========================================================================
+        function getInputDirection(fallbackAngle = null, team = 'home') {
+            let dx = 0;
+            let dy = 0;
+            if (team === 'home') {
+                if (keys.ArrowLeft) dx -= 1;
+                if (keys.ArrowRight) dx += 1;
+                if (keys.ArrowUp) dy -= 1;
+                if (keys.ArrowDown) dy += 1;
+            } else {
+                if (keys.KeyJ) dx -= 1;
+                if (keys.KeyL) dx += 1;
+                if (keys.KeyI) dy -= 1;
+                if (keys.KeyK) dy += 1;
+            }
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                return { x: dx / len, y: dy / len, hasInput: true };
+            }
+            if (fallbackAngle !== null) {
+                return { x: Math.cos(fallbackAngle), y: Math.sin(fallbackAngle), hasInput: false };
+            }
+            return { x: 0, y: 0, hasInput: false };
+        }
+
+        function moveTowards(entity, tx, ty, speed, dt) {
+            const dx = tx - entity.x;
+            const dy = ty - entity.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 2) {
+                entity.vx = 0;
+                entity.vy = 0;
+                return;
+            }
+            const step = Math.min(dist, speed * dt);
+            entity.vx = (dx / dist) * speed;
+            entity.vy = (dy / dist) * speed;
+            entity.x += (dx / dist) * step;
+            entity.y += (dy / dist) * step;
+        }
+
+        function findBestPassReceiver(passer, mode = 'ground') {
+            const teammates = state.players.filter(p => p.team === passer.team && p !== passer && !p.isGK);
+            const isHuman = (passer.team === 'home' || (passer.team === 'away' && state.gameMode === '2p'));
+            const inp = isHuman ? getInputDirection(passer.facing, passer.team) : { x: Math.cos(passer.facing), y: Math.sin(passer.facing), hasInput: true };
+            const aimX = inp.x;
+            const aimY = inp.y;
+
+            let bestPlayer = null;
+            let bestScore = -Infinity;
+
+            for (const tm of teammates) {
+                const dx = tm.x - passer.x;
+                const dy = tm.y - passer.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 40 || dist > 860) continue;
+
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+                const dot = dirX * aimX + dirY * aimY;
+
+                // Require reasonable alignment with input direction (prevent backwards mis-passes)
+                if (inp.hasInput && dot < 0.25) continue;
+
+                const distScore = 1 - Math.abs(dist - (mode === 'lob' ? 420 : 260)) / 700;
+                const runBonus = tm.runTimer > 0 ? 0.35 : 0;
+                const score = dot * 2.2 + distScore + runBonus;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPlayer = tm;
+                }
+            }
+
+            // Fallback to nearest forward teammate if strict cone had no match
+            if (!bestPlayer && teammates.length > 0) {
+                let minD = Infinity;
+                for (const tm of teammates) {
+                    const d = Math.hypot(tm.x - passer.x, tm.y - passer.y);
+                    if (d < minD) {
+                        minD = d;
+                        bestPlayer = tm;
+                    }
+                }
+            }
+            return bestPlayer;
+        }
+
+        function executePass(passer, mode = 'ground') {
+            if (!passer || state.ball.owner !== passer) return;
+
+            const receiver = findBestPassReceiver(passer, mode);
+            const atkDir = passer.team === 'home' ? getHomeAttackDir() : -getHomeAttackDir();
+
+            let targetX = passer.x + atkDir * 240;
+            let targetY = passer.y;
+
+            if (receiver) {
+                const lead = mode === 'through' ? 115 : (mode === 'lob' ? 55 : 22);
+                targetX = Math.max(30, Math.min(PITCH.w - 30, receiver.x + atkDir * lead));
+                targetY = Math.max(30, Math.min(PITCH.h - 30, receiver.y + receiver.vy * 0.25));
+                if (passer.team === 'home') {
+                    state.controlledPlayer = receiver;
+                } else if (state.gameMode === '2p') {
+                    state.controlledPlayerP2 = receiver;
+                }
+            }
+
+            const dx = targetX - passer.x;
+            const dy = targetY - passer.y;
+            const dist = Math.max(30, Math.hypot(dx, dy));
+            const passSpeed = mode === 'lob'
+                ? Math.min(920, Math.max(660, dist * 1.4))
+                : Math.min(1150, Math.max(760, dist * 2.15));
+
+            state.ball.owner = null;
+            state.ball.passTarget = receiver || null;
+            state.ball.passTargetX = targetX;
+            state.ball.passTargetY = targetY;
+            state.ball.passLockTimer = receiver ? 1.8 : 0;
+            state.ball.isLobPass = (mode === 'lob');
+            state.ball.isShot = false;
+            state.ball.isFinesseShot = false;
+            state.ball.vx = (dx / dist) * passSpeed;
+            state.ball.vy = (dy / dist) * passSpeed;
+            state.ball.vz = mode === 'lob' ? Math.min(340, 190 + dist * 0.22) : 0;
+            state.ball.spin = 0;
+            state.ball.lastTouchTeam = passer.team;
+            state.ball.lastTouchPlayer = passer;
+
+            passer.facing = Math.atan2(dy, dx);
+            passer.tackleCooldown = 0.28;
+            state.setPiece = null;
+
+            if (passer.team === 'home') state.stats.homePasses++;
+            else state.stats.awayPasses++;
+
+            sound.playKick(0.65);
+        }
+
+        function executeShot(shooter, power = 0.7, isFinesse = false) {
+            if (!shooter || state.ball.owner !== shooter) return;
+
+            const atkDir = shooter.team === 'home' ? getHomeAttackDir() : -getHomeAttackDir();
+            const goalX = atkDir === 1 ? PITCH.w : 0;
+
+            // Timed finishing green zone check (72% - 88%)
+            const isGreenTimed = (power >= 0.72 && power <= 0.88);
+            const isOverpowered = (power > 0.96);
+
+            // Aiming Y inside the goalposts (aims cleanly toward corners so goals feel rewarding)
+            let aimOffsetY = 0;
+            if (shooter.team === 'home') {
+                if (keys.ArrowUp) aimOffsetY = -64;
+                else if (keys.ArrowDown) aimOffsetY = 64;
+                else aimOffsetY = (shooter.y < PITCH.h / 2) ? 54 : -54;
+            } else if (state.gameMode === '2p') {
+                if (keys.KeyI) aimOffsetY = -64;
+                else if (keys.KeyK) aimOffsetY = 64;
+                else aimOffsetY = (shooter.y < PITCH.h / 2) ? 54 : -54;
+            } else {
+                const acc = DIFFICULTY_PARAMS[state.difficulty].shotAcc;
+                aimOffsetY = (Math.random() < 0.5 ? -1 : 1) * (35 + Math.random() * 35) * acc;
+            }
+
+            // Minimal scatter so aimed shots go on target
+            let scatterY = (Math.random() - 0.5) * 18;
+            if (isGreenTimed || isFinesse) scatterY *= 0.2;
+            else if (isOverpowered) scatterY = (Math.random() - 0.5) * 65;
+
+            const targetY = PITCH.h / 2 + aimOffsetY + scatterY;
+
+            // For finesse shots, curve outward first and bend INWARD into the far post!
+            const curveSign = (targetY > shooter.y) ? 1 : -1;
+            const initialAimY = isFinesse ? targetY - curveSign * 68 : targetY;
+
+            const dx = goalX - shooter.x;
+            const dy = initialAimY - shooter.y;
+            const dist = Math.max(40, Math.hypot(dx, dy));
+
+            // Distance factor: shots from far away (halfway line / own half) lose accuracy & speed
+            const distRatio = Math.max(0, (dist - 320) / 900);
+            const longRangeScatter = (Math.random() - 0.5) * distRatio * 240;
+            const finalDy = dy + longRangeScatter;
+            const finalDist = Math.max(40, Math.hypot(dx, finalDy));
+
+            const baseShotSpeed = (880 + power * 380 + (isGreenTimed ? 110 : 0)) * (1 - distRatio * 0.25);
+
+            state.ball.owner = null;
+            state.ball.passTarget = null;
+            state.ball.passLockTimer = 0;
+            state.ball.isLobPass = false;
+            state.ball.isShot = true;
+            state.ball.isFinesseShot = isFinesse;
+            state.ball.shotOriginDist = dist;
+            state.ball.vx = (dx / finalDist) * baseShotSpeed;
+            state.ball.vy = (finalDy / finalDist) * baseShotSpeed;
+            state.ball.vz = 105 + power * 120 + distRatio * 65;
+            state.ball.spin = isFinesse ? curveSign * 520 : 0;
+            state.ball.lastTouchTeam = shooter.team;
+            state.ball.lastTouchPlayer = shooter;
+
+            shooter.facing = Math.atan2(dy, dx);
+            shooter.tackleCooldown = 0.35;
+            state.setPiece = null;
+
+            if (shooter.team === 'home') state.stats.homeShots++;
+            else state.stats.awayShots++;
+
+            sound.playKick(0.95);
+        }
+
+        function triggerTeammateRun(carrier) {
+            const atkDir = carrier.team === 'home' ? getHomeAttackDir() : -getHomeAttackDir();
+            let bestMate = null;
+            let bestDist = Infinity;
+            for (const p of state.players) {
+                if (p.team === carrier.team && p !== carrier && !p.isGK) {
+                    const d = Math.hypot(p.x - carrier.x, p.y - carrier.y);
+                    if (d < bestDist && d < 520) {
+                        bestDist = d;
+                        bestMate = p;
+                    }
+                }
+            }
+            if (bestMate) {
+                bestMate.runTimer = 2.6;
+                bestMate.vx = atkDir * 240;
+            }
+        }
+
+        function switchControlledPlayer(team = 'home') {
+            const currentCtrl = team === 'home' ? state.controlledPlayer : state.controlledPlayerP2;
+            let bestPlayer = null;
+            let minDist = Infinity;
+
+            for (const p of state.players) {
+                if (p.team === team && !p.isGK && p !== currentCtrl) {
+                    const d = Math.hypot(p.x - state.ball.x, p.y - state.ball.y);
+                    if (d < minDist) {
+                        minDist = d;
+                        bestPlayer = p;
+                    }
+                }
+            }
+            if (bestPlayer) {
+                if (team === 'home') state.controlledPlayer = bestPlayer;
+                else state.controlledPlayerP2 = bestPlayer;
+            }
+        }
+
+        function executeTackle(defender, isSlide = false) {
+            if (!defender || defender.tackleCooldown > 0 || defender.stunTimer > 0) return;
+            // Disallow stealing/tackling while kickoff or set-piece is active!
+            if (state.setPiece) return;
+
+            const dx = state.ball.x - defender.x;
+            const dy = state.ball.y - defender.y;
+            const distToBall = Math.hypot(dx, dy);
+
+            if (distToBall > 4) {
+                defender.facing = Math.atan2(dy, dx);
+            }
+
+            defender.tackleCooldown = isSlide ? 0.95 : 0.55;
+
+            if (isSlide) {
+                defender.slideTimer = 0.42;
+                defender.vx = Math.cos(defender.facing) * 430;
+                defender.vy = Math.sin(defender.facing) * 430;
+            } else {
+                // Short lunge step toward ball
+                const step = Math.min(18, distToBall * 0.45);
+                defender.x += Math.cos(defender.facing) * step;
+                defender.y += Math.sin(defender.facing) * step;
+            }
+
+            const reach = isSlide ? 64 : 52;
+            if (distToBall <= reach && state.ball.z <= 36) {
+                const prevOwner = state.ball.owner;
+                if (prevOwner && prevOwner.team !== defender.team) {
+                    prevOwner.stunTimer = isSlide ? 0.95 : 0.65;
+                }
+                snapBallToPlayer(defender);
+                sound.playKick(0.8);
+            }
+        }
+
+        // =========================================================================
+        // 7. MAIN SIMULATION STEP
+        // =========================================================================
+        function updateSimulation(dt) {
+            if (state.netRipple.timer > 0) {
+                state.netRipple.timer = Math.max(0, state.netRipple.timer - dt);
+            }
+
+            if (state.screen === 'goal') {
+                state.goalTimer -= dt;
+                updateBall(dt * 0.35); // Slow-motion goal celebration
+                if (state.goalTimer <= 0) {
+                    document.getElementById('goalOverlay').classList.add('hidden');
+                    const kickoffTeam = state.lastScoringTeam === 'home' ? 'away' : 'home';
+                    setupKickoff(kickoffTeam);
+                    state.screen = 'playing';
+                    sound.playWhistle(false);
+                }
+                return;
+            }
+
+            if (state.screen !== 'playing') return;
+
+            // Advance Match Clock
+            state.elapsedMatchSec += dt;
+
+            // AI Set Piece Auto-Execution (Only in 1P mode)
+            if (state.setPiece && state.setPiece.team === 'away' && state.gameMode === '1p') {
+                state.setPiece.timer -= dt;
+                if (state.setPiece.timer <= 0 && state.ball.owner && state.ball.owner.team === 'away') {
+                    executePass(state.ball.owner, state.setPiece.type === 'goalkick' ? 'lob' : 'ground');
+                    state.setPiece = null;
+                }
+            }
+
+            // Check Half End
+            const targetEnd = state.half * state.halfDurationSec + (state.addedTimeMin / 45) * state.halfDurationSec;
+            if (state.elapsedMatchSec >= targetEnd && !state.ball.isShot) {
+                handlePeriodEnd();
+                return;
+            }
+
+            // Track Possession Stats
+            if (state.ball.owner) {
+                if (state.ball.owner.team === 'home') state.stats.homePossTime += dt;
+                else state.stats.awayPossTime += dt;
+            }
+
+            // Shot Power Charge (1P & 2P)
+            if (state.shotCharge.active) {
+                if (state.ball.owner && state.ball.owner.team === 'home') {
+                    state.shotCharge.power = Math.min(1, state.shotCharge.power + dt * 1.45);
+                    if (keys.KeyZ) state.shotCharge.isFinesse = true;
+                } else {
+                    state.shotCharge.active = false;
+                    state.shotCharge.power = 0;
+                }
+            }
+            if (state.shotChargeP2.active) {
+                if (state.ball.owner && state.ball.owner.team === 'away') {
+                    state.shotChargeP2.power = Math.min(1, state.shotChargeP2.power + dt * 1.45);
+                    if (keys.KeyB) state.shotChargeP2.isFinesse = true;
+                } else {
+                    state.shotChargeP2.active = false;
+                    state.shotChargeP2.power = 0;
+                }
+            }
+
+            // Preview pass target when home has ball
+            if (state.ball.owner && state.ball.owner.team === 'home') {
+                state.passPreviewTarget = findBestPassReceiver(state.ball.owner, 'ground');
+            } else {
+                state.passPreviewTarget = null;
+            }
+
+            // Update Players & AI
+            updatePlayers(dt);
+
+            // Update Ball Physics & Trapping
+            updateBall(dt);
+
+            // Smooth Camera Tracking
+            const camTargetX = Math.max(380, Math.min(PITCH.w - 380, state.ball.x));
+            const camTargetY = Math.max(240, Math.min(PITCH.h - 240, state.ball.y));
+            state.camera.x += (camTargetX - state.camera.x) * Math.min(1, dt * 6.5);
+            state.camera.y += (camTargetY - state.camera.y) * Math.min(1, dt * 6.5);
+        }
+
+        function updatePlayers(dt) {
+            const diff = DIFFICULTY_PARAMS[state.difficulty];
+            const ball = state.ball;
+            const homeAtkDir = getHomeAttackDir();
+
+            // Determine closest away defender to ball for AI pressing
+            let closestAwayPresser = null;
+            let minAwayDist = Infinity;
+            for (const p of state.players) {
+                if (p.team === 'away' && !p.isGK && p.stunTimer <= 0) {
+                    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+                    if (d < minAwayDist) {
+                        minAwayDist = d;
+                        closestAwayPresser = p;
+                    }
+                }
+            }
+
+            for (const p of state.players) {
+                // Decrement player timers
+                if (p.tackleCooldown > 0) p.tackleCooldown = Math.max(0, p.tackleCooldown - dt);
+                if (p.stunTimer > 0) p.stunTimer = Math.max(0, p.stunTimer - dt);
+                if (p.slideTimer > 0) p.slideTimer = Math.max(0, p.slideTimer - dt);
+                if (p.runTimer > 0) p.runTimer = Math.max(0, p.runTimer - dt);
+                if (p.aiActionCooldown > 0) p.aiActionCooldown = Math.max(0, p.aiActionCooldown - dt);
+
+                if (p.stunTimer > 0) {
+                    p.vx *= 0.85;
+                    p.vy *= 0.85;
+                    continue;
+                }
+
+                if (p.slideTimer > 0) {
+                    p.x = Math.max(16, Math.min(PITCH.w - 16, p.x + p.vx * dt));
+                    p.y = Math.max(16, Math.min(PITCH.h - 16, p.y + p.vy * dt));
+                    p.vx *= 0.92;
+                    p.vy *= 0.92;
+                    continue;
+                }
+
+                const baseSpeed = 215 + (p.rating - 80) * 3.2;
+
+                // 1. Goalkeeper Positioning & Ball Distribution
+                if (p.isGK) {
+                    const isLeftGK = (p.team === 'home' && homeAtkDir === 1) || (p.team === 'away' && homeAtkDir === -1);
+                    const goalLineX = isLeftGK ? 22 : PITCH.w - 22;
+
+                    // If AI GK holds the ball, distribute it after brief hold
+                    if (ball.owner === p && (p.team === 'away' && state.gameMode === '1p')) {
+                        p.vx = 0;
+                        p.vy = 0;
+                        if (p.aiActionCooldown <= 0) {
+                            executePass(p, Math.random() < 0.65 ? 'lob' : 'ground');
+                        }
+                        continue;
+                    }
+
+                    // If Human GK holds the ball, let user aim/move & pass
+                    if (ball.owner === p && (p.team === 'home' || (p.team === 'away' && state.gameMode === '2p'))) {
+                        const inp = getInputDirection(p.facing, p.team);
+                        if (inp.hasInput) {
+                            p.x = Math.max(12, Math.min(PITCH.w - 12, p.x + inp.x * 130 * dt));
+                            p.y = Math.max(PITCH.h / 2 - 140, Math.min(PITCH.h / 2 + 140, p.y + inp.y * 130 * dt));
+                            p.facing = Math.atan2(inp.y, inp.x);
+                        }
+                        p.vx = 0;
+                        p.vy = 0;
+                        continue;
+                    }
+
+                    const gkCharging = (p.team === 'home' && state.gkRush) || (p.team === 'away' && state.gameMode === '2p' && state.gkRushP2);
+
+                    let desiredX = goalLineX + (isLeftGK ? 12 : -12);
+                    let desiredY = PITCH.h / 2 + Math.max(-58, Math.min(58, (ball.y - PITCH.h / 2) * 0.48));
+
+                    if (gkCharging) {
+                        desiredX = ball.x;
+                        desiredY = ball.y;
+                    }
+
+                    // Equalized GK movement speed for both Home and Away goalkeepers
+                    const gkSpeed = gkCharging ? 250 : 165;
+                    moveTowards(p, desiredX, desiredY, gkSpeed, dt);
+                    p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+                    continue;
+                }
+
+                // 2. Human Controlled Player (1P Home OR 2P Away in 2-player mode)
+                const isHumanControlled = (p === state.controlledPlayer && p.team === 'home') ||
+                    (state.gameMode === '2p' && p === state.controlledPlayerP2 && p.team === 'away');
+
+                if (isHumanControlled) {
+                    const pTeam = p.team;
+                    const sprintKey = pTeam === 'home' ? keys.KeyE : keys.KeyU;
+
+                    // If this player is the locked pass receiver and user isn't pressing keys, step toward ball
+                    if (ball.passTarget === p && !getInputDirection(null, pTeam).hasInput) {
+                        moveTowards(p, ball.x, ball.y, baseSpeed * 0.95, dt);
+                        p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+                        continue;
+                    }
+
+                    if (state.setPiece && state.setPiece.team === pTeam && ball.owner === p) {
+                        const aim = getInputDirection(p.facing, pTeam);
+                        if (aim.hasInput) p.facing = Math.atan2(aim.y, aim.x);
+                        p.vx = 0;
+                        p.vy = 0;
+                        continue;
+                    }
+
+                    const inp = getInputDirection(p.facing, pTeam);
+                    const isSprinting = sprintKey && p.stamina > 5 && inp.hasInput;
+
+                    if (isSprinting) {
+                        p.stamina = Math.max(0, p.stamina - dt * 16);
+                    } else {
+                        p.stamina = Math.min(100, p.stamina + dt * 9);
+                    }
+
+                    if (inp.hasInput) {
+                        // During throw-in or corner kick, taker stays planted at the spot to aim (must pass with S/W/A)
+                        if (state.setPiece && (state.setPiece.type === 'throwin' || state.setPiece.type === 'corner') && ball.owner === p) {
+                            p.facing = Math.atan2(inp.y, inp.x);
+                            p.vx = 0;
+                            p.vy = 0;
+                            continue;
+                        }
+                        if (state.setPiece && state.setPiece.type === 'kickoff' && ball.owner === p) {
+                            // Keep kickoff protected for 0.8s after starting dribble so opponent cannot steal immediately
+                            state.setPiece = { type: 'kickoff_grace', team: p.team, x: PITCH.w / 2, y: PITCH.h / 2, timer: 0.85 };
+                        }
+                        const speedMult = isSprinting ? 1.38 : 1.0;
+                        const carrierDrag = (ball.owner === p) ? 0.94 : 1.0;
+                        const spd = baseSpeed * speedMult * carrierDrag;
+                        p.vx = inp.x * spd;
+                        p.vy = inp.y * spd;
+                        p.x = Math.max(16, Math.min(PITCH.w - 16, p.x + p.vx * dt));
+                        p.y = Math.max(16, Math.min(PITCH.h - 16, p.y + p.vy * dt));
+
+                        // Strictly prevent any player (even human-controlled) from crossing into opponent half during kickoff!
+                        if (state.setPiece && (state.setPiece.type === 'kickoff' || state.setPiece.type === 'kickoff_grace')) {
+                            const cx = PITCH.w / 2;
+                            const isLeftTeam = (p.team === 'home' && homeAtkDir === 1) || (p.team === 'away' && homeAtkDir === -1);
+                            if (state.setPiece.type === 'kickoff') {
+                                if (isLeftTeam && p.x > cx - 18) p.x = cx - 18;
+                                if (!isLeftTeam && p.x < cx + 18) p.x = cx + 18;
+                            } else if (p.team !== state.setPiece.team) {
+                                // Defending team cannot enter opponent half or center circle during kickoff grace
+                                if (isLeftTeam && p.x > cx - 26) p.x = cx - 26;
+                                if (!isLeftTeam && p.x < cx + 26) p.x = cx + 26;
+                            }
+                        }
+
+                        p.facing = Math.atan2(inp.y, inp.x);
+                    } else {
+                        p.vx = 0;
+                        p.vy = 0;
+                    }
+
+                    // Auto body-check / jockey steal when human runs into opponent ball carrier
+                    const oppTeam = pTeam === 'home' ? 'away' : 'home';
+                    if (ball.owner && ball.owner.team === oppTeam && p.tackleCooldown <= 0 && !state.setPiece) {
+                        const distToCarrier = Math.hypot(p.x - ball.owner.x, p.y - ball.owner.y);
+                        const distToBall = Math.hypot(p.x - ball.x, p.y - ball.y);
+                        if (distToCarrier <= 32 || distToBall <= 30) {
+                            const prevOwner = ball.owner;
+                            prevOwner.stunTimer = 0.65;
+                            p.tackleCooldown = 0.45;
+                            snapBallToPlayer(p);
+                            sound.playKick(0.75);
+                        }
+                    }
+                    continue;
+                }
+
+                // AI Pressing (Only when 1P mode; in 2P mode Away team is human-controlled)
+                if (state.gameMode === '1p' && !state.setPiece && p === closestAwayPresser && (!ball.owner || ball.owner.team === 'home')) {
+                    moveTowards(p, ball.x, ball.y, baseSpeed * diff.aiSpeed * 0.92, dt);
+                    p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+                    if (Math.hypot(p.x - ball.x, p.y - ball.y) < 24 && p.aiActionCooldown <= 0) {
+                        p.aiActionCooldown = 1.45;
+                        if (Math.random() < 0.45) {
+                            executeTackle(p, false);
+                        }
+                    }
+                    continue;
+                }
+
+                // 3. AI Ball Carrier (Only when 1P mode)
+                if (state.gameMode === '1p' && ball.owner === p && p.team === 'away') {
+                    if (state.setPiece) continue;
+
+                    const awayAtkDir = -homeAtkDir;
+                    const oppGoalX = awayAtkDir === 1 ? PITCH.w : 0;
+                    const oppGoalY = PITCH.h / 2;
+                    const distToGoal = Math.hypot(oppGoalX - p.x, oppGoalY - p.y);
+
+                    // Shoot when inside or near penalty box
+                    if (distToGoal < 330 && p.aiActionCooldown <= 0) {
+                        p.aiActionCooldown = 1.2;
+                        executeShot(p, 0.55 + Math.random() * 0.25, Math.random() < 0.35);
+                        continue;
+                    }
+
+                    // Check if a home defender is closing in -> pass or through-ball
+                    let nearestHomeDist = Infinity;
+                    for (const hp of state.players) {
+                        if (hp.team === 'home' && !hp.isGK) {
+                            const d = Math.hypot(hp.x - p.x, hp.y - p.y);
+                            if (d < nearestHomeDist) nearestHomeDist = d;
+                        }
+                    }
+
+                    if ((nearestHomeDist < 95 || Math.random() < dt * 0.65) && p.aiActionCooldown <= 0) {
+                        p.aiActionCooldown = 0.85;
+                        // Occasionally switch play to wingers so realistic throw-ins and crosses happen!
+                        const passMode = distToGoal < 520 && Math.random() < 0.35 ? 'through' : (Math.random() < 0.25 ? 'lob' : 'ground');
+                        executePass(p, passMode);
+                        continue;
+                    }
+
+                    // Dribble toward opponent goal with wing & central weaving
+                    const weaveY = oppGoalY + Math.sin(state.elapsedMatchSec * 1.8 + p.number) * 260;
+                    moveTowards(p, oppGoalX, weaveY, baseSpeed * diff.aiSpeed * 0.90, dt);
+                    p.facing = Math.atan2(weaveY - p.y, oppGoalX - p.x);
+                    continue;
+                }
+
+                // 4. Off-the-Ball Positioning (Teammates & Away AI)
+                const anchor = getAnchorPosition(p);
+                const teamAtkDir = p.team === 'home' ? homeAtkDir : -homeAtkDir;
+                const ballProgress = (ball.x - PITCH.w / 2) / (PITCH.w / 2); // -1 to 1
+                const shiftX = ballProgress * 220;
+
+                let destX = anchor.x + shiftX;
+                let destY = anchor.y + (ball.y - PITCH.h / 2) * 0.28;
+
+                // Teammate triggered run (Q key) or forward support when attacking
+                if (p.runTimer > 0) {
+                    destX += teamAtkDir * 240;
+                } else if (ball.owner && ball.owner.team === p.team) {
+                    if (['ST', 'LW', 'RW', 'CAM'].includes(p.role)) {
+                        destX += teamAtkDir * 110;
+                    }
+                }
+
+                destX = Math.max(45, Math.min(PITCH.w - 45, destX));
+                destY = Math.max(45, Math.min(PITCH.h - 45, destY));
+
+                // Strictly keep all players in their own half & outside center circle during kickoff
+                if (state.setPiece && (state.setPiece.type === 'kickoff' || state.setPiece.type === 'kickoff_grace')) {
+                    const cx = PITCH.w / 2;
+                    const cy = PITCH.h / 2;
+                    const isLeftTeam = (p.team === 'home' && homeAtkDir === 1) || (p.team === 'away' && homeAtkDir === -1);
+
+                    if (state.setPiece.type === 'kickoff' || p.team !== state.setPiece.team) {
+                        if (isLeftTeam && destX > cx - 26) destX = cx - 26;
+                        if (!isLeftTeam && destX < cx + 26) destX = cx + 26;
+                    }
+
+                    if (p.team !== state.setPiece.team) {
+                        const dx = destX - cx;
+                        const dy = destY - cy;
+                        const d = Math.hypot(dx, dy);
+                        const minD = PITCH.centerCircleR + 32;
+                        if (d < minD) {
+                            const ang = d > 0.1 ? Math.atan2(dy, dx) : (isLeftTeam ? Math.PI : 0);
+                            destX = cx + Math.cos(ang) * minD;
+                            destY = cy + Math.sin(ang) * minD;
+                        }
+                    }
+                }
+
+                const offBallSpeed = baseSpeed * (p.runTimer > 0 ? 1.25 : 0.85) * (p.team === 'away' ? diff.aiSpeed : 1);
+                moveTowards(p, destX, destY, offBallSpeed, dt);
+                p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+            }
+        }
+
+        function updateBall(dt) {
+            const b = state.ball;
+
+            // Ball attached to carrier's feet (or held overhead during throw-in!)
+            if (b.owner) {
+                if (state.setPiece && state.setPiece.type === 'throwin') {
+                    b.x = b.owner.x;
+                    b.y = b.owner.y;
+                    b.z = 44; // Overhead throw-in stance!
+                    return;
+                }
+                const dribbleOffset = 15 + Math.sin(state.elapsedMatchSec * 16) * 2.5;
+                b.x = b.owner.x + Math.cos(b.owner.facing) * dribbleOffset;
+                b.y = b.owner.y + Math.sin(b.owner.facing) * dribbleOffset;
+                b.z = 0;
+                return;
+            }
+
+            // Strong Pass Lock-On Homing & Auto-Deceleration so passes NEVER drift past receiver!
+            if (b.passTarget && b.passLockTimer > 0) {
+                b.passLockTimer -= dt;
+                const rx = b.passTarget.x;
+                const ry = b.passTarget.y;
+                const dx = rx - b.x;
+                const dy = ry - b.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist > 1) {
+                    const currentSpeed = Math.hypot(b.vx, b.vy);
+                    const desiredSpeed = dist < 140 ? Math.max(340, dist * 4.2) : currentSpeed;
+                    const desiredVx = (dx / dist) * desiredSpeed;
+                    const desiredVy = (dy / dist) * desiredSpeed;
+                    const steer = Math.min(1, dt * 14);
+                    b.vx += (desiredVx - b.vx) * steer;
+                    b.vy += (desiredVy - b.vy) * steer;
+                }
+            }
+
+            // Apply Magnus Curve Spin (for Z+D Finesse Shots)
+            if (Math.abs(b.spin) > 1) {
+                const spd = Math.hypot(b.vx, b.vy);
+                if (spd > 10) {
+                    const nx = -b.vy / spd;
+                    const ny = b.vx / spd;
+                    b.vx += nx * b.spin * dt;
+                    b.vy += ny * b.spin * dt;
+                    b.spin *= Math.pow(0.45, dt);
+                }
+            }
+
+            // Integrate Position
+            b.x += b.vx * dt;
+            b.y += b.vy * dt;
+
+            // Vertical Air Physics (Lob Passes & Shots)
+            if (b.z > 0 || b.vz !== 0) {
+                b.z += b.vz * dt;
+                b.vz -= 640 * dt; // Gravity
+                if (b.z <= 0) {
+                    b.z = 0;
+                    if (Math.abs(b.vz) > 95) {
+                        b.vz = -b.vz * 0.42;
+                        b.vx *= 0.84;
+                        b.vy *= 0.84;
+                    } else {
+                        b.vz = 0;
+                    }
+                }
+            }
+
+            // Ground Friction (lighter during locked pass so ball always reaches target)
+            if (b.z === 0) {
+                const friction = (b.passTarget && b.passLockTimer > 0)
+                    ? Math.pow(0.75, dt)
+                    : Math.pow(0.32, dt);
+                b.vx *= friction;
+                b.vy *= friction;
+            } else if (b.isShot) {
+                // Air drag on long-range shots so halfway-line shots slow down before reaching GK
+                const airDrag = Math.pow(0.78, dt);
+                b.vx *= airDrag;
+                b.vy *= airDrag;
+            }
+
+            // Player Trapping & Goalkeeper Saves (Balanced for exciting close/finesse goals, realistic long shots)
+            if (state.screen === 'playing') {
+                const ballSpeed = Math.hypot(b.vx, b.vy);
+                for (let i = 0; i < state.players.length; i++) {
+                    const p = state.players[i];
+                    if (p.stunTimer > 0) continue;
+                    if (p === b.lastTouchPlayer && p.tackleCooldown > 0) continue;
+
+                    const dist = Math.hypot(p.x - b.x, p.y - b.y);
+                    const isLockedReceiver = (b.passTarget === p);
+
+                    if (p.isGK && b.isShot && p.team !== b.lastTouchTeam) {
+                        const originDist = b.shotOriginDist || 300;
+                        const isLongShot = originDist > 460;
+
+                        // Equalized GK save reach for both Home & Away goalkeepers
+                        let gkReach = isLongShot ? 58 : 42;
+                        if (b.isFinesseShot && !isLongShot) gkReach -= 12;
+                        if (ballSpeed > 880 && !isLongShot) gkReach -= 4;
+                        if (ballSpeed > 1050 && !isLongShot) gkReach -= 4;
+
+                        if (dist <= Math.max(18, gkReach) && b.z <= 72) {
+                            // Parry/punch hard shots out toward the corner/endline so corner kicks & rebounds occur naturally!
+                            if (ballSpeed > 700 && Math.random() < 0.72) {
+                                const deflectDirX = (p.x < PITCH.w / 2) ? -1 : 1;
+                                const cornerSignY = (b.y < PITCH.h / 2) ? -1 : 1;
+                                b.vx = deflectDirX * (260 + Math.random() * 240);
+                                b.vy = cornerSignY * (340 + Math.random() * 280);
+                                b.vz = 150 + Math.random() * 70;
+                                b.isShot = false;
+                                b.lastTouchTeam = p.team;
+                                b.lastTouchPlayer = p;
+                                p.tackleCooldown = 0.55;
+                                sound.playKick(0.6);
+                                return;
+                            }
+                            snapBallToPlayer(p);
+                            if (p.isGK) p.aiActionCooldown = 0.65;
+                            return;
+                        }
+                        continue;
+                    }
+
+                    // Normal Field Player Ball Interception / Trapping (Defenders can deflect/clear near box -> corners/throw-ins!)
+                    const trapRadius = isLockedReceiver ? 38 : 23;
+                    const maxTrapZ = (b.isLobPass && !isLockedReceiver) ? 24 : 44;
+
+                    if (dist <= trapRadius && b.z <= maxTrapZ) {
+                        // If a defender blocks a fast shot or cross near their own goal/sideline, deflect out for corner/throw-in!
+                        if ((b.isShot || b.isLobPass) && p.team !== b.lastTouchTeam && !isLockedReceiver && Math.random() < 0.58) {
+                            const nearOwnGoal = (p.x < 240 || p.x > PITCH.w - 240);
+                            const outX = nearOwnGoal ? ((p.x < PITCH.w / 2 ? -1 : 1) * (320 + Math.random() * 220)) : ((Math.random() - 0.5) * 280);
+                            const outY = (p.y < PITCH.h / 2 ? -1 : 1) * (340 + Math.random() * 260);
+                            b.vx = outX;
+                            b.vy = outY;
+                            b.vz = 140;
+                            b.isShot = false;
+                            b.lastTouchTeam = p.team;
+                            b.lastTouchPlayer = p;
+                            p.tackleCooldown = 0.35;
+                            sound.playKick(0.55);
+                            return;
+                        }
+                        snapBallToPlayer(p);
+                        sound.playTrap();
+                        return;
+                    }
+                }
+            }
+
+            // Goal & Boundary Line Checks (Only check while match is actively playing!)
+            if (state.screen === 'playing') {
+                const goalTop = PITCH.h / 2 - PITCH.goalH / 2;
+                const goalBot = PITCH.h / 2 + PITCH.goalH / 2;
+
+                // Left Goal Line
+                if (b.x <= 0) {
+                    if (b.y >= goalTop && b.y <= goalBot && b.z <= 75) {
+                        const scoringTeam = getHomeAttackDir() === -1 ? 'home' : 'away';
+                        handleGoalScored(scoringTeam, 'left', b.y);
+                        return;
+                    }
+                    const defendingTeam = getHomeAttackDir() === 1 ? 'home' : 'away';
+                    if (b.lastTouchTeam === defendingTeam) {
+                        const cornerY = b.y < PITCH.h / 2 ? 12 : PITCH.h - 12;
+                        setupSetPiece('corner', defendingTeam === 'home' ? 'away' : 'home', 12, cornerY);
+                    } else {
+                        setupSetPiece('goalkick', defendingTeam, PITCH.sixYardW, PITCH.h / 2);
+                    }
+                    return;
+                }
+
+                // Right Goal Line
+                if (b.x >= PITCH.w) {
+                    if (b.y >= goalTop && b.y <= goalBot && b.z <= 75) {
+                        const scoringTeam = getHomeAttackDir() === 1 ? 'home' : 'away';
+                        handleGoalScored(scoringTeam, 'right', b.y);
+                        return;
+                    }
+                    const defendingTeam = getHomeAttackDir() === -1 ? 'home' : 'away';
+                    if (b.lastTouchTeam === defendingTeam) {
+                        const cornerY = b.y < PITCH.h / 2 ? 12 : PITCH.h - 12;
+                        setupSetPiece('corner', defendingTeam === 'home' ? 'away' : 'home', PITCH.w - 12, cornerY);
+                    } else {
+                        setupSetPiece('goalkick', defendingTeam, PITCH.w - PITCH.sixYardW, PITCH.h / 2);
+                    }
+                    return;
+                }
+
+                // Top & Bottom Touchlines (Throw-in)
+                if (b.y <= 0 || b.y >= PITCH.h) {
+                    const throwTeam = b.lastTouchTeam === 'home' ? 'away' : 'home';
+                    const throwY = b.y <= 0 ? 12 : PITCH.h - 12;
+                    setupSetPiece('throwin', throwTeam, b.x, throwY);
+                }
+            }
+        }
+
+        function handleGoalScored(scoringTeam, netSide, impactY) {
+            if (state.screen !== 'playing') return;
+
+            if (scoringTeam === 'home') state.homeScore++;
+            else state.awayScore++;
+
+            state.lastScoringTeam = scoringTeam;
+            state.screen = 'goal';
+            state.goalTimer = 2.4;
+            state.netRipple = { side: netSide, timer: 1.6, y: impactY };
+            state.shotCharge.active = false;
+            state.shotChargeP2.active = false;
+
+            const scorerName = state.ball.lastTouchPlayer ? state.ball.lastTouchPlayer.name : '';
+            document.getElementById('goalScorerText').textContent =
+                `${scorerName ? scorerName + ' · ' : ''}${state.homeTeam.code} ${state.homeScore} - ${state.awayScore} ${state.awayTeam.code}`;
+            document.getElementById('goalOverlay').classList.remove('hidden');
+
+            updateHUD();
+            sound.playNetSwish();
+            sound.playGoalCheer();
+            sound.playWhistle(false);
+        }
+
+        function handlePeriodEnd() {
+            sound.playWhistle(true);
+            state.shotCharge.active = false;
+
+            const totalPoss = state.stats.homePossTime + state.stats.awayPossTime;
+            const homePossPct = Math.round((state.stats.homePossTime / totalPoss) * 100);
+            const awayPossPct = 100 - homePossPct;
+
+            document.getElementById('repHomeName').textContent = state.homeTeam.name;
+            document.getElementById('repAwayName').textContent = state.awayTeam.name;
+            document.getElementById('repHomeScore').textContent = state.homeScore;
+            document.getElementById('repAwayScore').textContent = state.awayScore;
+
+            document.getElementById('statHomePoss').textContent = `${homePossPct}%`;
+            document.getElementById('statAwayPoss').textContent = `${awayPossPct}%`;
+            document.getElementById('statPossBar').style.width = `${homePossPct}%`;
+            document.getElementById('statHomeShots').textContent = state.stats.homeShots;
+            document.getElementById('statAwayShots').textContent = state.stats.awayShots;
+            document.getElementById('statHomePasses').textContent = state.stats.homePasses;
+            document.getElementById('statAwayPasses').textContent = state.stats.awayPasses;
+
+            if (state.half === 1) {
+                state.screen = 'halftime';
+                document.getElementById('reportSubtitle').textContent = 'HALF TIME';
+                document.getElementById('reportTitle').textContent = '전반전 종료';
+                document.getElementById('btnReportPrimary').textContent = '후반전 시작';
+            } else {
+                state.screen = 'fulltime';
+                document.getElementById('reportSubtitle').textContent = 'FULL TIME';
+                document.getElementById('reportTitle').textContent = '경기 종료';
+                document.getElementById('btnReportPrimary').textContent = '다시 경기하기';
+            }
+
+            document.getElementById('reportOverlay').classList.remove('hidden');
+        }
+
+        // =========================================================================
+        // 8. 3D RENDERING (THREE.JS TELE BROADCAST, PLAYERS, RADAR & HUD)
+        // =========================================================================
+        function resizeCanvases() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            renderer.setSize(w, h);
+            camera3D.aspect = w / h;
+            camera3D.updateProjectionMatrix();
+
+            if (radarCanvas.parentElement) {
+                radarCanvas.width = radarCanvas.parentElement.clientWidth || 176;
+                radarCanvas.height = radarCanvas.parentElement.clientHeight || 112;
+            }
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        function renderFrame() {
+            // 1. Update 3D Broadcast Camera (smoothly tracks ball + supports user mouse orbit)
+            const target3DX = to3DX(state.camera.x) * 0.85;
+            const target3DZ = to3DZ(state.camera.y) * 0.65;
+            const camDist = 760 + state.camera.pitchOffset;
+            const camHeight = 520 + state.camera.pitchOffset * 0.85;
+
+            const camX = target3DX + Math.sin(state.camera.yawOffset) * camDist;
+            const camZ = target3DZ + Math.cos(state.camera.yawOffset) * camDist;
+
+            camera3D.position.set(camX, Math.max(220, camHeight), camZ);
+            camera3D.lookAt(target3DX, 15, target3DZ - 20);
+
+            // 2. Goal Net Ripple Animation in 3D
+            if (netMeshes.left && netMeshes.right) {
+                if (state.netRipple.timer > 0 && state.netRipple.side) {
+                    const mesh = netMeshes[state.netRipple.side];
+                    const pulse = 1 + Math.sin(state.netRipple.timer * 28) * 0.14 * state.netRipple.timer;
+                    mesh.scale.set(pulse, 1, 1);
+                } else {
+                    netMeshes.left.scale.set(1, 1, 1);
+                    netMeshes.right.scale.set(1, 1, 1);
+                }
+            }
+
+            // 3. Update 3D Tactical Guides (Pass Lock-On & Finesse Curve)
+            const carrier = state.ball.owner;
+            if (carrier && carrier.team === 'home' && state.passPreviewTarget) {
+                const t = state.passPreviewTarget;
+                const posArr = passGuideLine.geometry.attributes.position.array;
+                posArr[0] = to3DX(carrier.x); posArr[1] = 2.0; posArr[2] = to3DZ(carrier.y);
+                posArr[3] = to3DX(t.x);       posArr[4] = 2.0; posArr[5] = to3DZ(t.y);
+                passGuideLine.geometry.attributes.position.needsUpdate = true;
+                passGuideLine.visible = true;
+
+                passTargetRing.position.set(to3DX(t.x), 1.5, to3DZ(t.y));
+                passTargetRing.visible = true;
+            } else {
+                passGuideLine.visible = false;
+                passTargetRing.visible = false;
+            }
+
+            if (carrier && carrier.team === 'home' && (keys.KeyZ || (state.shotCharge.active && state.shotCharge.isFinesse))) {
+                const atkDir = getHomeAttackDir();
+                const goalX = atkDir === 1 ? PITCH.w : 0;
+                const aimOffsetY = keys.ArrowUp ? -74 : (keys.ArrowDown ? 74 : (carrier.y < PITCH.h / 2 ? 34 : -34));
+                const targetY = PITCH.h / 2 + aimOffsetY;
+                const ctrlX = (carrier.x + goalX) / 2;
+                const ctrlY = (carrier.y + targetY) / 2 - aimOffsetY * 1.1;
+
+                const fArr = finesseGuideLine.geometry.attributes.position.array;
+                for (let i = 0; i <= 24; i++) {
+                    const t = i / 24;
+                    const inv = 1 - t;
+                    const px = inv * inv * carrier.x + 2 * inv * t * ctrlX + t * t * goalX;
+                    const py = inv * inv * carrier.y + 2 * inv * t * ctrlY + t * t * targetY;
+                    fArr[i * 3] = to3DX(px);
+                    fArr[i * 3 + 1] = 3.0;
+                    fArr[i * 3 + 2] = to3DZ(py);
+                }
+                finesseGuideLine.geometry.attributes.position.needsUpdate = true;
+                finesseGuideLine.visible = true;
+            } else {
+                finesseGuideLine.visible = false;
+            }
+
+            // 4. Sync 3D Players
+            for (const p of state.players) {
+                const obj = playerMeshes.get(p.id);
+                if (!obj) continue;
+
+                obj.group.position.set(to3DX(p.x), 0, to3DZ(p.y));
+                obj.bodyPivot.rotation.y = -p.facing;
+
+                // Slide tackle tilt vs running leg swing
+                if (p.slideTimer > 0) {
+                    obj.bodyPivot.rotation.z = -Math.PI / 2.2;
+                    obj.bodyPivot.position.y = 6;
+                } else {
+                    obj.bodyPivot.rotation.z = 0;
+                    obj.bodyPivot.position.y = 0;
+                    const spd = Math.hypot(p.vx, p.vy);
+                    if (spd > 15) {
+                        const stride = Math.sin(state.elapsedMatchSec * 18 + p.number) * 0.55;
+                        obj.leftLeg.rotation.z = stride;
+                        obj.rightLeg.rotation.z = -stride;
+                    } else {
+                        obj.leftLeg.rotation.z = 0;
+                        obj.rightLeg.rotation.z = 0;
+                    }
+                }
+
+                const isControlled = (p === state.controlledPlayer);
+                obj.cursorRing.visible = isControlled;
+                obj.cursorArrow.visible = isControlled;
+                if (isControlled) {
+                    obj.cursorArrow.position.y = 56 + Math.sin(state.elapsedMatchSec * 8) * 3;
+                }
+                obj.runRing.visible = (p.runTimer > 0 && p.team === 'home');
+            }
+
+            // 5. Sync 3D Ball & Shadow
+            const b = state.ball;
+            const bx3 = to3DX(b.x);
+            const bz3 = to3DZ(b.y);
+            const by3 = 8.5 + b.z * 0.85;
+            ball3DGroup.position.set(bx3, by3, bz3);
+
+            // Rotate ball proportionally to velocity
+            const bSpeed = Math.hypot(b.vx, b.vy);
+            if (bSpeed > 5) {
+                ball3DGroup.rotation.z -= (b.vx * 0.0022);
+                ball3DGroup.rotation.x += (b.vy * 0.0022);
+            }
+            bandMesh.material.color.setHex(b.isFinesseShot ? 0xa855f7 : 0x0f172a);
+
+            ballShadowMesh.position.set(bx3, 0.7, bz3);
+            const shScale = Math.max(0.5, 1 - b.z / 260);
+            ballShadowMesh.scale.set(shScale, shScale, 1);
+
+            // 6. Render WebGL 3D Scene
+            renderer.render(scene, camera3D);
+
+            // 7. Radar & HTML HUD
+            if (state.screen === 'playing' || state.screen === 'goal') {
+                renderRadar();
+                updateHUD();
+            }
+        }
+
+        function renderRadar() {
+            const rw = radarCanvas.width;
+            const rh = radarCanvas.height;
+            radarCtx.clearRect(0, 0, rw, rh);
+
+            radarCtx.fillStyle = 'rgba(6, 78, 59, 0.92)';
+            radarCtx.fillRect(0, 0, rw, rh);
+            radarCtx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            radarCtx.lineWidth = 1;
+            radarCtx.strokeRect(2, 2, rw - 4, rh - 4);
+            radarCtx.beginPath();
+            radarCtx.moveTo(rw / 2, 2);
+            radarCtx.lineTo(rw / 2, rh - 2);
+            radarCtx.stroke();
+
+            for (const p of state.players) {
+                const rx = (p.x / PITCH.w) * rw;
+                const ry = (p.y / PITCH.h) * rh;
+                radarCtx.fillStyle = p.team === 'home' ? '#34d399' : '#fbbf24';
+                radarCtx.beginPath();
+                radarCtx.arc(rx, ry, p === state.controlledPlayer ? 3.5 : 2.3, 0, Math.PI * 2);
+                radarCtx.fill();
+            }
+
+            // Ball dot
+            const bx = (state.ball.x / PITCH.w) * rw;
+            const by = (state.ball.y / PITCH.h) * rh;
+            radarCtx.fillStyle = '#ffffff';
+            radarCtx.beginPath();
+            radarCtx.arc(bx, by, 3, 0, Math.PI * 2);
+            radarCtx.fill();
+        }
+
+        function updateHUD() {
+            document.getElementById('hudHomeScore').textContent = state.homeScore;
+            document.getElementById('hudAwayScore').textContent = state.awayScore;
+            document.getElementById('hudHalfBadge').textContent = state.half === 1 ? '1H' : '2H';
+
+            // Convert elapsed real seconds into 90-minute football clock
+            const matchMinutesFloat = (state.elapsedMatchSec / state.halfDurationSec) * 45;
+            const regEndMin = state.half * 45;
+            const mins = Math.floor(matchMinutesFloat);
+            const secs = Math.floor((matchMinutesFloat - mins) * 60);
+
+            const addedEl = document.getElementById('hudAddedTime');
+            if (mins >= regEndMin) {
+                document.getElementById('hudClock').textContent = `${String(regEndMin).padStart(2, '0')}:00`;
+                addedEl.textContent = `+${state.addedTimeMin}'`;
+                addedEl.classList.remove('hidden');
+            } else {
+                document.getElementById('hudClock').textContent =
+                    `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                addedEl.classList.add('hidden');
+            }
+
+            // Set piece banner
+            const statusEl = document.getElementById('hudStatusBanner');
+            if (state.setPiece) {
+                const labels = {
+                    kickoff: 'KICK OFF',
+                    throwin: 'THROW IN (스로인)',
+                    goalkick: 'GOAL KICK (골킥)',
+                    corner: 'CORNER KICK (코너킥)'
+                };
+                statusEl.textContent = labels[state.setPiece.type] || 'SET PIECE';
+                statusEl.classList.remove('hidden');
+            } else {
+                statusEl.classList.add('hidden');
+            }
+
+            // Controlled player bar
+            const cp = state.controlledPlayer;
+            if (cp) {
+                document.getElementById('hudPlayerNumber').textContent = cp.number;
+                document.getElementById('hudPlayerName').textContent = cp.name;
+                document.getElementById('hudStaminaBar').style.width = `${Math.round(cp.stamina)}%`;
+            }
+
+            // Shot power gauge (1P or 2P)
+            const gaugeWrap = document.getElementById('shotGaugeWrapper');
+            if (state.shotCharge.active) {
+                gaugeWrap.classList.remove('hidden');
+                document.getElementById('shotGaugeFill').style.width = `${Math.round(state.shotCharge.power * 100)}%`;
+                document.getElementById('shotTypeLabel').textContent =
+                    (state.shotCharge.isFinesse || keys.KeyZ) ? '1P FINESSE (감아차기)' : '1P SHOT POWER';
+            } else if (state.shotChargeP2.active) {
+                gaugeWrap.classList.remove('hidden');
+                document.getElementById('shotGaugeFill').style.width = `${Math.round(state.shotChargeP2.power * 100)}%`;
+                document.getElementById('shotTypeLabel').textContent =
+                    (state.shotChargeP2.isFinesse || keys.KeyB) ? '2P FINESSE (감아차기)' : '2P SHOT POWER';
+            } else {
+                gaugeWrap.classList.add('hidden');
+            }
+        }
+
+        // =========================================================================
+        // 9. MAIN ANIMATION LOOP
+        // =========================================================================
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            updateSimulation(dt);
+            renderFrame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            populateTeamSelects();
+            resizeCanvases();
+            requestAnimationFrame(gameLoop);
+        };
+    })();
+    </script>
+</body>
+</html>
