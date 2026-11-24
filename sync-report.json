@@ -1,6 +1,11 @@
 {
-  "updatedAt": "2026-11-24T04:33:26.509Z",
+  "updatedAt": "2026-11-24T05:13:29.653Z",
   "skipped": [
+    {
+      "sourceName": "2d_rpg (24) - 이이든.html",
+      "driveId": "1Aknp0PkZXIhi8gHtDacrAYBffJBIIsJr",
+      "reason": "파일명에서 학번·이름을 찾지 못함"
+    },
     {
       "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
       "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
@@ -21,6 +26,27 @@
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
       "studentNo": "3103",
       "name": "김재훈"
+    },
+    {
+      "sourceName": "midnight-hunter (1) - 3308윤시현.html",
+      "driveId": "1NV9ZTq7mJlr99zWN3XDfDiEDeqr42Jq-",
+      "reason": "같은 파일을 두 번 올림 (한 번만 게시)",
+      "studentNo": "3308",
+      "name": "윤시현"
+    },
+    {
+      "sourceName": "seashell-game (3) - 3303김성민.html",
+      "driveId": "1mduf7ngtizPRNB9hyPzldvbaWSARihto",
+      "reason": "새 버전으로 교체됨 (옛 파일)",
+      "studentNo": "3303",
+      "name": "김성민"
+    },
+    {
+      "sourceName": "seashell-game (4) - 3303김성민.html",
+      "driveId": "1gEUwPmaK8-vssvEhK8yz9QDAN6PxLCvv",
+      "reason": "새 버전으로 교체됨 (옛 파일)",
+      "studentNo": "3303",
+      "name": "김성민"
     }
   ]
 }

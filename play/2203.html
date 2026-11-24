@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>엑소더스 궤도 방정식: 신세계 항법 (Exodus Orbital Navigation)</title>
+  <style>
+    :root {
+      --bg-void: #03050c;
+      --bg-panel: rgba(9, 14, 28, 0.92);
+      --bg-card: rgba(14, 22, 42, 0.9);
+      --border-glow: rgba(56, 189, 248, 0.3);
+      --accent-cyan: #38bdf8;
+      --accent-amber: #fbbf24;
+      --accent-emerald: #34d399;
+      --accent-rose: #fb7185;
+      --accent-violet: #a78bfa;
+      --text-main: #e2e8f0;
+      --text-dim: #94a3b8;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #03050c;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(5, 8, 18, 0.96);
+      border-bottom: 1px solid var(--border-glow);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #0284c7, #059669);
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      color: #fff;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .brand span {
+      display: block;
+      font-size: 10.5px;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stage-pills {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .stage-pill {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .stage-pill:hover {
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    .stage-pill.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-cyan);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .stage-pill.hard {
+      border-color: rgba(251, 113, 133, 0.4);
+    }
+
+    .stage-pill.hard.active {
+      background: rgba(251, 113, 133, 0.2);
+      border-color: var(--accent-rose);
+      box-shadow: 0 0 12px rgba(251, 113, 133, 0.35);
+    }
+
+    .stage-pill.cleared {
+      border-color: rgba(52, 211, 153, 0.6);
+      color: var(--accent-emerald);
+    }
+
+    .main-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 405px;
+      gap: 16px;
+      padding: 16px 20px;
+      max-width: 1660px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1060px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .viewport-card {
+      position: relative;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 14px;
+      overflow: hidden;
+      height: calc(100vh - 96px);
+      min-height: 580px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    canvas#spaceCanvas {
+      width: 100%;
+      height: 100%;
+      min-height: 580px;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .hud-overlay-top {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hud-chip {
+      background: rgba(4, 7, 17, 0.86);
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      backdrop-filter: blur(8px);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hud-chip.interactive {
+      pointer-events: auto;
+    }
+
+    .hud-chip b { color: var(--accent-cyan); }
+    .hud-chip .warn { color: var(--accent-amber); }
+    .hud-chip .danger { color: var(--accent-rose); }
+
+    .cam-btn {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .cam-btn.active {
+      background: rgba(52, 211, 153, 0.22);
+      border-color: var(--accent-emerald);
+      color: #a7f3d0;
+    }
+
+    .legend-bar {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      background: rgba(4, 7, 17, 0.82);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .legend-items {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-glow);
+      border-radius: 14px;
+      padding: 15px 17px;
+      backdrop-filter: blur(10px);
+    }
+
+    .story-banner {
+      padding: 8px 11px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(244, 63, 94, 0.14), rgba(16, 185, 129, 0.14));
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      font-size: 11.5px;
+      color: #fde68a;
+      margin-bottom: 9px;
+      line-height: 1.45;
+    }
+
+    .mission-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .mission-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-amber);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .mission-tag.extreme {
+      color: var(--accent-rose);
+    }
+
+    .mission-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .mission-desc {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-dim);
+    }
+
+    .coord-readout {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(3, 5, 12, 0.82);
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .coord-readout span { color: var(--text-dim); }
+    .coord-readout strong { color: #fff; }
+
+    .eq-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+      margin-bottom: 8px;
+    }
+
+    .eq-input-wrap {
+      display: flex;
+      align-items: center;
+      background: #03050c;
+      border: 1.5px solid rgba(56, 189, 248, 0.5);
+      border-radius: 10px;
+      padding: 4px 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .eq-input-wrap:focus-within {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.3);
+    }
+
+    .eq-prefix {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-amber);
+      margin-right: 8px;
+      user-select: none;
+    }
+
+    input#fnInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 16px;
+      padding: 8px 0;
+    }
+
+    .mode-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 9px;
+      padding: 6px 10px;
+      border-radius: 7px;
+      background: rgba(52, 211, 153, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.26);
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      color: var(--accent-emerald);
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn-launch {
+      background: linear-gradient(135deg, #0284c7, #059669);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 16px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+      transition: transform 0.12s, box-shadow 0.2s;
+    }
+
+    .btn-launch:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 25px rgba(56, 189, 248, 0.55);
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 0 13px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent-amber);
+      color: var(--accent-amber);
+    }
+
+    .status-box {
+      padding: 11px 13px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      background: rgba(3, 5, 12, 0.88);
+      border-left: 3px solid var(--accent-cyan);
+      font-family: var(--font-mono);
+    }
+
+    .status-box.success {
+      border-left-color: var(--accent-emerald);
+      background: rgba(6, 78, 59, 0.28);
+      color: #a7f3d0;
+    }
+
+    .status-box.error {
+      border-left-color: var(--accent-rose);
+      background: rgba(136, 19, 55, 0.28);
+      color: #fecdd3;
+    }
+
+    .hint-box {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px dashed rgba(251, 191, 36, 0.4);
+      font-size: 12px;
+      color: #fde68a;
+      line-height: 1.55;
+      display: none;
+    }
+
+    .hint-box.visible { display: block; }
+
+    .syntax-guide {
+      font-size: 11.5px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .syntax-guide code {
+      color: var(--accent-cyan);
+      background: rgba(15, 23, 42, 0.9);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .next-stage-banner {
+      display: none;
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 9px;
+      border: 1px solid var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.2);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .next-stage-banner:hover {
+      background: rgba(16, 185, 129, 0.34);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-badge">🌍</div>
+      <div>
+        <h1>엑소더스 궤도 방정식: 신세계 항법</h1>
+        <span>EARTH EXODUS · UNRESTRICTED RELATIVISTIC ORBITAL NAVIGATION</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="stage-pills" id="stagePills"></div>
+    </div>
+  </header>
+
+  <main class="main-grid">
+    <section class="viewport-card">
+      <div class="hud-overlay-top">
+        <div class="hud-chip">
+          <span>CURSOR: <b id="cursorCoords">(0.00, 0.00)</b></span>
+          <span>Φ(r): <b class="warn" id="cursorPotential">0.00</b></span>
+          <span>|g|: <b class="danger" id="cursorGravity">0.00</b></span>
+        </div>
+        <div class="hud-chip interactive">
+          <span>Δr: <b class="warn" id="maxDeflection">0.00</b></span>
+          <span>STATUS: <b id="telemetryState">STANDBY</b></span>
+          <button class="cam-btn" id="followCamBtn" onclick="toggleFollowCam()">🔭 카메라 추적: OFF</button>
+        </div>
+      </div>
+      <canvas id="spaceCanvas" width="900" height="640"></canvas>
+      <div class="legend-bar">
+        <div class="legend-items">
+          <span><i class="dot" style="background:#fb7185"></i>지구 잔해 (출발)</span>
+          <span><i class="dot" style="background:#34d399"></i>정착 후보 행성 (도착)</span>
+          <span><i class="dot" style="background:#38bdf8"></i>입력 함수 궤적</span>
+          <span><i class="dot" style="background:#f59e0b"></i>실제 중력 굴절 궤적</span>
+          <span><i class="dot" style="background:#a78bfa"></i>블랙홀 / 중성자별</span>
+        </div>
+        <span>휠: 줌 | 드래그: 이동 | 더블클릭: 리셋</span>
+      </div>
+    </section>
+
+    <aside class="control-panel">
+      <div class="card">
+        <div class="story-banner">
+          ☄️ <b>인류 엑소더스 작전:</b> 멸망한 지구의 잔해를 떠나, 우주의 중력장을 돌파하고 인류가 살아갈 새로운 정착 행성에 방주를 착륙시키십시오.
+        </div>
+        <div class="mission-header">
+          <span class="mission-tag" id="missionTag">STAGE 01 / 12</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent-cyan);" id="wellCountBadge">중력원: 0개</span>
+        </div>
+        <h2 class="mission-title" id="missionTitle">꽃이 피어있는 행성: 플로라-I</h2>
+        <p class="mission-desc" id="missionDesc"></p>
+
+        <div class="coord-readout">
+          <div><span>지구 잔해 출발:</span> <strong id="startCoordText">(-7, -2)</strong></div>
+          <div><span>정착 행성 좌표:</span> <strong id="targetCoordText">(7, 5)</strong></div>
+          <div><span>정착 행성 반경:</span> <strong id="targetRadiusText">r ≤ 0.72</strong></div>
+          <div><span>궤적 범위:</span> <strong>무제한 (화면 밖 비행 허용)</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eq-label">
+          <span>방주 궤도 함수 입력 (자유 항법 모드)</span>
+          <span style="color:var(--text-dim);font-size:11px;">Enter 로 즉시 출항</span>
+        </div>
+        <div class="eq-input-wrap">
+          <span class="eq-prefix">y =</span>
+          <input type="text" id="fnInput" placeholder="원하는 x의 함수식을 자유롭게 입력" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="mode-badge">
+          <span>함수 제한 해제: 모든 함수식 즉시 출항 가능</span>
+          <span id="startEvalBadge">출발점 자동 정렬 ✓</span>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-launch" id="launchBtn" onclick="launchShip()">🚀 인류 방주 출항 (LAUNCH)</button>
+          <button class="btn-secondary" onclick="toggleHint()">💡 힌트</button>
+        </div>
+
+        <div class="hint-box" id="hintBox"></div>
+        <button class="next-stage-banner" id="nextStageBtn" onclick="nextStage()">다음 정착 행성 탐사하기 ➔</button>
+      </div>
+
+      <div class="status-box" id="statusBox">
+        [항법 컴퓨터 준비 완료] 어떤 함수식이든 제한 없이 입력할 수 있습니다. 궤적이 화면 밖으로 크게 휘어 나갔다가 되돌아와도 정상 비행합니다.
+      </div>
+
+      <div class="card syntax-guide">
+        <strong style="color:#fff;display:block;margin-bottom:4px;">자유 수식 입력 가이드 (상수항 자동 보정 지원)</strong>
+        • 상수·일차·다항: <code>0</code>, <code>1/2x</code>, <code>-0.1x^2</code>, <code>1/16x^3 - 29/8x</code><br/>
+        • 삼각·무리·지수: <code>2.5sin(pi/3*x)</code>, <code>cos(x)</code>, <code>2.7sqrt(x+8)</code>, <code>e^(0.2x)</code><br/>
+        • 입력한 함수의 변화량 <code>f(x) - f(x₀)</code>가 지구 출발점 <code>(x₀, y₀)</code>에서 즉시 이어지므로 상수항을 맞추지 않아도 바로 발사됩니다.
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. 12개 스테이지 & 고유 외형 정착 행성 데이터 (예시 수식 초기값 없음)
+    // =========================================================================
+    const STAGES = [
+      {
+        id: 1,
+        tag: "STAGE 01 · BLOOMING FLORA WORLD",
+        title: "꽃이 피어있는 행성: 플로라-I",
+        desc: "지구가 산산조각 난 직후, 가장 가까운 생명의 행성 '플로라-I'이 포착되었습니다. 거대한 분홍빛 꽃잎들이 대기를 수놓은 이 행성 (7, 5)에 도착하도록 지구 잔해 (-7, -2)에서 출발하는 직선 항로를 계산하십시오.",
+        ship: { x: -7, y: -2 },
+        target: { x: 7, y: 5, r: 0.72, name: "플로라-I (꽃 행성)", planetType: "flower" },
+        obstacles: [],
+        wells: [],
+        hint: "x가 -7에서 7까지 14만큼 증가할 때 y는 -2에서 5까지 7만큼 올라가야 합니다. 기울기 1/2인 y = 1/2x (또는 y = 1/2x + 3/2)를 입력하십시오."
+      },
+      {
+        id: 2,
+        tag: "STAGE 02 · EYEBALL OCEAN WORLD",
+        title: "거대 눈알 행성: 오큘러스-IX",
+        desc: "항성 고정 자전으로 인해 거대한 눈동자 모양의 바다와 빙하가 형성된 신비의 행성 '오큘러스-IX' (7, -2)로 향합니다. 항로를 가로막는 불모의 가스 행성을 피해 포물선 궤도를 그리십시오.",
+        ship: { x: -7, y: -2 },
+        target: { x: 7, y: -2, r: 0.72, name: "오큘러스-IX (눈알 행성)", planetType: "eyeball" },
+        obstacles: [{ x: 0, y: -1.6, r: 2.2, color: "#ea580c", name: "적갈색 가스 행성", obsType: "gas" }],
+        wells: [],
+        hint: "출발점과 도착점의 y좌표가 같으므로 대칭 이차함수 y = -0.1x^2 (또는 y = -1/10(x+7)(x-7)) 을 입력하면 중앙의 가스 행성 위로 여유 있게 넘어갑니다."
+      },
+      {
+        id: 3,
+        tag: "STAGE 03 · CRYSTALLINE ICE WORLD",
+        title: "얼음 결정 행성: 글라시아-IV",
+        desc: "푸른 오로라와 투명한 빙하 첨탑으로 뒤덮인 수자원 행성 '글라시아-IV' (7, 0)입니다. 항로 아래의 중성자별이 방주를 강하게 끌어당기므로, 무중력 기준으로는 행성보다 훨씬 위쪽을 겨냥해야 합니다.",
+        ship: { x: -7, y: 0 },
+        target: { x: 7, y: 0, r: 0.72, name: "글라시아-IV (얼음 행성)", planetType: "ice" },
+        obstacles: [],
+        wells: [{ x: 0, y: -2.5, horizonR: 0.85, strength: 7.5, type: "neutron", name: "중성자별 PSR" }],
+        hint: "중성자별 인력 때문에 대칭 포물선은 행성 아래로 빗나갑니다. y = -1/10(x + 7)(x - 10) 처럼 오른쪽으로 더 높게 뻗는 포물선을 조준하십시오."
+      },
+      {
+        id: 4,
+        tag: "STAGE 04 · VOLCANIC MAGMA WORLD",
+        title: "화산 지열 행성: 이그니스-V",
+        desc: "어두운 현무암 지각 사이로 따뜻한 용암 강이 흐르는 지열 행성 '이그니스-V' (7, -2)입니다. 항성질량 블랙홀의 깊은 시공간 우물을 스치며 중력 렌즈 굴절을 이용해 착륙하십시오.",
+        ship: { x: -7, y: -2 },
+        target: { x: 7, y: -2, r: 0.72, name: "이그니스-V (화산 행성)", planetType: "volcano" },
+        obstacles: [],
+        wells: [{ x: 0, y: -1.8, horizonR: 1.2, strength: 14.0, type: "blackhole", name: "블랙홀 GX-1" }],
+        hint: "블랙홀 인력이 매우 강하므로 화면 위쪽으로 크게 솟구쳤다가 휘어 내려오는 y = -0.12(x + 7)(x - 15) 꼴의 포물선이 필요합니다."
+      },
+      {
+        id: 5,
+        tag: "STAGE 05 · RINGED SANCTUARY WORLD",
+        title: "고리가 있는 행성: 아우레아-VII",
+        desc: "찬란한 황금빛 다중 고리를 두른 거대 정착 행성 '아우레아-VII' (8, 2.5)입니다. 엇갈린 쌍성 블랙홀이 만드는 S자 시공간 회랑을 삼차함수의 변곡점으로 돌파하십시오.",
+        ship: { x: -8, y: -2.5 },
+        target: { x: 8, y: 2.5, r: 0.72, name: "아우레아-VII (고리 행성)", planetType: "ringed" },
+        obstacles: [],
+        wells: [
+          { x: -1.8, y: 2.3, horizonR: 1.1, strength: 11.0, type: "blackhole", name: "쌍성 북극" },
+          { x: 1.8, y: -2.3, horizonR: 1.1, strength: 11.0, type: "blackhole", name: "쌍성 남극" }
+        ],
+        hint: "삼차함수 y = 0.002(x + 8)^3 - 0.05(x + 8) 또는 y = 0.004x^3 + 0.06x 부근의 완만한 S자 곡선을 시도해 보십시오."
+      },
+      {
+        id: 6,
+        tag: "STAGE 06 · BIOLUMINESCENT OCEAN WORLD",
+        title: "심해 산호 행성: 아쿠아리아-III",
+        desc: "발광 산호초와 청록빛 바다가 빛나는 '아쿠아리아-III' (7.5, -2.5) 앞을 거대 암석 행성이 가로막고 있습니다. 상단 블랙홀의 중력 슬링바이로 궤적을 급격히 꺾어 행성 뒤편으로 진입하십시오.",
+        ship: { x: -8, y: 1 },
+        target: { x: 7.5, y: -2.5, r: 0.75, name: "아쿠아리아-III (산호 행성)", planetType: "ocean" },
+        obstacles: [{ x: 1.5, y: -2.8, r: 2.2, color: "#64748b", name: "차폐 암석 행성", obsType: "rock" }],
+        wells: [{ x: 0.5, y: 1.6, horizonR: 1.0, strength: 15.0, type: "blackhole", name: "렌즈 블랙홀" }],
+        hint: "블랙홀 위쪽을 크게 감아 돌도록 y = -0.12(x + 8)(x - 10) 꼴을 입력하면 중력이 방주를 아래로 꺾어 행성 뒤편에 착륙시켜 줍니다."
+      },
+      {
+        id: 7,
+        tag: "STAGE 07 · GEODE CRYSTAL WORLD",
+        title: "수정 광맥 행성: 크리스탈리스",
+        desc: "자수정과 장미석 결정들이 표면 전체에서 빛을 발하는 '크리스탈리스' (8, -2)입니다. 세 개의 고밀도 천체가 지그재그로 당기는 중력 우물 성단을 삼차함수로 통과하십시오.",
+        ship: { x: -8, y: 2 },
+        target: { x: 8, y: -2, r: 0.72, name: "크리스탈리스 (수정 행성)", planetType: "crystal" },
+        obstacles: [],
+        wells: [
+          { x: -3, y: -0.8, horizonR: 0.85, strength: 8.5, type: "neutron", name: "펄서 알파" },
+          { x: 0, y: 2.6, horizonR: 1.05, strength: 12.5, type: "blackhole", name: "중앙 블랙홀" },
+          { x: 3.5, y: -1.8, horizonR: 0.85, strength: 8.5, type: "neutron", name: "펄서 베타" }
+        ],
+        hint: "삼차함수 y = -0.005(x + 8)^3 + 0.4(x + 8) 꼴을 기준으로 중앙 블랙홀 아래와 펄서 베타 위를 통과하십시오."
+      },
+      {
+        id: 8,
+        tag: "STAGE 08 · WORLDTREE CANOPY WORLD",
+        title: "세계수 숲 행성: 실바누스-II",
+        desc: "거대한 세계수 숲과 황금빛 반딧불이가 가득한 '실바누스-II' (8, 3)입니다. 은하 중심의 초대질량 블랙홀 궁수자리 A*와 두 수호 행성 사이를 원점 대칭 기함수(ax³ + bx)로 돌파하십시오.",
+        ship: { x: -8, y: -3 },
+        target: { x: 8, y: 3, r: 0.75, name: "실바누스-II (세계수 행성)", planetType: "forest" },
+        obstacles: [
+          { x: -3.5, y: 1.6, r: 1.75, color: "#0284c7", name: "얼음 거성 I", obsType: "ice" },
+          { x: 4.0, y: -2.0, r: 1.85, color: "#d97706", name: "용암 행성 II", obsType: "lava" }
+        ],
+        wells: [{ x: 0, y: 0, horizonR: 1.2, strength: 15.0, type: "blackhole", name: "궁수자리 A*" }],
+        hint: "기함수 y = 1/16x^3 - 29/8x 가 두 수호 행성을 회피하며 궁수자리 A*의 강력한 인력을 상쇄하고 통과합니다."
+      },
+      {
+        id: 9,
+        tag: "STAGE 09 · CLOUD-SPIRE SKY WORLD [HARD]",
+        title: "구름 섬 천공 행성: 제피로스-VIII",
+        extreme: true,
+        desc: "고난도 항법: 부유하는 구름 섬들과 황금빛 번개가 어우러진 '제피로스-VIII' (6, 0)입니다. 상하 교대로 배치된 4개의 소행성대를 주기 삼각함수 파동으로 슬라롬 회피하십시오.",
+        ship: { x: -6, y: 0 },
+        target: { x: 6, y: 0, r: 0.74, name: "제피로스-VIII (구름 행성)", planetType: "cloud" },
+        obstacles: [
+          { x: -4.5, y: -0.35, r: 1.25, color: "#78716c", name: "소행성-1", obsType: "rock" },
+          { x: -1.5, y: 0.35, r: 1.25, color: "#78716c", name: "소행성-2", obsType: "rock" },
+          { x: 1.5, y: -0.35, r: 1.25, color: "#78716c", name: "소행성-3", obsType: "rock" },
+          { x: 4.5, y: 0.35, r: 1.25, color: "#78716c", name: "소행성-4", obsType: "rock" }
+        ],
+        wells: [
+          { x: -3.0, y: -3.6, horizonR: 0.55, strength: 1.6, type: "neutron", name: "위상 펄서 N" },
+          { x: 3.0, y: 3.6, horizonR: 0.55, strength: 1.6, type: "neutron", name: "위상 펄서 S" }
+        ],
+        hint: "주기가 6인 사인 함수에 위상 펄서 인력을 보정한 y = 3.9sin(pi/3 * x) - 0.7x 로 4개의 소행성을 교차 회피하십시오."
+      },
+      {
+        id: 10,
+        tag: "STAGE 10 · SOLAR OASIS WORLD [HARD]",
+        title: "태양 오아시스 행성: 솔라리스-X",
+        extreme: true,
+        desc: "고난도 항법: 황금빛 태양풍 코로나와 에메랄드 오아시스가 공존하는 고고도 행성 '솔라리스-X' (8, 5)입니다. 심연 블랙홀의 하향 인력을 이기고 급상승한 뒤 완만히 감속 진입하십시오.",
+        ship: { x: -8, y: -3 },
+        target: { x: 8, y: 5, r: 0.74, name: "솔라리스-X (태양 행성)", planetType: "solar" },
+        obstacles: [
+          { x: 1.5, y: -1.8, r: 2.0, color: "#b45309", name: "거대 적색 행성", obsType: "gas" }
+        ],
+        wells: [
+          { x: -2.0, y: -4.2, horizonR: 0.8, strength: 3.8, type: "blackhole", name: "심연 블랙홀" }
+        ],
+        hint: "초반 기울기가 가파르고 후반이 완만한 무리함수 y = 3.6sqrt(x + 8) 꼴을 입력해 블랙홀의 인력을 극복하십시오."
+      },
+      {
+        id: 11,
+        tag: "STAGE 11 · TWIN-MOON HAVEN [EXTREME]",
+        title: "쌍둥이 위성 행성: 셀레스티아",
+        extreme: true,
+        desc: "극한 항법: 두 개의 푸른 위성이 궤도를 도는 평화의 행성 '셀레스티아' (8, 0)입니다. 4개의 중력 우물이 교대로 당기는 전단 구역을 삼각함수와 선형 기울기의 결합으로 돌파하십시오.",
+        ship: { x: -8, y: 0 },
+        target: { x: 8, y: 0, r: 0.68, name: "셀레스티아 (쌍둥이 달 행성)", planetType: "twinmoon" },
+        obstacles: [],
+        wells: [
+          { x: -4.2, y: -2.1, horizonR: 0.85, strength: 10.0, type: "neutron", name: "우물 I" },
+          { x: -1.4, y: 2.1, horizonR: 0.9, strength: 10.5, type: "blackhole", name: "우물 II" },
+          { x: 1.4, y: -2.1, horizonR: 0.9, strength: 10.5, type: "blackhole", name: "우물 III" },
+          { x: 4.2, y: 2.1, horizonR: 0.85, strength: 10.0, type: "neutron", name: "우물 IV" }
+        ],
+        hint: "기본 파동 sin(pi/4 * x) 에 비대칭 중력 편차를 상쇄하는 선형항을 더해 y = 0.75sin(pi/4 * x) + 0.05x 꼴을 시도해 보십시오."
+      },
+      {
+        id: 12,
+        tag: "STAGE 12 · NEW EDEN PRIME [FINAL]",
+        title: "제2의 지구: 뉴 에덴 프라임",
+        extreme: true,
+        desc: "최종 엑소더스 미션: 푸른 바다와 초록 대륙, 황금 고리와 오로라가 빛나는 완벽한 제2의 지구 '뉴 에덴 프라임' (8, 3)입니다. 가르강튀아 삼중 블랙홀의 극한 시공간 미로를 돌파해 인류의 새 역사를 여십시오!",
+        ship: { x: -8, y: -3 },
+        target: { x: 8, y: 3, r: 0.72, name: "뉴 에덴 프라임 (제2의 지구)", planetType: "eden" },
+        obstacles: [
+          { x: -3.8, y: 3.9, r: 1.35, color: "#0369a1", name: "수호성 타이탄-A", obsType: "ice" },
+          { x: 3.8, y: -3.9, r: 1.35, color: "#be123c", name: "수호성 타이탄-B", obsType: "lava" }
+        ],
+        wells: [
+          { x: 0, y: 0, horizonR: 1.15, strength: 15.5, type: "blackhole", name: "가르강튀아" },
+          { x: -2.5, y: -3.1, horizonR: 0.7, strength: 5.5, type: "neutron", name: "동반성 1" },
+          { x: 2.5, y: 3.1, horizonR: 0.7, strength: 5.5, type: "neutron", name: "동반성 2" }
+        ],
+        hint: "기함수 y = 3/64x^3 - 7/8x 부근을 입력하면 가르강튀아와 동반성의 회전력을 상쇄하며 뉴 에덴에 진입합니다."
+      }
+    ];
+
+    // =========================================================================
+    // 2. 무제한 수식 파서 (어떤 함수든 제한 없이 수용)
+    // =========================================================================
+    function compileUserFunction(rawExpr) {
+      if (!rawExpr || !rawExpr.trim()) {
+        throw new Error("함수식을 입력하십시오.");
+      }
+
+      let expr = rawExpr.trim().replace(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*/i, "");
+
+      if (/[;{}\[\]=$_`"']/.test(expr)) {
+        throw new Error("허용되지 않은 특수문자가 포함되어 있습니다.");
+      }
+
+      expr = expr
+        .replace(/×/g, "*")
+        .replace(/÷/g, "/")
+        .replace(/−/g, "-")
+        .replace(/\^/g, "**")
+        .replace(/√\s*\(/g, "sqrt(");
+
+      expr = expr
+        .replace(/π/g, "Π")
+        .replace(/\bpi\b/gi, "Π")
+        .replace(/\be\b/g, "Ε");
+
+      const fnMap = [
+        ["arcsin", "Φ1"], ["asin", "Φ1"],
+        ["arccos", "Φ2"], ["acos", "Φ2"],
+        ["arctan", "Φ3"], ["atan", "Φ3"],
+        ["sinh", "Φ4"], ["cosh", "Φ5"], ["tanh", "Φ6"],
+        ["sin", "Φ7"], ["cos", "Φ8"], ["tan", "Φ9"],
+        ["sqrt", "Ψ1"], ["abs", "Ψ2"], ["ln", "Ψ3"], ["log", "Ψ4"], ["exp", "Ψ5"]
+      ];
+      for (const [name, tok] of fnMap) {
+        expr = expr.replace(new RegExp(`\\b${name}\\b`, "gi"), tok);
+      }
+
+      expr = expr
+        .replace(/(\d)(x|Π|Ε|\(|Φ\d|Ψ\d)/gi, "$1*$2")
+        .replace(/(x|Π|Ε)(\d|x|Π|Ε|\(|Φ\d|Ψ\d)/gi, "$1*$2")
+        .replace(/(\))(\d|x|Π|Ε|\(|Φ\d|Ψ\d)/gi, "$1*$2");
+
+      const restoreMap = {
+        "Π": "Math.PI",
+        "Ε": "Math.E",
+        "Φ1": "Math.asin",
+        "Φ2": "Math.acos",
+        "Φ3": "Math.atan",
+        "Φ4": "Math.sinh",
+        "Φ5": "Math.cosh",
+        "Φ6": "Math.tanh",
+        "Φ7": "Math.sin",
+        "Φ8": "Math.cos",
+        "Φ9": "Math.tan",
+        "Ψ1": "Math.sqrt",
+        "Ψ2": "Math.abs",
+        "Ψ3": "Math.log",
+        "Ψ4": "Math.log10",
+        "Ψ5": "Math.exp"
+      };
+      expr = expr.replace(/Π|Ε|Φ\d|Ψ\d/g, (m) => restoreMap[m]);
+
+      let compiled;
+      try {
+        compiled = new Function("x", `"use strict"; return (${expr});`);
+      } catch (e) {
+        throw new Error("수식 문법 오류입니다. 괄호와 연산자를 확인하십시오.");
+      }
+
+      const testVal = compiled(0);
+      if (typeof testVal !== "number" && !Number.isNaN(testVal)) {
+        throw new Error("수식이 숫자를 반환하지 않습니다.");
+      }
+
+      return compiled;
+    }
+
+    // 출발점 (x0, y0)에서 자동으로 연속 출발하도록 변환하는 래퍼
+    // f(x0) == y0 인 함수는 원본 그대로, 그렇지 않은 함수는 y0 + (f(x) - f(x0)) 로 매끄럽게 출발
+    function buildAnchoredFunction(rawFn, ship) {
+      let y0;
+      try {
+        y0 = rawFn(ship.x);
+      } catch {
+        y0 = NaN;
+      }
+      const baseOffset = Number.isFinite(y0) ? (ship.y - y0) : ship.y;
+      return (x) => {
+        const val = rawFn(x);
+        return Number.isFinite(val) ? val + baseOffset : val;
+      };
+    }
+
+    // =========================================================================
+    // 3. 게임 상태 & 카메라 & 성운 텍스처
+    // =========================================================================
+    const canvas = document.getElementById("spaceCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // 성운 배경 오프스크린 캔버스
+    const nebulaCanvas = document.createElement("canvas");
+    nebulaCanvas.width = 1200;
+    nebulaCanvas.height = 800;
+
+    function buildNebulaBackdrop() {
+      const nctx = nebulaCanvas.getContext("2d");
+      nctx.fillStyle = "#03050c";
+      nctx.fillRect(0, 0, 1200, 800);
+
+      const clouds = [
+        { x: 260, y: 210, r: 420, c1: "rgba(30, 58, 138, 0.28)", c2: "rgba(15, 23, 42, 0)" },
+        { x: 920, y: 560, r: 460, c1: "rgba(88, 28, 135, 0.22)", c2: "rgba(15, 23, 42, 0)" },
+        { x: 640, y: 240, r: 360, c1: "rgba(13, 148, 136, 0.16)", c2: "rgba(15, 23, 42, 0)" },
+        { x: 350, y: 620, r: 340, c1: "rgba(190, 24, 93, 0.13)", c2: "rgba(15, 23, 42, 0)" },
+        { x: 840, y: 180, r: 300, c1: "rgba(217, 119, 6, 0.10)", c2: "rgba(15, 23, 42, 0)" }
+      ];
+
+      for (const c of clouds) {
+        const g = nctx.createRadialGradient(c.x, c.y, 10, c.x, c.y, c.r);
+        g.addColorStop(0, c.c1);
+        g.addColorStop(1, c.c2);
+        nctx.fillStyle = g;
+        nctx.fillRect(0, 0, 1200, 800);
+      }
+
+      // 미세 성단 먼지 입자
+      for (let i = 0; i < 450; i++) {
+        const x = Math.random() * 1200;
+        const y = Math.random() * 800;
+        const rad = Math.random() * 1.3 + 0.2;
+        nctx.fillStyle = `rgba(186, 230, 253, ${Math.random() * 0.22})`;
+        nctx.beginPath();
+        nctx.arc(x, y, rad, 0, Math.PI * 2);
+        nctx.fill();
+      }
+    }
+
+    let currentStageIdx = 0;
+    let currentStage = STAGES[0];
+    const clearedStages = new Set();
+
+    const camera = {
+      cx: 0,
+      cy: 0,
+      scale: 44,
+      isDragging: false,
+      lastX: 0,
+      lastY: 0,
+      followShip: false
+    };
+
+    const simState = {
+      mode: "idle",
+      purePoints: [],
+      bentPoints: [],
+      gravityVectors: [],
+      animProgress: 0,
+      animSpeed: 4.5,
+      particles: [],
+      stars: [],
+      time: 0,
+      maxDeflection: 0,
+      cursorWorld: { x: 0, y: 0 },
+      shipWorld: { x: -7, y: -2 }
+    };
+
+    function getViewportSize() {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        width: rect.width > 10 ? rect.width : 900,
+        height: rect.height > 10 ? rect.height : 640
+      };
+    }
+
+    function initStars() {
+      const colors = ["#bae6fd", "#ffffff", "#fde68a", "#fed7aa", "#ddd6fe"];
+      simState.stars = [];
+      for (let i = 0; i < 280; i++) {
+        simState.stars.push({
+          x: (Math.random() - 0.5) * 110,
+          y: (Math.random() - 0.5) * 80,
+          size: Math.random() * 1.9 + 0.35,
+          alpha: Math.random() * 0.75 + 0.2,
+          twinkle: Math.random() * Math.PI * 2,
+          color: colors[i % colors.length],
+          bright: i % 24 === 0
+        });
+      }
+    }
+
+    function worldToScreen(wx, wy) {
+      const { width, height } = getViewportSize();
+      return {
+        x: width / 2 + (wx - camera.cx) * camera.scale,
+        y: height / 2 - (wy - camera.cy) * camera.scale
+      };
+    }
+
+    function screenToWorld(sx, sy) {
+      const { width, height } = getViewportSize();
+      return {
+        x: camera.cx + (sx - width / 2) / camera.scale,
+        y: camera.cy - (sy - height / 2) / camera.scale
+      };
+    }
+
+    function resetCamera() {
+      camera.cx = 0;
+      camera.cy = 0;
+      const { width, height } = getViewportSize();
+      camera.scale = Math.max(26, Math.min(54, Math.min(width / 21, height / 14)));
+    }
+
+    function toggleFollowCam() {
+      camera.followShip = !camera.followShip;
+      const btn = document.getElementById("followCamBtn");
+      btn.textContent = camera.followShip ? "🔭 카메라 추적: ON" : "🔭 카메라 추적: OFF";
+      btn.classList.toggle("active", camera.followShip);
+      if (!camera.followShip) resetCamera();
+    }
+
+    // =========================================================================
+    // 4. 무제한 궤적 계산기 (화면 밖 고고도/장거리 비행 완전 허용)
+    // =========================================================================
+    function computeGravitationalField(x, y) {
+      let ax = 0;
+      let ay = 0;
+      let potential = 0;
+      for (const w of currentStage.wells) {
+        const rx = w.x - x;
+        const ry = w.y - y;
+        const r = Math.hypot(rx, ry);
+        const rs = w.horizonR;
+        const effR = Math.max(0.4, r - 0.55 * rs);
+        const accel = w.strength / (effR * effR + 0.4);
+        ax += accel * (rx / (r + 1e-6));
+        ay += accel * (ry / (r + 1e-6));
+        potential -= w.strength / Math.max(0.45, r - 0.45 * rs);
+      }
+      return { ax, ay, mag: Math.hypot(ax, ay), potential };
+    }
+
+    function samplePureCurve(fn, xMin = -45, xMax = 45, step = 0.08) {
+      const pts = [];
+      for (let x = xMin; x <= xMax; x += step) {
+        let y;
+        try { y = fn(x); } catch { y = NaN; }
+        if (Number.isFinite(y) && Math.abs(y) < 1e5) {
+          pts.push({ x, y });
+        } else {
+          pts.push(null);
+        }
+      }
+      return pts;
+    }
+
+    function computeTrajectory(anchoredFn) {
+      const s = currentStage.ship;
+      const t = currentStage.target;
+
+      const dirX = t.x >= s.x ? 1 : -1;
+      const dx = 0.035 * dirX;
+
+      let cx = s.x;
+      let cy = s.y;
+      let dvx = 0;
+      let dvy = 0;
+
+      const purePoints = [{ x: cx, y: cy }];
+      const bentPoints = [{ x: cx, y: cy }];
+      const gravityVectors = [];
+      let maxDeflection = 0;
+
+      // 화면 밖으로 크게 벗어났다가 돌아오는 궤적도 충분히 추적할 수 있도록 넓은 한계치 설정
+      const xLimit = 120;
+      const maxSteps = 3600;
+
+      for (let step = 1; step <= maxSteps; step++) {
+        const nomXPrev = s.x + (step - 1) * dx;
+        const nomXNext = s.x + step * dx;
+        let yPrev, yNext;
+        try {
+          yPrev = anchoredFn(nomXPrev);
+          yNext = anchoredFn(nomXNext);
+        } catch {
+          break;
+        }
+
+        const validStep = Number.isFinite(yNext) && Number.isFinite(yPrev);
+        if (validStep) {
+          purePoints.push({ x: nomXNext, y: yNext });
+        }
+
+        const guideDx = dx;
+        const guideDy = validStep ? (yNext - yPrev) : 0;
+        const dsNom = Math.hypot(guideDx, guideDy);
+        const dt = Math.min(0.16, Math.max(0.035, dsNom * 0.6));
+
+        const gField = computeGravitationalField(cx, cy);
+        dvx += gField.ax * dt;
+        dvy += gField.ay * dt;
+
+        if (step % 16 === 0 && gField.mag > 0.08) {
+          gravityVectors.push({ x: cx, y: cy, gx: gField.ax, gy: gField.ay });
+        }
+
+        const nx = cx + guideDx + dvx * dt;
+        const ny = cy + guideDy + dvy * dt;
+
+        for (let sub = 1; sub <= 4; sub++) {
+          const frac = sub / 4;
+          const sx = cx + (nx - cx) * frac;
+          const sy = cy + (ny - cy) * frac;
+
+          const deflect = Math.hypot(sx - nomXNext, sy - yNext);
+          if (deflect > maxDeflection) maxDeflection = deflect;
+
+          if (Math.hypot(sx - t.x, sy - t.y) <= t.r) {
+            bentPoints.push({ x: t.x, y: t.y });
+            return { status: "arrived", purePoints, bentPoints, gravityVectors, maxDeflection };
+          }
+
+          for (const w of currentStage.wells) {
+            if (Math.hypot(sx - w.x, sy - w.y) <= w.horizonR) {
+              bentPoints.push({ x: sx, y: sy });
+              return { status: "sucked", purePoints, bentPoints, gravityVectors, maxDeflection, well: w };
+            }
+          }
+
+          for (const obs of currentStage.obstacles) {
+            if (Math.hypot(sx - obs.x, sy - obs.y) <= obs.r) {
+              bentPoints.push({ x: sx, y: sy });
+              return { status: "crash", purePoints, bentPoints, gravityVectors, maxDeflection, obstacle: obs };
+            }
+          }
+        }
+
+        bentPoints.push({ x: nx, y: ny });
+        cx = nx;
+        cy = ny;
+
+        if (Math.abs(ny) > 1e7 || Math.abs(nx) > xLimit) {
+          break;
+        }
+      }
+
+      let minDist = Infinity;
+      let closestPt = bentPoints[bentPoints.length - 1];
+      for (const p of bentPoints) {
+        const d = Math.hypot(p.x - t.x, p.y - t.y);
+        if (d < minDist) {
+          minDist = d;
+          closestPt = p;
+        }
+      }
+
+      return {
+        status: "miss",
+        purePoints,
+        bentPoints,
+        gravityVectors,
+        maxDeflection,
+        minDist,
+        closestPt
+      };
+    }
+
+    // =========================================================================
+    // 5. 실시간 미리보기 및 무제한 즉시 출항 제어
+    // =========================================================================
+    function updateStartPreview() {
+      const expr = document.getElementById("fnInput").value;
+      const badge = document.getElementById("startEvalBadge");
+      if (!expr || !expr.trim()) {
+        if (simState.mode === "idle") {
+          simState.purePoints = [];
+        }
+        badge.textContent = "출발점 자동 정렬 ✓";
+        return;
+      }
+
+      try {
+        const rawFn = compileUserFunction(expr);
+        const anchoredFn = buildAnchoredFunction(rawFn, currentStage.ship);
+        if (simState.mode === "idle") {
+          simState.purePoints = samplePureCurve(anchoredFn);
+        }
+        badge.textContent = "궤도 예측 준비 완료 ✓";
+      } catch {
+        badge.textContent = "수식 입력 중...";
+      }
+    }
+
+    function launchShip() {
+      const expr = document.getElementById("fnInput").value;
+      const statusBox = document.getElementById("statusBox");
+      const nextBtn = document.getElementById("nextStageBtn");
+      nextBtn.style.display = "none";
+
+      let rawFn;
+      try {
+        rawFn = compileUserFunction(expr);
+      } catch (err) {
+        statusBox.className = "status-box error";
+        statusBox.textContent = `[수식 오류] ${err.message}`;
+        document.getElementById("telemetryState").textContent = "SYNTAX ERR";
+        return;
+      }
+
+      const anchoredFn = buildAnchoredFunction(rawFn, currentStage.ship);
+      const result = computeTrajectory(anchoredFn);
+
+      simState.purePoints = result.purePoints;
+      simState.bentPoints = result.bentPoints;
+      simState.gravityVectors = result.gravityVectors;
+      simState.maxDeflection = result.maxDeflection || 0;
+      simState.particles = [];
+      simState.shipWorld = { x: currentStage.ship.x, y: currentStage.ship.y };
+      document.getElementById("maxDeflection").textContent = simState.maxDeflection.toFixed(2);
+
+      simState.mode = "flying";
+      simState.animProgress = 1;
+      simState.pendingResult = result;
+      simState.animSpeed = Math.max(4.0, Math.min(18.0, result.bentPoints.length / 85));
+
+      statusBox.className = "status-box";
+      statusBox.textContent = `[방주 출항] 멸망한 지구를 떠나 '${currentStage.target.name}' 행성으로 항해 중... (중력 굴절 Δr = ${simState.maxDeflection.toFixed(2)})`;
+      document.getElementById("telemetryState").textContent = "IN FLIGHT";
+    }
+
+    function finalizeFlight(result) {
+      const statusBox = document.getElementById("statusBox");
+      const nextBtn = document.getElementById("nextStageBtn");
+      const endPt = result.bentPoints[result.bentPoints.length - 1];
+
+      if (result.status === "arrived") {
+        simState.mode = "arrived";
+        clearedStages.add(currentStage.id);
+        renderStagePills();
+        spawnExplosion(currentStage.target.x, currentStage.target.y, "#34d399", 55);
+        statusBox.className = "status-box success";
+        statusBox.textContent = `[행성 착륙 성공!] 인류 방주가 '${currentStage.target.name}' 대기권에 무사히 안착했습니다! (최대 중력 굴절 Δr = ${result.maxDeflection.toFixed(2)})`;
+        document.getElementById("telemetryState").textContent = "LANDED";
+        if (currentStageIdx < STAGES.length - 1) {
+          nextBtn.style.display = "block";
+          nextBtn.textContent = "다음 정착 행성 탐사하기 ➔";
+        } else {
+          nextBtn.style.display = "block";
+          nextBtn.textContent = "🎉 제2의 지구 뉴 에덴 안착 완료! 인류 재건 성공!";
+        }
+      } else if (result.status === "sucked") {
+        simState.mode = "sucked";
+        spawnExplosion(endPt.x, endPt.y, "#a78bfa", 55);
+        statusBox.className = "status-box error";
+        statusBox.textContent = `[사건의 지평선 붕괴] '${result.well.name}'의 중력 우물에 포획되었습니다. 중력 굴절을 감안해 우물로부터 더 멀리 우회하는 궤도를 설계하십시오.`;
+        document.getElementById("telemetryState").textContent = "HORIZON LOSS";
+      } else if (result.status === "crash") {
+        simState.mode = "crash";
+        spawnExplosion(endPt.x, endPt.y, "#fb7185", 48);
+        statusBox.className = "status-box error";
+        statusBox.textContent = `[불모 행성 충돌] '${result.obstacle.name}' 표면과 충돌했습니다. 계수를 조정해 안전 고도를 확보하십시오.`;
+        document.getElementById("telemetryState").textContent = "IMPACT";
+      } else {
+        simState.mode = "miss";
+        const closest = result.closestPt || endPt;
+        statusBox.className = "status-box error";
+        statusBox.textContent = `[정착 행성 이탈] '${currentStage.target.name}' 행성을 지나쳐 심우주로 항해했습니다. 최근접 좌표 (${closest.x.toFixed(2)}, ${closest.y.toFixed(2)}), 오차 ${result.minDist.toFixed(2)} 단위.`;
+        document.getElementById("telemetryState").textContent = "OFF COURSE";
+      }
+    }
+
+    function spawnExplosion(wx, wy, color, count) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = Math.random() * 0.16 + 0.02;
+        simState.particles.push({
+          x: wx,
+          y: wy,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 1.0,
+          decay: Math.random() * 0.02 + 0.011,
+          color
+        });
+      }
+    }
+
+    // =========================================================================
+    // 6. 고퀄리티 천체 렌더링 (시공간 격자 · 인터스텔라 블랙홀 · 펄서 · 12종 행성)
+    // =========================================================================
+    function warpCoord(wx, wy) {
+      let dx = 0;
+      let dy = 0;
+      let fieldIntensity = 0;
+      for (const w of currentStage.wells) {
+        const rx = w.x - wx;
+        const ry = w.y - wy;
+        const d = Math.hypot(rx, ry);
+        const pull = Math.min((w.strength * 0.11) / (d * 0.75 + 0.85), 1.35);
+        dx += (rx / (d + 0.001)) * pull;
+        dy += (ry / (d + 0.001)) * pull;
+        fieldIntensity += w.strength / (d * d + 1.2);
+      }
+      return { x: wx + dx, y: wy + dy, intensity: fieldIntensity };
+    }
+
+    function drawSpacetimeGrid(width, height) {
+      const topLeft = screenToWorld(0, 0);
+      const bottomRight = screenToWorld(width, height);
+      const xStart = Math.max(-60, Math.floor(topLeft.x) - 2);
+      const xEnd = Math.min(60, Math.ceil(bottomRight.x) + 2);
+      const yStart = Math.max(-60, Math.floor(bottomRight.y) - 2);
+      const yEnd = Math.min(60, Math.ceil(topLeft.y) + 2);
+
+      const hasWells = currentStage.wells.length > 0;
+      const step = hasWells ? 0.35 : 1.0;
+
+      for (let gx = xStart; gx <= xEnd; gx++) {
+        const isMajor = gx === 0 || gx % 5 === 0;
+        let prev = null;
+        for (let gy = yStart; gy <= yEnd; gy += step) {
+          const w = warpCoord(gx, gy);
+          const p = worldToScreen(w.x, w.y);
+          if (prev) {
+            ctx.beginPath();
+            ctx.moveTo(prev.p.x, prev.p.y);
+            ctx.lineTo(p.x, p.y);
+            if (gx === 0) {
+              ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+              ctx.lineWidth = 1.5;
+            } else if (w.intensity > 1.8) {
+              ctx.strokeStyle = `rgba(251, 191, 36, ${Math.min(0.55, 0.16 + w.intensity * 0.08)})`;
+              ctx.lineWidth = 1.2;
+            } else if (w.intensity > 0.65) {
+              ctx.strokeStyle = `rgba(167, 139, 250, ${Math.min(0.4, 0.12 + w.intensity * 0.12)})`;
+              ctx.lineWidth = 1.05;
+            } else {
+              ctx.strokeStyle = isMajor ? "rgba(56, 189, 248, 0.17)" : "rgba(148, 163, 184, 0.07)";
+              ctx.lineWidth = isMajor ? 1.0 : 0.8;
+            }
+            ctx.stroke();
+          }
+          prev = { p };
+        }
+      }
+
+      for (let gy = yStart; gy <= yEnd; gy++) {
+        const isMajor = gy === 0 || gy % 5 === 0;
+        let prev = null;
+        for (let gx = xStart; gx <= xEnd; gx += step) {
+          const w = warpCoord(gx, gy);
+          const p = worldToScreen(w.x, w.y);
+          if (prev) {
+            ctx.beginPath();
+            ctx.moveTo(prev.p.x, prev.p.y);
+            ctx.lineTo(p.x, p.y);
+            if (gy === 0) {
+              ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+              ctx.lineWidth = 1.5;
+            } else if (w.intensity > 1.8) {
+              ctx.strokeStyle = `rgba(251, 191, 36, ${Math.min(0.55, 0.16 + w.intensity * 0.08)})`;
+              ctx.lineWidth = 1.2;
+            } else if (w.intensity > 0.65) {
+              ctx.strokeStyle = `rgba(167, 139, 250, ${Math.min(0.4, 0.12 + w.intensity * 0.12)})`;
+              ctx.lineWidth = 1.05;
+            } else {
+              ctx.strokeStyle = isMajor ? "rgba(56, 189, 248, 0.17)" : "rgba(148, 163, 184, 0.07)";
+              ctx.lineWidth = isMajor ? 1.0 : 0.8;
+            }
+            ctx.stroke();
+          }
+          prev = { p };
+        }
+      }
+
+      ctx.fillStyle = "rgba(148, 163, 184, 0.58)";
+      ctx.font = "11px monospace";
+      const labelStep = camera.scale < 22 ? 5 : 1;
+      for (let gx = xStart; gx <= xEnd; gx++) {
+        if (gx === 0 || gx % labelStep !== 0) continue;
+        const p = worldToScreen(gx, 0);
+        ctx.fillText(String(gx), p.x - 5, p.y + 14);
+      }
+      for (let gy = yStart; gy <= yEnd; gy++) {
+        if (gy === 0 || gy % labelStep !== 0) continue;
+        const p = worldToScreen(0, gy);
+        ctx.fillText(String(gy), p.x + 6, p.y + 4);
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 인터스텔라 가르강튀아급 블랙홀 & 자기권 중성자별 렌더링
+    // -------------------------------------------------------------------------
+    function drawWells() {
+      const time = simState.time;
+      for (const w of currentStage.wells) {
+        const p = worldToScreen(w.x, w.y);
+        const rPx = Math.max(12, w.horizonR * camera.scale);
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        // 1. 시공간 중력 등고선
+        for (let ring = 1; ring <= 3; ring++) {
+          const contourR = rPx * (1.7 + ring * 1.25);
+          ctx.beginPath();
+          ctx.arc(0, 0, contourR, 0, Math.PI * 2);
+          ctx.strokeStyle = w.type === "blackhole"
+            ? `rgba(245, 158, 11, ${0.18 - ring * 0.04})`
+            : `rgba(56, 189, 248, ${0.22 - ring * 0.05})`;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        if (w.type === "blackhole") {
+          // 2. 외부 중력 렌즈 코로나 헤일로
+          const outerGlow = ctx.createRadialGradient(0, 0, rPx * 0.9, 0, 0, rPx * 4.5);
+          outerGlow.addColorStop(0, "rgba(251, 191, 36, 0.55)");
+          outerGlow.addColorStop(0.28, "rgba(234, 88, 12, 0.25)");
+          outerGlow.addColorStop(0.6, "rgba(124, 58, 237, 0.12)");
+          outerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = outerGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 4.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          const tilt = -0.24;
+          ctx.save();
+          ctx.rotate(tilt);
+
+          // 3. 인터스텔라식 상·하부 중력 렌즈 강착원반 아치 (뒤편 원반의 빛이 블랙홀 위아래로 휘어 보임)
+          const lensedGradTop = ctx.createRadialGradient(0, -rPx * 0.25, rPx * 0.95, 0, -rPx * 0.25, rPx * 2.15);
+          lensedGradTop.addColorStop(0, "rgba(254, 240, 138, 0.95)");
+          lensedGradTop.addColorStop(0.35, "rgba(245, 158, 11, 0.65)");
+          lensedGradTop.addColorStop(0.75, "rgba(194, 65, 12, 0.2)");
+          lensedGradTop.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = lensedGradTop;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 2.05, Math.PI, Math.PI * 2);
+          ctx.fill();
+
+          const lensedGradBot = ctx.createRadialGradient(0, rPx * 0.2, rPx * 0.95, 0, rPx * 0.2, rPx * 1.85);
+          lensedGradBot.addColorStop(0, "rgba(253, 224, 71, 0.85)");
+          lensedGradBot.addColorStop(0.45, "rgba(234, 88, 12, 0.45)");
+          lensedGradBot.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = lensedGradBot;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 1.75, 0, Math.PI);
+          ctx.fill();
+
+          // 4. 적도 강착원반 뒤쪽 절반 (사건의 지평선 뒤를 지나가는 부분)
+          ctx.save();
+          ctx.scale(1, 0.26);
+          const diskBackGrad = ctx.createLinearGradient(-rPx * 3.4, 0, rPx * 3.4, 0);
+          diskBackGrad.addColorStop(0, "rgba(254, 249, 195, 0.1)");
+          diskBackGrad.addColorStop(0.22, "rgba(254, 240, 138, 0.95)"); // 도플러 청색편이/증폭 측
+          diskBackGrad.addColorStop(0.5, "rgba(245, 158, 11, 0.85)");
+          diskBackGrad.addColorStop(0.82, "rgba(194, 65, 12, 0.65)");  // 도플러 적색편이/감쇠 측
+          diskBackGrad.addColorStop(1, "rgba(124, 45, 18, 0.05)");
+          ctx.strokeStyle = diskBackGrad;
+          ctx.lineWidth = rPx * 0.65;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 2.45, Math.PI, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // 5. 칠흑의 사건의 지평선 그림자 (Event Horizon Shadow)
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+          ctx.fillStyle = "#010205";
+          ctx.fill();
+
+          // 6. 면도날처럼 예리한 황금빛 광자구 (Photon Sphere Ring)
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 1.03, 0, Math.PI * 2);
+          ctx.strokeStyle = "#fef08a";
+          ctx.lineWidth = 2.0;
+          ctx.shadowColor = "#f59e0b";
+          ctx.shadowBlur = 12;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // 7. 적도 강착원반 앞쪽 절반 (블랙홀 앞을 가로지르는 초고온 플라즈마)
+          ctx.save();
+          ctx.scale(1, 0.26);
+          const diskFrontGrad = ctx.createLinearGradient(-rPx * 3.5, 0, rPx * 3.5, 0);
+          diskFrontGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+          diskFrontGrad.addColorStop(0.2, "rgba(255, 251, 235, 0.98)");
+          diskFrontGrad.addColorStop(0.48, "rgba(251, 191, 36, 0.92)");
+          diskFrontGrad.addColorStop(0.8, "rgba(234, 88, 12, 0.72)");
+          diskFrontGrad.addColorStop(1, "rgba(154, 52, 18, 0)");
+          ctx.strokeStyle = diskFrontGrad;
+          ctx.lineWidth = rPx * 0.58;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 2.45, 0, Math.PI);
+          ctx.stroke();
+
+          // 회전하는 플라즈마 필라멘트 고리
+          for (let f = 0; f < 3; f++) {
+            const rRing = rPx * (1.75 + f * 0.45);
+            const startAng = (time * (1.6 - f * 0.3) + f * 2.1) % (Math.PI * 2);
+            ctx.strokeStyle = f === 0 ? "rgba(255, 255, 255, 0.85)" : "rgba(253, 224, 71, 0.65)";
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(0, 0, rRing, startAng, startAng + 1.3);
+            ctx.stroke();
+          }
+          ctx.restore();
+          ctx.restore();
+        } else {
+          // 고퀄리티 자기권 펄서 / 중성자별
+          const pulseScale = 1 + Math.sin(time * 9) * 0.08;
+          const nGlow = ctx.createRadialGradient(0, 0, rPx * 0.4, 0, 0, rPx * 4.2 * pulseScale);
+          nGlow.addColorStop(0, "rgba(224, 242, 254, 0.85)");
+          nGlow.addColorStop(0.3, "rgba(56, 189, 248, 0.4)");
+          nGlow.addColorStop(0.7, "rgba(99, 102, 241, 0.14)");
+          nGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = nGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx * 4.2 * pulseScale, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.save();
+          ctx.rotate(Math.sin(time * 3.2) * 0.18 - 0.42);
+
+          // 자기장 쌍극자 루프 (Dipole Field Lines)
+          ctx.strokeStyle = "rgba(125, 211, 252, 0.35)";
+          ctx.lineWidth = 1.2;
+          for (const side of [-1, 1]) {
+            for (const loop of [1.6, 2.3]) {
+              ctx.beginPath();
+              ctx.ellipse(side * rPx * loop * 0.55, 0, rPx * loop * 0.55, rPx * loop * 0.9, 0, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+
+          // 상대론적 쌍극 제트 빔
+          const jetGrad = ctx.createLinearGradient(0, -rPx * 4.2, 0, rPx * 4.2);
+          jetGrad.addColorStop(0, "rgba(56, 189, 248, 0)");
+          jetGrad.addColorStop(0.45, "rgba(186, 230, 253, 0.75)");
+          jetGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.95)");
+          jetGrad.addColorStop(0.55, "rgba(186, 230, 253, 0.75)");
+          jetGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+          ctx.fillStyle = jetGrad;
+          ctx.beginPath();
+          ctx.moveTo(-2, 0);
+          ctx.lineTo(-12, -rPx * 4.2);
+          ctx.lineTo(12, -rPx * 4.2);
+          ctx.lineTo(2, 0);
+          ctx.lineTo(12, rPx * 4.2);
+          ctx.lineTo(-12, rPx * 4.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+
+          // 초고밀도 중성자별 핵
+          const core = ctx.createRadialGradient(-rPx * 0.2, -rPx * 0.2, 1, 0, 0, rPx);
+          core.addColorStop(0, "#ffffff");
+          core.addColorStop(0.45, "#7dd3fc");
+          core.addColorStop(0.85, "#0284c7");
+          core.addColorStop(1, "#1e3a8a");
+          ctx.fillStyle = core;
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = "#e0f2fe";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // 라벨
+        ctx.fillStyle = "#f1f5f9";
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${w.name} (GM=${w.strength})`, p.x, p.y + rPx + 18);
+        ctx.textAlign = "left";
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 입체 3D 음영 & 표면 디테일이 살아있는 장애물 천체 렌더링
+    // -------------------------------------------------------------------------
+    function drawObstacles() {
+      for (const obs of currentStage.obstacles) {
+        const p = worldToScreen(obs.x, obs.y);
+        const rPx = Math.max(12, obs.r * camera.scale);
+        const oType = obs.obsType || "rock";
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+
+        // 외곽 대기 산란 글로우
+        const atmo = ctx.createRadialGradient(0, 0, rPx * 0.85, 0, 0, rPx * 1.25);
+        atmo.addColorStop(0, oType === "ice" ? "rgba(56, 189, 248, 0.35)" : oType === "lava" ? "rgba(249, 115, 22, 0.35)" : "rgba(251, 191, 36, 0.2)");
+        atmo.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = atmo;
+        ctx.beginPath();
+        ctx.arc(0, 0, rPx * 1.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 행성 본체 클리핑
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+        ctx.clip();
+
+        if (oType === "gas") {
+          // 목성형 줄무늬 & 대적점 소용돌이
+          const g = ctx.createLinearGradient(-rPx, -rPx, rPx, rPx);
+          g.addColorStop(0, "#fed7aa");
+          g.addColorStop(0.35, obs.color);
+          g.addColorStop(0.7, "#7c2d12");
+          g.addColorStop(1, "#1c1917");
+          ctx.fillStyle = g;
+          ctx.fillRect(-rPx, -rPx, rPx * 2, rPx * 2);
+
+          ctx.rotate(-0.2);
+          ctx.fillStyle = "rgba(255, 237, 213, 0.22)";
+          ctx.fillRect(-rPx * 1.2, -rPx * 0.45, rPx * 2.4, rPx * 0.16);
+          ctx.fillRect(-rPx * 1.2, rPx * 0.1, rPx * 2.4, rPx * 0.2);
+          ctx.fillStyle = "rgba(124, 45, 18, 0.35)";
+          ctx.fillRect(-rPx * 1.2, -rPx * 0.15, rPx * 2.4, rPx * 0.14);
+
+          // 대적점 폭풍
+          ctx.beginPath();
+          ctx.ellipse(rPx * 0.2, rPx * 0.2, rPx * 0.24, rPx * 0.13, 0, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(220, 38, 38, 0.55)";
+          ctx.fill();
+        } else if (oType === "ice") {
+          const g = ctx.createRadialGradient(-rPx * 0.35, -rPx * 0.35, rPx * 0.1, 0, 0, rPx);
+          g.addColorStop(0, "#e0f2fe");
+          g.addColorStop(0.5, "#0284c7");
+          g.addColorStop(1, "#0f172a");
+          ctx.fillStyle = g;
+          ctx.fillRect(-rPx, -rPx, rPx * 2, rPx * 2);
+
+          ctx.strokeStyle = "rgba(186, 230, 253, 0.45)";
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(-rPx * 0.6, -rPx * 0.3);
+          ctx.lineTo(rPx * 0.1, 0);
+          ctx.lineTo(rPx * 0.65, -rPx * 0.4);
+          ctx.moveTo(rPx * 0.1, 0);
+          ctx.lineTo(-rPx * 0.2, rPx * 0.7);
+          ctx.stroke();
+        } else if (oType === "lava") {
+          const g = ctx.createRadialGradient(-rPx * 0.3, -rPx * 0.3, rPx * 0.1, 0, 0, rPx);
+          g.addColorStop(0, "#78350f");
+          g.addColorStop(0.55, "#292524");
+          g.addColorStop(1, "#090d16");
+          ctx.fillStyle = g;
+          ctx.fillRect(-rPx, -rPx, rPx * 2, rPx * 2);
+
+          ctx.strokeStyle = "#fb923c";
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(-rPx * 0.7, -rPx * 0.1);
+          ctx.lineTo(-rPx * 0.1, rPx * 0.2);
+          ctx.lineTo(rPx * 0.6, -rPx * 0.25);
+          ctx.moveTo(-rPx * 0.1, rPx * 0.2);
+          ctx.lineTo(rPx * 0.2, rPx * 0.75);
+          ctx.stroke();
+        } else {
+          // 암석 소행성 / 차폐 행성 (크레이터 음영)
+          const g = ctx.createRadialGradient(-rPx * 0.35, -rPx * 0.35, rPx * 0.1, 0, 0, rPx);
+          g.addColorStop(0, "#cbd5e1");
+          g.addColorStop(0.45, "#64748b");
+          g.addColorStop(1, "#0f172a");
+          ctx.fillStyle = g;
+          ctx.fillRect(-rPx, -rPx, rPx * 2, rPx * 2);
+
+          const craters = [
+            { x: -0.32, y: -0.25, r: 0.22 },
+            { x: 0.28, y: -0.18, r: 0.16 },
+            { x: -0.08, y: 0.34, r: 0.26 },
+            { x: 0.36, y: 0.32, r: 0.14 }
+          ];
+          for (const c of craters) {
+            ctx.beginPath();
+            ctx.arc(c.x * rPx, c.y * rPx, c.r * rPx, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(15, 23, 42, 0.36)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(226, 232, 240, 0.22)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+
+        // 3D 구형 명암 경계선 (Terminator Shadow)
+        const shadowGrad = ctx.createRadialGradient(-rPx * 0.42, -rPx * 0.42, rPx * 0.25, 0, 0, rPx * 1.15);
+        shadowGrad.addColorStop(0, "rgba(255, 255, 255, 0.12)");
+        shadowGrad.addColorStop(0.55, "rgba(0, 0, 0, 0)");
+        shadowGrad.addColorStop(1, "rgba(2, 4, 10, 0.78)");
+        ctx.fillStyle = shadowGrad;
+        ctx.fillRect(-rPx, -rPx, rPx * 2, rPx * 2);
+
+        ctx.restore();
+
+        // 테두리 림 라이트
+        ctx.beginPath();
+        ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        ctx.restore();
+
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(obs.name, p.x, p.y + rPx + 16);
+        ctx.textAlign = "left";
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 멸망한 지구 잔해 (출발점)
+    // -------------------------------------------------------------------------
+    function drawShatteredEarth() {
+      const s = worldToScreen(currentStage.ship.x, currentStage.ship.y);
+      const r = 15;
+      const time = simState.time;
+
+      // 붉은 용암 핵 & 대기 붕괴 글로우
+      const glow = ctx.createRadialGradient(s.x, s.y, 2, s.x, s.y, r * 2.5);
+      glow.addColorStop(0, "rgba(249, 115, 22, 0.65)");
+      glow.addColorStop(0.5, "rgba(244, 63, 94, 0.25)");
+      glow.addColorStop(1, "rgba(244, 63, 94, 0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(s.x, s.y);
+
+      // 노출된 빛나는 지구 맨틀 핵
+      const coreGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, r * 0.9);
+      coreGrad.addColorStop(0, "#fef08a");
+      coreGrad.addColorStop(0.5, "#f97316");
+      coreGrad.addColorStop(1, "#991b1b");
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 갈라져 떨어져 나간 지각 판 조각 3개 (푸른 바다 + 녹색 대륙 흔적)
+      const plates = [
+        { ang: -2.2, dist: 2.2, start: -2.9, end: -1.3 },
+        { ang: 0.2, dist: 2.5, start: -0.7, end: 1.0 },
+        { ang: 2.1, dist: 2.0, start: 1.4, end: 2.8 }
+      ];
+      for (const pl of plates) {
+        ctx.save();
+        ctx.translate(Math.cos(pl.ang) * pl.dist, Math.sin(pl.ang) * pl.dist);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, pl.start, pl.end);
+        ctx.closePath();
+        ctx.fillStyle = "#1d4ed8";
+        ctx.fill();
+        ctx.strokeStyle = "#fb923c";
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 공전하는 암석 파편 띠
+      for (let i = 0; i < 7; i++) {
+        const ang = time * 0.85 + i * (Math.PI * 2 / 7);
+        const dist = r + 5 + (i % 3) * 2.5;
+        ctx.fillStyle = i % 2 === 0 ? "#cbd5e1" : "#fb7185";
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * dist, Math.sin(ang) * dist, i % 2 === 0 ? 1.8 : 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+
+      ctx.fillStyle = "#fecdd3";
+      ctx.font = "bold 11px monospace";
+      ctx.fillText(`지구 잔해 (${currentStage.ship.x}, ${currentStage.ship.y})`, s.x - 46, s.y - 23);
+    }
+
+    // -------------------------------------------------------------------------
+    // AAA 고퀄리티 12종 고유 정착 행성 렌더링 (입체 3D 명암 + 대기 산란 + 표면 디테일)
+    // -------------------------------------------------------------------------
+    function drawDestinationPlanet() {
+      const target = currentStage.target;
+      const t = worldToScreen(target.x, target.y);
+      const r = Math.max(20, target.r * camera.scale);
+      const bodyR = r * 0.85;
+      const type = target.planetType || "eden";
+      const time = simState.time;
+
+      ctx.save();
+      ctx.translate(t.x, t.y);
+
+      // 0. 외기권 대기 산란 광륜 (Atmosphere Scattering Halo)
+      const haloColors = {
+        flower: "rgba(244, 114, 182, 0.35)",
+        eyeball: "rgba(56, 189, 248, 0.35)",
+        ice: "rgba(125, 211, 252, 0.42)",
+        volcano: "rgba(249, 115, 22, 0.38)",
+        ringed: "rgba(52, 211, 153, 0.35)",
+        ocean: "rgba(34, 211, 238, 0.38)",
+        crystal: "rgba(192, 132, 252, 0.4)",
+        forest: "rgba(74, 222, 128, 0.38)",
+        cloud: "rgba(165, 180, 252, 0.4)",
+        solar: "rgba(251, 191, 36, 0.55)",
+        twinmoon: "rgba(56, 189, 248, 0.38)",
+        eden: "rgba(56, 189, 248, 0.45)"
+      };
+      const atmoGlow = ctx.createRadialGradient(0, 0, bodyR * 0.85, 0, 0, r * 1.45);
+      atmoGlow.addColorStop(0, haloColors[type] || "rgba(52, 211, 153, 0.38)");
+      atmoGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = atmoGlow;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 착륙 판정 반경 점선 링
+      const pulse = 1 + Math.sin(time * 3.5) * 0.03;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * pulse, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(52, 211, 153, 0.52)";
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 1. 뒤쪽 고리 (고리 행성 / 뉴 에덴)
+      if (type === "ringed" || type === "eden") {
+        ctx.save();
+        ctx.rotate(-0.34);
+        ctx.scale(1, 0.3);
+        const rings = type === "ringed"
+          ? [
+              { rad: r * 1.98, w: 4.5, col: "rgba(251, 191, 36, 0.72)" },
+              { rad: r * 1.72, w: 6.0, col: "rgba(52, 211, 153, 0.62)" },
+              { rad: r * 1.42, w: 3.5, col: "rgba(254, 240, 138, 0.75)" }
+            ]
+          : [
+              { rad: r * 1.85, w: 4.5, col: "rgba(56, 189, 248, 0.68)" },
+              { rad: r * 1.54, w: 3.2, col: "rgba(251, 191, 36, 0.6)" }
+            ];
+        for (const rg of rings) {
+          ctx.beginPath();
+          ctx.arc(0, 0, rg.rad, Math.PI, Math.PI * 2);
+          ctx.strokeStyle = rg.col;
+          ctx.lineWidth = rg.w;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 2. 행성 외곽 특수 구조물 (꽃잎 / 빙하 첨탑 / 수정 클러스터 / 오로라)
+      if (type === "flower") {
+        const petals = 10;
+        for (let i = 0; i < petals; i++) {
+          const ang = (i / petals) * Math.PI * 2 + time * 0.22;
+          const bloom = 1 + Math.sin(time * 2.5 + i) * 0.05;
+          ctx.save();
+          ctx.rotate(ang);
+          const pGrad = ctx.createLinearGradient(bodyR * 0.85, 0, bodyR * 1.45 * bloom, 0);
+          pGrad.addColorStop(0, i % 2 === 0 ? "#db2777" : "#ea580c");
+          pGrad.addColorStop(0.6, i % 2 === 0 ? "#f472b6" : "#fb923c");
+          pGrad.addColorStop(1, "#fce7f3");
+          ctx.fillStyle = pGrad;
+          ctx.beginPath();
+          ctx.moveTo(bodyR * 0.85, 0);
+          ctx.quadraticCurveTo(bodyR * 1.15, -bodyR * 0.28, bodyR * 1.45 * bloom, 0);
+          ctx.quadraticCurveTo(bodyR * 1.15, bodyR * 0.28, bodyR * 0.85, 0);
+          ctx.fill();
+          ctx.restore();
+        }
+      } else if (type === "ice") {
+        // 빙하 결정 첨탑 + 극지방 에메랄드 오로라
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2 + 0.15;
+          ctx.save();
+          ctx.rotate(ang);
+          const spireGrad = ctx.createLinearGradient(bodyR * 0.85, 0, bodyR * 1.38, 0);
+          spireGrad.addColorStop(0, "#0284c7");
+          spireGrad.addColorStop(0.5, "#7dd3fc");
+          spireGrad.addColorStop(1, "#ffffff");
+          ctx.fillStyle = spireGrad;
+          ctx.beginPath();
+          ctx.moveTo(bodyR * 0.85, -4.5);
+          ctx.lineTo(bodyR * 1.38, 0);
+          ctx.lineTo(bodyR * 0.85, 4.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      } else if (type === "crystal") {
+        // 반투명 굴절 수정 프리즘
+        for (let i = 0; i < 7; i++) {
+          const ang = (i / 7) * Math.PI * 2 - 0.2;
+          ctx.save();
+          ctx.rotate(ang);
+          const cGrad = ctx.createLinearGradient(bodyR * 0.82, 0, bodyR * 1.42, 0);
+          cGrad.addColorStop(0, "#6b21a8");
+          cGrad.addColorStop(0.55, i % 2 === 0 ? "#c084fc" : "#f472b6");
+          cGrad.addColorStop(1, "#fae8ff");
+          ctx.fillStyle = cGrad;
+          ctx.beginPath();
+          ctx.moveTo(bodyR * 0.82, -5.5);
+          ctx.lineTo(bodyR * 1.26, -4);
+          ctx.lineTo(bodyR * 1.44, 0);
+          ctx.lineTo(bodyR * 1.26, 4);
+          ctx.lineTo(bodyR * 0.82, 5.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else if (type === "solar") {
+        // 태양풍 불꽃 코로나 루프
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2 + time * 0.35;
+          ctx.save();
+          ctx.rotate(ang);
+          ctx.strokeStyle = "rgba(251, 191, 36, 0.75)";
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(bodyR * 0.95, 0, bodyR * 0.32, -Math.PI * 0.5, Math.PI * 0.5);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // 3. 행성 구체 내부 렌더링 (클리핑)
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
+      ctx.clip();
+
+      const baseGrad = ctx.createRadialGradient(-bodyR * 0.35, -bodyR * 0.35, bodyR * 0.08, 0, 0, bodyR);
+
+      if (type === "flower") {
+        baseGrad.addColorStop(0, "#6ee7b7");
+        baseGrad.addColorStop(0.55, "#059669");
+        baseGrad.addColorStop(1, "#022c22");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+        // 꽃잎 대륙 & 황금 꽃술
+        ctx.fillStyle = "rgba(244, 114, 182, 0.85)";
+        ctx.beginPath(); ctx.arc(-bodyR * 0.25, -bodyR * 0.2, bodyR * 0.28, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bodyR * 0.28, bodyR * 0.24, bodyR * 0.24, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fde047";
+        ctx.beginPath(); ctx.arc(-bodyR * 0.25, -bodyR * 0.2, bodyR * 0.1, 0, Math.PI * 2); ctx.fill();
+      } else if (type === "eyeball") {
+        // 하이-디테일 거대 눈알 행성!
+        baseGrad.addColorStop(0, "#ffffff");
+        baseGrad.addColorStop(0.7, "#e0f2fe");
+        baseGrad.addColorStop(1, "#7dd3fc");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 미세한 붉은/푸른 빙하 맥락 (Sclera veins)
+        ctx.strokeStyle = "rgba(244, 63, 94, 0.24)";
+        ctx.lineWidth = 1.0;
+        for (let v = 0; v < 8; v++) {
+          const ang = (v / 8) * Math.PI * 2 + 0.3;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(ang) * bodyR * 0.95, Math.sin(ang) * bodyR * 0.95);
+          ctx.quadraticCurveTo(
+            Math.cos(ang + 0.2) * bodyR * 0.7,
+            Math.sin(ang + 0.2) * bodyR * 0.7,
+            Math.cos(ang - 0.1) * bodyR * 0.52,
+            Math.sin(ang - 0.1) * bodyR * 0.52
+          );
+          ctx.stroke();
+        }
+
+        // 우주선(비행 중) 또는 마우스 커서(대기 중)를 실시간 추적하는 시선
+        const focusWorld = simState.mode === "flying" ? simState.shipWorld : simState.cursorWorld;
+        const dxEye = focusWorld.x - target.x;
+        const dyEye = -(focusWorld.y - target.y);
+        const distEye = Math.hypot(dxEye, dyEye) + 1e-6;
+        const maxOffset = bodyR * 0.24;
+        const offsetMag = Math.min(maxOffset, distEye * 1.1);
+        const lookX = (dxEye / distEye) * offsetMag;
+        const lookY = (dyEye / distEye) * offsetMag;
+
+        // 방사형 섬유질 홍채 (Iris)
+        const irisR = bodyR * 0.56;
+        const irisGrad = ctx.createRadialGradient(lookX, lookY, irisR * 0.25, lookX, lookY, irisR);
+        irisGrad.addColorStop(0, "#67e8f9");
+        irisGrad.addColorStop(0.55, "#0284c7");
+        irisGrad.addColorStop(0.88, "#4338ca");
+        irisGrad.addColorStop(1, "#1e1b4b");
+        ctx.fillStyle = irisGrad;
+        ctx.beginPath();
+        ctx.arc(lookX, lookY, irisR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 홍채 방사선 패턴
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.38)";
+        ctx.lineWidth = 1.0;
+        for (let f = 0; f < 18; f++) {
+          const a = (f / 18) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(lookX + Math.cos(a) * irisR * 0.42, lookY + Math.sin(a) * irisR * 0.42);
+          ctx.lineTo(lookX + Math.cos(a) * irisR * 0.92, lookY + Math.sin(a) * irisR * 0.92);
+          ctx.stroke();
+        }
+
+        // 깊은 동공 (Pupil)
+        ctx.fillStyle = "#020617";
+        ctx.beginPath();
+        ctx.arc(lookX, lookY, irisR * 0.44, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 각막 반사광 하이라이트
+        ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+        ctx.beginPath();
+        ctx.ellipse(lookX - irisR * 0.28, lookY - irisR * 0.3, irisR * 0.2, irisR * 0.12, -0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(lookX + irisR * 0.22, lookY + irisR * 0.25, irisR * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === "ice") {
+        baseGrad.addColorStop(0, "#f0f9ff");
+        baseGrad.addColorStop(0.5, "#38bdf8");
+        baseGrad.addColorStop(1, "#172554");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 다각형 빙하 판 균열
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.72)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-bodyR * 0.75, -bodyR * 0.15);
+        ctx.lineTo(-bodyR * 0.1, bodyR * 0.15);
+        ctx.lineTo(bodyR * 0.65, -bodyR * 0.3);
+        ctx.moveTo(-bodyR * 0.1, bodyR * 0.15);
+        ctx.lineTo(bodyR * 0.15, bodyR * 0.78);
+        ctx.stroke();
+      } else if (type === "volcano") {
+        baseGrad.addColorStop(0, "#451a03");
+        baseGrad.addColorStop(0.55, "#1c1917");
+        baseGrad.addColorStop(1, "#090d16");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 빛나는 마그마 균열 네트워크
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(-bodyR * 0.8, bodyR * 0.22);
+        ctx.quadraticCurveTo(-bodyR * 0.1, -bodyR * 0.25, bodyR * 0.75, bodyR * 0.18);
+        ctx.moveTo(-bodyR * 0.2, -bodyR * 0.75);
+        ctx.quadraticCurveTo(bodyR * 0.15, 0, -bodyR * 0.1, bodyR * 0.78);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#fef08a";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      } else if (type === "ringed") {
+        baseGrad.addColorStop(0, "#fef08a");
+        baseGrad.addColorStop(0.5, "#10b981");
+        baseGrad.addColorStop(1, "#064e3b");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        ctx.rotate(-0.34);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.fillRect(-bodyR * 1.2, -bodyR * 0.32, bodyR * 2.4, bodyR * 0.16);
+        ctx.fillRect(-bodyR * 1.2, bodyR * 0.16, bodyR * 2.4, bodyR * 0.14);
+      } else if (type === "ocean") {
+        baseGrad.addColorStop(0, "#67e8f9");
+        baseGrad.addColorStop(0.5, "#0284c7");
+        baseGrad.addColorStop(1, "#1e1b4b");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 발광 산호 환초
+        ctx.strokeStyle = "#34d399";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(-bodyR * 0.22, bodyR * 0.18, bodyR * 0.24, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = "#f472b6";
+        ctx.beginPath(); ctx.arc(bodyR * 0.28, -bodyR * 0.18, bodyR * 0.18, 0, Math.PI * 2); ctx.stroke();
+      } else if (type === "crystal") {
+        baseGrad.addColorStop(0, "#f5d0fe");
+        baseGrad.addColorStop(0.5, "#9333ea");
+        baseGrad.addColorStop(1, "#2e1065");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 결정 단면 하이라이트
+        ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.beginPath();
+        ctx.moveTo(-bodyR * 0.4, -bodyR * 0.5);
+        ctx.lineTo(bodyR * 0.2, -bodyR * 0.2);
+        ctx.lineTo(-bodyR * 0.1, bodyR * 0.4);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "forest") {
+        baseGrad.addColorStop(0, "#bef264");
+        baseGrad.addColorStop(0.5, "#15803d");
+        baseGrad.addColorStop(1, "#052e16");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 황금 세계수 수관
+        ctx.fillStyle = "#fde047";
+        ctx.beginPath(); ctx.arc(0, -bodyR * 0.18, bodyR * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(-bodyR * 0.08, bodyR * 0.1, bodyR * 0.16, bodyR * 0.65);
+      } else if (type === "cloud") {
+        baseGrad.addColorStop(0, "#fae8ff");
+        baseGrad.addColorStop(0.55, "#6366f1");
+        baseGrad.addColorStop(1, "#1e1b4b");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.beginPath(); ctx.arc(-bodyR * 0.22, -bodyR * 0.1, bodyR * 0.36, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bodyR * 0.25, bodyR * 0.14, bodyR * 0.32, 0, Math.PI * 2); ctx.fill();
+      } else if (type === "solar") {
+        baseGrad.addColorStop(0, "#fef9c3");
+        baseGrad.addColorStop(0.55, "#f59e0b");
+        baseGrad.addColorStop(1, "#9a3412");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath(); ctx.arc(0, 0, bodyR * 0.34, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // twinmoon & eden (제2의 지구)
+        baseGrad.addColorStop(0, "#7dd3fc");
+        baseGrad.addColorStop(0.52, "#0284c7");
+        baseGrad.addColorStop(1, "#172554");
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+        // 녹색 대륙과 구름 소용돌이
+        ctx.fillStyle = "#34d399";
+        ctx.beginPath(); ctx.arc(-bodyR * 0.26, -bodyR * 0.18, bodyR * 0.38, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(bodyR * 0.32, bodyR * 0.26, bodyR * 0.3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.beginPath(); ctx.ellipse(0, -bodyR * 0.42, bodyR * 0.55, bodyR * 0.12, -0.2, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // 4. 모든 행성에 공통 적용되는 3D 입체 명암 & 대기 프레넬 반사광 (눈알 행성은 동공 가독성 위해 약하게 적용)
+      const shadowStrength = type === "eyeball" ? 0.38 : 0.72;
+      const sphereShadow = ctx.createRadialGradient(-bodyR * 0.42, -bodyR * 0.42, bodyR * 0.25, 0, 0, bodyR * 1.15);
+      sphereShadow.addColorStop(0, "rgba(255, 255, 255, 0.16)");
+      sphereShadow.addColorStop(0.55, "rgba(0, 0, 0, 0)");
+      sphereShadow.addColorStop(1, `rgba(2, 4, 12, ${shadowStrength})`);
+      ctx.fillStyle = sphereShadow;
+      ctx.fillRect(-bodyR, -bodyR, bodyR * 2, bodyR * 2);
+
+      ctx.restore(); // 본체 클리핑 종료
+
+      // 5. 행성 대기 림 라이트
+      ctx.beginPath();
+      ctx.arc(0, 0, bodyR, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.52)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 6. 앞쪽 고리 (고리 행성 / 뉴 에덴)
+      if (type === "ringed" || type === "eden") {
+        ctx.save();
+        ctx.rotate(-0.34);
+        ctx.scale(1, 0.3);
+        const rings = type === "ringed"
+          ? [
+              { rad: r * 1.98, w: 4.5, col: "rgba(251, 191, 36, 0.88)" },
+              { rad: r * 1.72, w: 6.0, col: "rgba(52, 211, 153, 0.75)" },
+              { rad: r * 1.42, w: 3.5, col: "rgba(254, 240, 138, 0.85)" }
+            ]
+          : [
+              { rad: r * 1.85, w: 4.5, col: "rgba(56, 189, 248, 0.8)" },
+              { rad: r * 1.54, w: 3.2, col: "rgba(251, 191, 36, 0.7)" }
+            ];
+        for (const rg of rings) {
+          ctx.beginPath();
+          ctx.arc(0, 0, rg.rad, 0, Math.PI);
+          ctx.strokeStyle = rg.col;
+          ctx.lineWidth = rg.w;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 7. 쌍둥이 위성 (twinmoon)
+      if (type === "twinmoon") {
+        for (let m = 0; m < 2; m++) {
+          const ang = time * 1.6 + m * Math.PI;
+          const mx = Math.cos(ang) * (r * 1.38);
+          const my = Math.sin(ang) * (r * 0.56);
+          ctx.beginPath();
+          ctx.arc(mx, my, 4.6, 0, Math.PI * 2);
+          ctx.fillStyle = m === 0 ? "#fde047" : "#7dd3fc";
+          ctx.fill();
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+
+      // 8. 행성 이름 및 좌표 라벨
+      ctx.fillStyle = "#a7f3d0";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(target.name, 0, -r - 17);
+      ctx.font = "10.5px monospace";
+      ctx.fillStyle = "#fde68a";
+      ctx.fillText(`(${target.x}, ${target.y})`, 0, -r - 4);
+      ctx.textAlign = "left";
+
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------------------
+    // 화면 밖 비행 시 방주 위치 추적 인디케이터
+    // -------------------------------------------------------------------------
+    function drawOffscreenShipIndicator(width, height) {
+      if (simState.mode !== "flying" && simState.mode !== "miss") return;
+      const sp = worldToScreen(simState.shipWorld.x, simState.shipWorld.y);
+      const pad = 34;
+      if (sp.x >= 0 && sp.x <= width && sp.y >= 0 && sp.y <= height) return;
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const dx = sp.x - cx;
+      const dy = sp.y - cy;
+      const ang = Math.atan2(dy, dx);
+
+      const maxX = width / 2 - pad;
+      const maxY = height / 2 - pad;
+      const scaleX = Math.abs(dx) > 1e-6 ? maxX / Math.abs(dx) : Infinity;
+      const scaleY = Math.abs(dy) > 1e-6 ? maxY / Math.abs(dy) : Infinity;
+      const t = Math.min(scaleX, scaleY);
+
+      const ix = cx + dx * t;
+      const iy = cy + dy * t;
+
+      ctx.save();
+      ctx.translate(ix, iy);
+
+      // 화살표 배지
+      ctx.save();
+      ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(-8, -8);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(-8, 8);
+      ctx.closePath();
+      ctx.fillStyle = "#fbbf24";
+      ctx.fill();
+      ctx.restore();
+
+      // 좌표 텍스트 박스
+      const label = `방주 (${simState.shipWorld.x.toFixed(1)}, ${simState.shipWorld.y.toFixed(1)})`;
+      ctx.font = "bold 11px monospace";
+      const tw = ctx.measureText(label).width;
+      const boxX = Math.max(-ix + 10, Math.min(width - ix - tw - 18, -tw / 2 - 4));
+      const boxY = iy < height / 2 ? 16 : -26;
+
+      ctx.fillStyle = "rgba(4, 7, 17, 0.88)";
+      ctx.strokeStyle = "rgba(251, 191, 36, 0.65)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(boxX, boxY, tw + 10, 18, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#fde68a";
+      ctx.fillText(label, boxX + 5, boxY + 13);
+
+      ctx.restore();
+    }
+
+    function drawTrajectories() {
+      if (simState.purePoints.length > 1) {
+        ctx.beginPath();
+        let penDown = false;
+        for (const pt of simState.purePoints) {
+          if (!pt) {
+            penDown = false;
+            continue;
+          }
+          const sp = worldToScreen(pt.x, pt.y);
+          if (!penDown) {
+            ctx.moveTo(sp.x, sp.y);
+            penDown = true;
+          } else {
+            ctx.lineTo(sp.x, sp.y);
+          }
+        }
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.55)";
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (simState.bentPoints.length > 1) {
+        const limit = simState.mode === "flying"
+          ? Math.min(simState.bentPoints.length, Math.floor(simState.animProgress))
+          : simState.bentPoints.length;
+
+        if (limit > 1) {
+          ctx.beginPath();
+          for (let i = 0; i < limit; i++) {
+            const sp = worldToScreen(simState.bentPoints[i].x, simState.bentPoints[i].y);
+            if (i === 0) ctx.moveTo(sp.x, sp.y);
+            else ctx.lineTo(sp.x, sp.y);
+          }
+          ctx.strokeStyle =
+            simState.mode === "arrived" ? "#34d399" :
+            (simState.mode === "crash" || simState.mode === "sucked") ? "#fb7185" :
+            "#f59e0b";
+          ctx.lineWidth = 3.2;
+          ctx.shadowColor = ctx.strokeStyle;
+          ctx.shadowBlur = 12;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          for (const gv of simState.gravityVectors) {
+            const p0 = worldToScreen(gv.x, gv.y);
+            const mag = Math.hypot(gv.gx, gv.gy);
+            const len = Math.min(34, 8 + mag * 4.5);
+            const ux = gv.gx / (mag + 1e-6);
+            const uy = -gv.gy / (mag + 1e-6);
+            const p1x = p0.x + ux * len;
+            const p1y = p0.y + uy * len;
+
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1x, p1y);
+            ctx.strokeStyle = "rgba(167, 139, 250, 0.72)";
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(p1x, p1y, 2.2, 0, Math.PI * 2);
+            ctx.fillStyle = "#c4b5fd";
+            ctx.fill();
+          }
+
+          const curr = simState.bentPoints[limit - 1];
+          const prev = simState.bentPoints[Math.max(0, limit - 2)];
+          simState.shipWorld = { x: curr.x, y: curr.y };
+
+          if (camera.followShip && simState.mode === "flying") {
+            camera.cx += (curr.x - camera.cx) * 0.14;
+            camera.cy += (curr.y - camera.cy) * 0.14;
+          }
+
+          const sp = worldToScreen(curr.x, curr.y);
+          const spPrev = worldToScreen(prev.x, prev.y);
+          const angle = Math.atan2(sp.y - spPrev.y, sp.x - spPrev.x);
+
+          if (simState.mode === "flying" || simState.mode === "arrived" || simState.mode === "miss") {
+            ctx.save();
+            ctx.translate(sp.x, sp.y);
+            ctx.rotate(angle);
+
+            if (simState.mode === "flying") {
+              ctx.beginPath();
+              ctx.moveTo(-10, 0);
+              ctx.lineTo(-24 - Math.random() * 10, -4);
+              ctx.lineTo(-24 - Math.random() * 10, 4);
+              ctx.closePath();
+              ctx.fillStyle = "#fbbf24";
+              ctx.fill();
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(13, 0);
+            ctx.lineTo(-8, -7);
+            ctx.lineTo(-4, 0);
+            ctx.lineTo(-8, 7);
+            ctx.closePath();
+            ctx.fillStyle = "#f8fafc";
+            ctx.fill();
+            ctx.strokeStyle = "#34d399";
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+
+            ctx.restore();
+          }
+        }
+      } else if (simState.mode === "idle") {
+        simState.shipWorld = { x: currentStage.ship.x, y: currentStage.ship.y };
+        const sp = worldToScreen(currentStage.ship.x, currentStage.ship.y);
+        ctx.save();
+        ctx.translate(sp.x, sp.y);
+        ctx.beginPath();
+        ctx.moveTo(13, 0);
+        ctx.lineTo(-8, -7);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-8, 7);
+        ctx.closePath();
+        ctx.fillStyle = "#f8fafc";
+        ctx.fill();
+        ctx.strokeStyle = "#34d399";
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawParticles() {
+      for (let i = simState.particles.length - 1; i >= 0; i--) {
+        const pt = simState.particles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life -= pt.decay;
+        if (pt.life <= 0) {
+          simState.particles.splice(i, 1);
+          continue;
+        }
+        const sp = worldToScreen(pt.x, pt.y);
+        ctx.globalAlpha = pt.life;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = pt.color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function renderLoop() {
+      simState.time += 0.016;
+
+      const dpr = window.devicePixelRatio || 1;
+      const { width, height } = getViewportSize();
+      if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // 심우주 성운 배경
+      ctx.drawImage(nebulaCanvas, 0, 0, width, height);
+
+      // 다층 분광 별빛 & 회절 스파이크
+      for (const st of simState.stars) {
+        const sp = worldToScreen(st.x, st.y);
+        if (sp.x < -15 || sp.x > width + 15 || sp.y < -15 || sp.y > height + 15) continue;
+        const alpha = st.alpha * (0.7 + 0.3 * Math.sin(simState.time * 2 + st.twinkle));
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = st.color;
+        ctx.fillRect(sp.x, sp.y, st.size, st.size);
+
+        if (st.bright) {
+          ctx.strokeStyle = st.color;
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(sp.x - 5, sp.y + st.size / 2);
+          ctx.lineTo(sp.x + 6, sp.y + st.size / 2);
+          ctx.moveTo(sp.x + st.size / 2, sp.y - 5);
+          ctx.lineTo(sp.x + st.size / 2, sp.y + 6);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      drawSpacetimeGrid(width, height);
+      drawWells();
+      drawObstacles();
+      drawShatteredEarth();
+      drawDestinationPlanet();
+      drawTrajectories();
+      drawParticles();
+      drawOffscreenShipIndicator(width, height);
+
+      if (simState.mode === "flying") {
+        simState.animProgress += simState.animSpeed;
+        if (simState.animProgress >= simState.bentPoints.length) {
+          simState.animProgress = simState.bentPoints.length;
+          finalizeFlight(simState.pendingResult);
+        }
+      }
+
+      ctx.restore();
+      requestAnimationFrame(renderLoop);
+    }
+
+    // =========================================================================
+    // 7. 스테이지 전환 및 UI 이벤트
+    // =========================================================================
+    function renderStagePills() {
+      const container = document.getElementById("stagePills");
+      container.innerHTML = "";
+      STAGES.forEach((st, idx) => {
+        const btn = document.createElement("button");
+        const isHard = st.extreme ? "hard" : "";
+        const isActive = idx === currentStageIdx ? "active" : "";
+        const isCleared = clearedStages.has(st.id) ? "cleared" : "";
+        btn.className = `stage-pill ${isHard} ${isActive} ${isCleared}`.trim();
+        btn.textContent = clearedStages.has(st.id) ? `✓ ${String(st.id).padStart(2, "0")}` : String(st.id).padStart(2, "0");
+        btn.title = st.title;
+        btn.onclick = () => loadStage(idx);
+        container.appendChild(btn);
+      });
+    }
+
+    function loadStage(idx) {
+      currentStageIdx = idx;
+      currentStage = STAGES[idx];
+
+      simState.mode = "idle";
+      simState.purePoints = [];
+      simState.bentPoints = [];
+      simState.gravityVectors = [];
+      simState.particles = [];
+      simState.maxDeflection = 0;
+      simState.shipWorld = { x: currentStage.ship.x, y: currentStage.ship.y };
+
+      const tagEl = document.getElementById("missionTag");
+      tagEl.textContent = currentStage.tag;
+      tagEl.className = currentStage.extreme ? "mission-tag extreme" : "mission-tag";
+
+      document.getElementById("wellCountBadge").textContent = `중력원: ${currentStage.wells.length}개`;
+      document.getElementById("missionTitle").textContent = currentStage.title;
+      document.getElementById("missionDesc").textContent = currentStage.desc;
+      document.getElementById("startCoordText").textContent = `(${currentStage.ship.x}, ${currentStage.ship.y})`;
+      document.getElementById("targetCoordText").textContent = `(${currentStage.target.x}, ${currentStage.target.y})`;
+      document.getElementById("targetRadiusText").textContent = `r ≤ ${currentStage.target.r}`;
+      document.getElementById("maxDeflection").textContent = "0.00";
+      document.getElementById("telemetryState").textContent = "STANDBY";
+
+      const fnInput = document.getElementById("fnInput");
+      fnInput.value = "";
+
+      const hintBox = document.getElementById("hintBox");
+      hintBox.textContent = `💡 ${currentStage.hint}`;
+      hintBox.classList.remove("visible");
+
+      document.getElementById("nextStageBtn").style.display = "none";
+
+      const statusBox = document.getElementById("statusBox");
+      statusBox.className = "status-box";
+      statusBox.textContent = `[섹터 ${String(currentStage.id).padStart(2, "0")}] 원하는 함수 y = f(x)를 자유롭게 입력해 '${currentStage.target.name}' (${currentStage.target.x}, ${currentStage.target.y}) 행성으로 출항하십시오.`;
+
+      updateStartPreview();
+      renderStagePills();
+      resetCamera();
+    }
+
+    function nextStage() {
+      if (currentStageIdx < STAGES.length - 1) {
+        loadStage(currentStageIdx + 1);
+      }
+    }
+
+    function toggleHint() {
+      document.getElementById("hintBox").classList.toggle("visible");
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const w = screenToWorld(sx, sy);
+      simState.cursorWorld = w;
+
+      document.getElementById("cursorCoords").textContent = `(${w.x.toFixed(2)}, ${w.y.toFixed(2)})`;
+      const gf = computeGravitationalField(w.x, w.y);
+      document.getElementById("cursorPotential").textContent = gf.potential.toFixed(2);
+      document.getElementById("cursorGravity").textContent = gf.mag.toFixed(2);
+
+      if (camera.isDragging) {
+        const dx = (e.clientX - camera.lastX) / camera.scale;
+        const dy = (e.clientY - camera.lastY) / camera.scale;
+        camera.cx -= dx;
+        camera.cy += dy;
+        camera.lastX = e.clientX;
+        camera.lastY = e.clientY;
+      }
+    });
+
+    canvas.addEventListener("mousedown", (e) => {
+      camera.isDragging = true;
+      camera.lastX = e.clientX;
+      camera.lastY = e.clientY;
+    });
+
+    window.addEventListener("mouseup", () => {
+      camera.isDragging = false;
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      camera.scale = Math.max(5, Math.min(140, camera.scale * factor));
+    }, { passive: false });
+
+    canvas.addEventListener("dblclick", resetCamera);
+
+    const fnInputEl = document.getElementById("fnInput");
+    fnInputEl.addEventListener("input", updateStartPreview);
+    fnInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") launchShip();
+    });
+
+    buildNebulaBackdrop();
+    initStars();
+    loadStage(0);
+    requestAnimationFrame(renderLoop);
+  </script>
+</body>
+</html>

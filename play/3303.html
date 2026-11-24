@@ -31,7 +31,7 @@
     letter-spacing: -.02em;
   }
   button { font: inherit; }
-  .app { max-width: 1510px; margin: 0 auto; padding: 22px 26px 28px; }
+  .app { max-width: 1760px; margin: 0 auto; padding: 22px 26px 28px; }
   .topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:17px; }
   .brand { display:flex; align-items:center; gap:13px; min-width:235px; }
   .brand-mark { width:47px; height:47px; display:grid; place-items:center; border-radius:17px; color:#fff; background:linear-gradient(145deg,#46bcb0,#167b84); box-shadow:0 9px 22px rgba(22,143,141,.24); }
@@ -56,7 +56,7 @@
   .scene-subtitle { margin-top:3px; color:var(--muted); font-size:11px; font-weight:650; }
   .weather-chip { display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:999px; color:#5b827e; background:#eff8eb; font-size:10px; font-weight:850; white-space:nowrap; }
   .sun-dot { width:9px; height:9px; border-radius:50%; background:#f2bf62; box-shadow:0 0 0 4px rgba(242,191,98,.17); }
-  .canvas-wrap { position:relative; margin:0 12px; height:min(64vh, 585px); min-height:390px; overflow:hidden; border-radius:17px; background:#80cfc9; box-shadow:inset 0 0 0 1px rgba(255,255,255,.48); }
+  .canvas-wrap { position:relative; margin:0 12px; height:min(78vh, 760px); min-height:540px; overflow:hidden; border-radius:17px; background:#80cfc9; box-shadow:inset 0 0 0 1px rgba(255,255,255,.48); }
   #world { display:block; width:100%; height:100%; }
   .scene-hud { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:space-between; padding:13px; pointer-events:none; }
   .scene-topline { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
@@ -141,7 +141,7 @@
   }
   @media (max-width:820px) {
     .layout { grid-template-columns:1fr; }
-    .canvas-wrap { height:58vw; min-height:360px; max-height:540px; }
+    .canvas-wrap { height:68vw; min-height:440px; max-height:680px; }
     .sidebar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
     .customer-card { grid-column:1/-1; }
     .topbar { align-items:flex-start; }
@@ -161,7 +161,7 @@
     .stat-value { font-size:15px; }
     .round-pill { min-width:0; }
     .quiet-button { padding:8px 9px; font-size:10px; }
-    .canvas-wrap { height:72vw; min-height:300px; margin:0 7px; }
+    .canvas-wrap { height:84vw; min-height:360px; max-height:600px; margin:0 7px; }
     .scene-heading { padding:13px 14px 10px; }
     .scene-footer { padding:10px 12px; font-size:9px; }
     .hint-chip { max-width:80%; font-size:9px; }
@@ -207,10 +207,10 @@
         <div class="weather-chip"><span class="sun-dot"></span>잔잔한 오후</div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
-        <canvas id="world" aria-label="WASD로 이동하는 바닷가. 위쪽 중앙의 조개밭에 들어가 조개를 수거하고 오른쪽 가게 손님에게 판매하세요."></canvas>
+        <canvas id="world" aria-label="WASD로 이동하는 바닷가. 확대된 조개밭에서 조개에 직접 닿아 수거하고, 3초마다 위치가 바뀌는 초록 안전 발판을 밟아 지뢰 폭발을 피한 뒤 오른쪽 가게 손님에게 판매하세요."></canvas>
         <div class="scene-hud" aria-hidden="true">
           <div class="scene-topline"><div class="mini-chip">조개밭 <strong id="patchStock">0개</strong></div><div class="mini-chip">생산량 <strong id="yieldValue">5초마다 1개</strong></div></div>
-          <div class="scene-bottomline"><div class="hint-chip" id="actionHint">이동: WASD · 조개밭에 들어가면 조개를 자동으로 주워요</div><div class="timer-chip">다음 조개 <span id="spawnTime">5.0</span>초</div></div>
+          <div class="scene-bottomline"><div class="hint-chip" id="actionHint">이동: WASD · 조개에 직접 닿아 수집 · 초록 발판은 3초마다 이동</div><div class="timer-chip">다음 조개 <span id="spawnTime">5.0</span>초</div></div>
         </div>
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
       </div>
@@ -266,7 +266,7 @@
     <div class="modal-kicker">조개를 모으고, 가게를 키우세요</div>
     <h1 id="modalTitle">조개마을</h1>
     <p class="modal-copy">잔잔한 바닷가에서 조개 장사를 시작해요. 조개밭을 오가며 재고를 모으고, 손님을 맞이해 번 돈으로 해변 가게를 키워보세요.</p>
-    <div class="modal-rules"><div class="rule"><b>WASD 이동</b><span>모래사장을 돌아다녀요.</span></div><div class="rule"><b>조개밭 수거</b><span>네모 구역에 들어가면 자동 수거.</span></div><div class="rule"><b>E 키 판매</b><span>손님 옆에서 주문을 판매해요.</span></div></div>
+    <div class="modal-rules"><div class="rule"><b>WASD 이동</b><span>모래사장을 돌아다녀요.</span></div><div class="rule"><b>조개밭 수거</b><span>조개에 직접 닿아야 주울 수 있어요.</span></div><div class="rule"><b>초록 안전 발판</b><span>3초마다 위치가 바뀌니 지뢰를 피하세요.</span></div></div>
     <button class="button" id="startButton" type="button">가게 문 열기</button>
     <div class="modal-foot">게임 상태는 이 브라우저에 자동 저장됩니다.</div>
   </div>
@@ -277,7 +277,9 @@
 (() => {
   "use strict";
   const WORLD = { width: 1000, height: 600 };
-  const PATCH = { x: 391, y: 245, width: 218, height: 157 };
+  const PATCH = { x: 305, y: 248, width: 390, height: 270 };
+  const SAFE_ZONE_SIZE = { width: 88, height: 56 };
+  const MINE_BLAST_RADIUS = 78;
   const SHOP = { x: 822, y: 420 };
   const KEY = "shellshore-save-v1";
   const $ = (id) => document.getElementById(id);
@@ -298,8 +300,9 @@
     return {
       round: 1, servedInRound: 0, totalServed: 0, nextCustomerSerial: 1, shells: 0, money: 0, patchStock: 0,
       upgradeLevel: 0, speedLevel: 0, collector: false, cashier: false,
+      patchShells: [], safeZone: { x: PATCH.x + PATCH.width - SAFE_ZONE_SIZE.width - 20, y: PATCH.y + PATCH.height - SAFE_ZONE_SIZE.height - 16, timer: 3 },
       player: { x: 326, y: 482 },
-      currentCustomer: null, customerDelay: 0, spawnTimer: 5,
+      currentCustomer: null, customerDelay: 0, spawnTimer: 5, mines: [], mineSpawnTimer: 8,
       collectorTimer: 1.5, cashierTimer: 1.0
     };
   }
@@ -323,6 +326,14 @@
         upgradeLevel: Math.min(5, Math.max(0, Number(saved.upgradeLevel) || 0)),
         speedLevel: Math.min(5, Math.max(0, Number(saved.speedLevel) || 0)),
         collector: Boolean(saved.collector), cashier: Boolean(saved.cashier),
+        patchShells: [],
+        safeZone: saved.safeZone && Number.isFinite(Number(saved.safeZone.x)) && Number.isFinite(Number(saved.safeZone.y))
+          ? {
+              x: clamp(Number(saved.safeZone.x), PATCH.x + 8, PATCH.x + PATCH.width - SAFE_ZONE_SIZE.width - 8),
+              y: clamp(Number(saved.safeZone.y), PATCH.y + 52, PATCH.y + PATCH.height - SAFE_ZONE_SIZE.height - 8),
+              timer: clamp(Number(saved.safeZone.timer) || 0, 0, 3)
+            }
+          : { x: PATCH.x + PATCH.width - SAFE_ZONE_SIZE.width - 20, y: PATCH.y + PATCH.height - SAFE_ZONE_SIZE.height - 16, timer: 3 },
         player: { x: clamp(Number(saved.player?.x) || 326, 38, 962), y: clamp(Number(saved.player?.y) || 482, 228, 565) },
         currentCustomer: saved.currentCustomer && typeof saved.currentCustomer === "object"
           && Number.isFinite(Number(saved.currentCustomer.order))
@@ -335,9 +346,29 @@
           : null,
         customerDelay: Math.max(0, Number(saved.customerDelay) || 0),
         spawnTimer: Number.isFinite(Number(saved.spawnTimer)) ? Math.max(0, Number(saved.spawnTimer)) : 5,
+        mines: Array.isArray(saved.mines)
+          ? saved.mines.filter(mine => mine && Number.isFinite(Number(mine.x)) && Number.isFinite(Number(mine.y)) && Number.isFinite(Number(mine.timer))).slice(0, 5).map(mine => ({
+              x: clamp(Number(mine.x), PATCH.x + 24, PATCH.x + PATCH.width - 24),
+              y: clamp(Number(mine.y), PATCH.y + 60, PATCH.y + PATCH.height - 24),
+              timer: clamp(Number(mine.timer), 0, 5)
+            }))
+          : saved.mine && Number.isFinite(Number(saved.mine.x)) && Number.isFinite(Number(saved.mine.y)) && Number.isFinite(Number(saved.mine.timer))
+            ? [{ x: clamp(Number(saved.mine.x), PATCH.x + 24, PATCH.x + PATCH.width - 24), y: clamp(Number(saved.mine.y), PATCH.y + 60, PATCH.y + PATCH.height - 24), timer: clamp(Number(saved.mine.timer), 0, 5) }]
+            : [],
+        mineSpawnTimer: Number.isFinite(Number(saved.mineSpawnTimer)) ? Math.max(0, Number(saved.mineSpawnTimer)) : 8,
         collectorTimer: Number.isFinite(Number(saved.collectorTimer)) ? Math.max(0, Number(saved.collectorTimer)) : 1.5,
         cashierTimer: Number.isFinite(Number(saved.cashierTimer)) ? Math.max(0, Number(saved.cashierTimer)) : 1.0
       };
+      if (Array.isArray(saved.patchShells)) {
+        restored.patchShells = saved.patchShells.filter(shell => shell && Number.isFinite(Number(shell.x)) && Number.isFinite(Number(shell.y))).slice(0, 5000).map(shell => ({
+          x: clamp(Number(shell.x), PATCH.x + 14, PATCH.x + PATCH.width - 14),
+          y: clamp(Number(shell.y), PATCH.y + 58, PATCH.y + PATCH.height - 14)
+        }));
+        restored.patchStock = restored.patchShells.length;
+      } else {
+        restored.patchShells = Array.from({ length: Math.min(restored.patchStock, 5000) }, () => randomPatchPoint(restored.safeZone, restored.mines));
+        restored.patchStock = restored.patchShells.length;
+      }
       if (restored.round === 2 && restored.totalServed >= 50) {
         restored.round = 3;
         restored.servedInRound = 0;
@@ -364,7 +395,7 @@
   const floaters = [];
   const hasSavedProgress = Boolean(
     customer || customerDelay > 0 || state.totalServed > 0 || state.shells > 0 || state.money > 0
-    || state.patchStock > 0 || state.upgradeLevel > 0 || state.collector || state.cashier
+    || state.patchStock > 0 || state.mines.length > 0 || state.upgradeLevel > 0 || state.collector || state.cashier
     || state.player.x !== 326 || state.player.y !== 482
   );
 
@@ -391,6 +422,7 @@
     state.currentCustomer = customer ? { ...customer } : null;
     state.customerDelay = customerDelay;
     state.spawnTimer = spawnTimer;
+    state.patchStock = state.patchShells.length;
     state.collectorTimer = collectorTimer;
     state.cashierTimer = cashierTimer;
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) { /* Private browsing can disable storage. */ }
@@ -450,15 +482,98 @@
   function nearShop() {
     return Math.hypot(state.player.x - SHOP.x, state.player.y - SHOP.y) < 108;
   }
-  function collectPatch() {
-    if (state.patchStock < 1) return;
-    const amount = state.patchStock;
-    state.patchStock = 0;
+  function randomPatchPoint(safeZone = null, mines = [], existing = []) {
+    let point = { x: PATCH.x + 24, y: PATCH.y + 70 };
+    for (let attempt = 0; attempt < 48; attempt++) {
+      point = {
+        x: randomInt(PATCH.x + 18, PATCH.x + PATCH.width - 18),
+        y: randomInt(PATCH.y + 58, PATCH.y + PATCH.height - 18)
+      };
+      const inSafe = safeZone && point.x >= safeZone.x - 10 && point.x <= safeZone.x + SAFE_ZONE_SIZE.width + 10
+        && point.y >= safeZone.y - 10 && point.y <= safeZone.y + SAFE_ZONE_SIZE.height + 10;
+      const nearMine = mines.some(mine => Math.hypot(point.x - mine.x, point.y - mine.y) < 38);
+      const nearShell = existing.some(shell => Math.hypot(point.x - shell.x, point.y - shell.y) < 17);
+      if (!inSafe && !nearMine && !nearShell) return point;
+    }
+    return point;
+  }
+  function collectTouchingShells() {
+    let amount = 0;
+    for (let i = state.patchShells.length - 1; i >= 0; i--) {
+      const shell = state.patchShells[i];
+      if (Math.hypot(state.player.x - shell.x, state.player.y - shell.y) <= 22) {
+        state.patchShells.splice(i, 1);
+        amount++;
+      }
+    }
+    if (!amount) return;
+    state.patchStock = state.patchShells.length;
     state.shells += amount;
     addFloater(state.player.x, state.player.y - 35, `+${amount} 조개`, "#fff4d0");
-    showToast(`조개밭에서 ${amount}개를 주웠어요.`, 1.35);
+    showToast(`${amount}개 조개에 닿아 주웠어요.`, 1.2);
     save();
     renderUI();
+  }
+  function isInSafeZone(x, y) {
+    return x >= state.safeZone.x && x <= state.safeZone.x + SAFE_ZONE_SIZE.width
+      && y >= state.safeZone.y && y <= state.safeZone.y + SAFE_ZONE_SIZE.height;
+  }
+  function moveSafeZone() {
+    const oldCenter = { x: state.safeZone.x + SAFE_ZONE_SIZE.width / 2, y: state.safeZone.y + SAFE_ZONE_SIZE.height / 2 };
+    let next = { x: state.safeZone.x, y: state.safeZone.y };
+    for (let attempt = 0; attempt < 48; attempt++) {
+      next = {
+        x: randomInt(PATCH.x + 8, PATCH.x + PATCH.width - SAFE_ZONE_SIZE.width - 8),
+        y: randomInt(PATCH.y + 52, PATCH.y + PATCH.height - SAFE_ZONE_SIZE.height - 8)
+      };
+      const center = { x: next.x + SAFE_ZONE_SIZE.width / 2, y: next.y + SAFE_ZONE_SIZE.height / 2 };
+      const movedEnough = Math.hypot(center.x - oldCenter.x, center.y - oldCenter.y) >= 100;
+      const avoidsMines = state.mines.every(mine => Math.hypot(center.x - mine.x, center.y - mine.y) > MINE_BLAST_RADIUS * 0.7);
+      if (movedEnough && avoidsMines) break;
+    }
+    if (next.x === state.safeZone.x && next.y === state.safeZone.y) {
+      next.x = next.x < PATCH.x + PATCH.width / 2 ? PATCH.x + PATCH.width - SAFE_ZONE_SIZE.width - 8 : PATCH.x + 8;
+    }
+    state.safeZone = { ...next, timer: 3 };
+    save();
+  }
+  function spawnMineWave() {
+    const count = randomInt(1, 5);
+    const newMines = [];
+    for (let i = 0; i < count; i++) {
+      let point = { x: PATCH.x + 30, y: PATCH.y + 70 };
+      for (let attempt = 0; attempt < 60; attempt++) {
+        point = {
+          x: randomInt(PATCH.x + 30, PATCH.x + PATCH.width - 30),
+          y: randomInt(PATCH.y + 62, PATCH.y + PATCH.height - 24)
+        };
+        const safeCenter = { x: state.safeZone.x + SAFE_ZONE_SIZE.width / 2, y: state.safeZone.y + SAFE_ZONE_SIZE.height / 2 };
+        const nearSafeZone = Math.abs(point.x - safeCenter.x) < SAFE_ZONE_SIZE.width / 2 + 34
+          && Math.abs(point.y - safeCenter.y) < SAFE_ZONE_SIZE.height / 2 + 34;
+        const tooClose = newMines.some(mine => Math.hypot(point.x - mine.x, point.y - mine.y) < MINE_BLAST_RADIUS * 1.15);
+        if (!nearSafeZone && !tooClose) break;
+      }
+      newMines.push({ ...point, timer: 5 });
+    }
+    state.mines = newMines;
+    showToast(`조개밭에 지뢰 ${count}개 출현! 5초 안에 초록 발판으로 피하세요.`, 2.4);
+    save();
+    renderUI();
+  }
+  function explodeMine(mine) {
+    const distance = Math.hypot(state.player.x - mine.x, state.player.y - mine.y);
+    const safe = isInSafeZone(state.player.x, state.player.y);
+    if (distance <= MINE_BLAST_RADIUS && !safe) {
+      const loss = Math.ceil(state.money * 0.5);
+      state.money = Math.max(0, state.money - loss);
+      addFloater(state.player.x, state.player.y - 34, `-${loss}원`, "#ff685f");
+      showToast(`지뢰 폭발! 안전 발판 밖이라 돈 ${loss.toLocaleString("ko-KR")}원이 사라졌어요.`, 2.4);
+    } else if (safe) {
+      showToast("지뢰가 폭발했지만 초록 안전 발판 덕분에 무사해요!", 2.2);
+    } else {
+      showToast("지뢰가 멀리서 폭발했어요. 다음 지뢰를 조심하세요.", 1.8);
+    }
+    addFloater(mine.x, mine.y - 20, "펑!", "#ffbf72");
   }
   function sellToCustomer(automatic = false) {
     if (!customer || state.shells < customer.order) return false;
@@ -543,12 +658,31 @@
       walkAmount += delta * 12;
     }
 
-    if (state.player.x > PATCH.x - 18 && state.player.x < PATCH.x + PATCH.width + 18 && state.player.y > PATCH.y - 16 && state.player.y < PATCH.y + PATCH.height + 16) collectPatch();
+    collectTouchingShells();
+
+    state.safeZone.timer -= delta;
+    if (state.safeZone.timer <= 0) moveSafeZone();
+
+    if (state.mines.length) {
+      for (const mine of state.mines) mine.timer -= delta;
+      const exploded = state.mines.filter(mine => mine.timer <= 0);
+      state.mines = state.mines.filter(mine => mine.timer > 0);
+      for (const mine of exploded) explodeMine(mine);
+      if (exploded.length) {
+        if (!state.mines.length) state.mineSpawnTimer = 2;
+        save();
+        renderUI();
+      }
+    } else {
+      state.mineSpawnTimer -= delta;
+      if (state.mineSpawnTimer <= 0) spawnMineWave();
+    }
 
     spawnTimer -= delta;
     if (spawnTimer <= 0) {
       const count = shellsPerCycle();
-      state.patchStock += count;
+      for (let i = 0; i < count; i++) state.patchShells.push(randomPatchPoint(state.safeZone, state.mines, state.patchShells));
+      state.patchStock = state.patchShells.length;
       spawnTimer += productionRate();
       addFloater(PATCH.x + PATCH.width / 2, PATCH.y + 35, `+${count}`, "#fff0c8");
       if (state.patchStock === count) showToast(`조개 ${count}개가 조개밭에 생겼어요.`, 1.15);
@@ -570,7 +704,8 @@
       if (collectorTimer <= 0) {
         collectorTimer = 1.8;
         if (state.patchStock > 0) {
-          const amount = state.patchStock;
+          const amount = state.patchShells.length;
+          state.patchShells = [];
           state.patchStock = 0;
           state.shells += amount;
           addFloater(588, 338, `+${amount} 조개`, "#fff4d0");
@@ -669,7 +804,7 @@
     }
     updateEmployeeButton(el.collector, state.collector, 500, "수거 직원 고용");
     updateEmployeeButton(el.cashier, state.cashier, 800, "계산 직원 고용");
-    el.hint.textContent = !running ? "가게 문을 열고 조개밭을 살펴보세요" : paused ? "일시정지 중 — 계속하기를 눌러 재개" : nearShop() ? (customer && state.shells >= customer.order ? `손님에게 E 키로 조개 ${customer.order}개 판매` : "손님 곁이에요 · 주문 수량을 채우면 E 키로 판매") : "WASD 이동 · 조개밭에 들어가면 조개를 자동으로 주워요";
+    el.hint.textContent = !running ? "가게 문을 열고 조개밭을 살펴보세요" : paused ? "일시정지 중 — 계속하기를 눌러 재개" : nearShop() ? (customer && state.shells >= customer.order ? `손님에게 E 키로 조개 ${customer.order}개 판매` : "손님 곁이에요 · 주문 수량을 채우면 E 키로 판매") : "WASD 이동 · 조개에 직접 닿아 수집 · 초록 발판은 3초마다 이동";
   }
   function updateEmployeeButton(button, owned, cost, label) {
     if (owned) {
@@ -818,11 +953,30 @@
     ctx.setLineDash([8,6]);ctx.lineWidth=3;ctx.strokeStyle="#fff9e7";roundedRect(ctx,x+2,y+2,w-4,h-4,16);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle="rgba(122,91,48,.58)";ctx.font="900 12px system-ui,sans-serif";ctx.textAlign="center";ctx.fillText("조개 생산 구역",x+w/2,y+28);
     ctx.fillStyle="rgba(122,91,48,.7)";ctx.font="700 9px system-ui,sans-serif";ctx.fillText(`다음 생산까지 ${Math.max(0,spawnTimer).toFixed(1)}초`,x+w/2,y+43);
-    const count=Math.min(state.patchStock,24);
-    const positions=[[57,75],[90,72],[130,76],[165,73],[44,101],[77,112],[111,99],[150,110],[181,101],[61,132],[99,133],[140,131],[171,132],[95,82],[128,114],[47,123],[183,83],[114,77],[74,94],[155,91],[136,97],[69,118],[162,120],[111,116]];
-    for(let i=0;i<count;i++){const p=positions[i];drawShell(x+p[0],y+p[1],.36+(i%3)*.035,i%2?"#f1c69b":"#fff1d1");}
-    if(state.patchStock>24){ctx.fillStyle="#805e3c";ctx.font="900 12px system-ui,sans-serif";ctx.textAlign="center";ctx.fillText(`+${state.patchStock-24}`,x+w-24,y+h-17);}
+    ctx.save();
+    ctx.shadowColor="rgba(25,105,69,.24)";ctx.shadowBlur=9;ctx.fillStyle="#45bd6a";roundedRect(ctx,state.safeZone.x,state.safeZone.y,SAFE_ZONE_SIZE.width,SAFE_ZONE_SIZE.height,11);ctx.fill();
+    ctx.shadowBlur=0;ctx.lineWidth=2;ctx.strokeStyle="#e6ffe9";roundedRect(ctx,state.safeZone.x+2,state.safeZone.y+2,SAFE_ZONE_SIZE.width-4,SAFE_ZONE_SIZE.height-4,9);ctx.stroke();
+    ctx.fillStyle="#f4fff2";ctx.font="950 9px system-ui,sans-serif";ctx.textAlign="center";ctx.fillText("안전 발판",state.safeZone.x+SAFE_ZONE_SIZE.width/2,state.safeZone.y+21);ctx.font="800 8px system-ui,sans-serif";ctx.fillText(`${Math.max(0,state.safeZone.timer).toFixed(1)}초 후 이동`,state.safeZone.x+SAFE_ZONE_SIZE.width/2,state.safeZone.y+37);
+    ctx.restore();
+    for(let i=0;i<state.patchShells.length;i++){
+      const shell=state.patchShells[i];
+      drawShell(shell.x,shell.y,.34+(i%3)*.025,i%2?"#f1c69b":"#fff1d1");
+    }
+    for(const mine of state.mines) drawMine(mine);
     if(state.collector){ctx.strokeStyle="rgba(49,135,122,.2)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(x+w/2,y+h/2,55+Math.sin(animationTime*3)*4,0,Math.PI*2);ctx.stroke();}
+    ctx.restore();
+  }
+  function drawMine(mine) {
+    const radius=MINE_BLAST_RADIUS;
+    const pulse=.08+.055*(1+Math.sin(animationTime*8));
+    ctx.save();
+    ctx.fillStyle=`rgba(232,73,62,${pulse})`;ctx.beginPath();ctx.arc(mine.x,mine.y,radius,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="rgba(213,66,55,.42)";ctx.lineWidth=1.5;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(mine.x,mine.y,radius,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="rgba(55,43,38,.2)";ctx.beginPath();ctx.ellipse(mine.x,mine.y+12,19,7,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#3e4442";ctx.strokeStyle="#202c2c";ctx.lineWidth=2;ctx.beginPath();ctx.arc(mine.x,mine.y,15,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle="#f3b24d";ctx.beginPath();ctx.arc(mine.x,mine.y,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#d94c3e";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(mine.x+6,mine.y-11);ctx.quadraticCurveTo(mine.x+13,mine.y-21,mine.x+18,mine.y-13);ctx.stroke();
+    roundedRect(ctx,mine.x-22,mine.y-43,44,20,7);ctx.fillStyle="rgba(151,47,39,.92)";ctx.fill();ctx.fillStyle="#fff8e9";ctx.font="950 12px system-ui,sans-serif";ctx.textAlign="center";ctx.fillText(`${Math.ceil(mine.timer)}초`,mine.x,mine.y-29);
     ctx.restore();
   }
   function drawShell(x,y,s,color) {

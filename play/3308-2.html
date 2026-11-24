@@ -1,0 +1,3857 @@
+<!DOCTYPE html>
+<html lang="ko"><head><script data-bard-client-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwMjg2Njg0NTY1NDMwNzMwNDc1OSIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjXzdhOTY1OGI4MTUyOTI4OGJfaW5kZXguaHRtbC0yNTIifSwiZXhwIjoxNzk1NDk5MTUwLCJpYXQiOjE3OTU0OTU1NTAsImFsZyI6IlJTMjU2In0.hdp3sR_PDuA3CM_mBNvcdyN4RuZL4FelqI4ngSEoXgW2KYJK2oJqxFG9xExt2E64iYBMDDhiJekqqycS7c5Fxw0CcMlELPyojgp-7LzjuzUWwhLtwwDS_4EO8CSi9tT7L4AHgvKDZ12XjHCUt13ql1vPgTk-dTRSaMQfKfSt6-iaH-m9LIcgRTOsrDX2XjO0f8VCr1u-qFWO8qsV23ZgFi3j2Y9ETONvTcPAESp1elfIL4iyg8xH1zL9JsJk9f5VGLYyMPbd49BvQU3NB6fdxkAoC-T2iKW6URZd2-B5lVmJFw9CWUs8cQGa8khFp1_vKwE7RoL_m2bxrKVxzQC02A","c_7a9658b81529288b_index.html-252")</script><script data-bard-client-injected="true">
+  document.addEventListener('input', (event) => {
+    if (event.target && (event.target.isContentEditable || event.target.hasAttribute('contenteditable'))) {
+      const clonedDoc = document.cloneNode(true);
+      const injectedScripts = clonedDoc.querySelectorAll('[data-bard-client-injected="true"]');
+      injectedScripts.forEach(el => el.remove());
+      window.parent.postMessage({
+        type: 'inlineEdit',
+        html: '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML
+      }, '*');
+    }
+  });
+</script><script data-bard-client-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const SCROLL_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    ' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End',
+  ]);
+  const HORIZONTAL_KEYS = new Set(['ArrowLeft', 'ArrowRight']);
+
+  function isTextEntryTarget(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' ||
+        tagName === 'SELECT' || target.isContentEditable === true;
+  }
+
+  // An element absorbs the key only if it both overflows on the axis being
+  // scrolled and is configured to scroll on that axis. The cheap dimension
+  // test runs first because getComputedStyle forces a style recalc, and this
+  // runs on every keypress. Each axis is read from its own longhand: the
+  // 'overflow' shorthand serializes as two values when the axes differ, which
+  // is the common 'overflow-x: hidden; overflow-y: auto' pane.
+  function canScroll(node, horizontal) {
+    const overflows = horizontal ? node.scrollWidth > node.clientWidth
+                                 : node.scrollHeight > node.clientHeight;
+    if (!overflows) return false;
+    const style = window.getComputedStyle(node);
+    const overflow = horizontal ? style.overflowX : style.overflowY;
+    return overflow === 'auto' || overflow === 'scroll';
+  }
+
+  // Walks up from the event target so nested scrollers keep their behavior.
+  // <body> is included because pages that pin the root height make it the
+  // scroll container.
+  function hasScrollableAncestor(target, horizontal) {
+    let node = target;
+    while (node && node !== document.documentElement) {
+      if (canScroll(node, horizontal)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function rootCanScroll(horizontal) {
+    const scroller = document.scrollingElement || document.documentElement;
+    if (!scroller) return false;
+    // Tolerate a pixel of rounding so subpixel layouts do not look scrollable.
+    return horizontal ? scroller.scrollWidth > window.innerWidth + 1
+                      : scroller.scrollHeight > window.innerHeight + 1;
+  }
+
+  window.addEventListener('keydown', function(event) {
+    if (!SCROLL_KEYS.has(event.key)) return;
+    if (event.defaultPrevented) return;
+    // Alt and Meta turn arrows into browser history navigation, and Ctrl is
+    // reserved for shortcuts, so none of them are scroll intent.
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+
+    const target = event.target;
+    if (isTextEntryTarget(target)) return;
+
+    // Anything that can still absorb the scroll gets to keep it.
+    const horizontal = HORIZONTAL_KEYS.has(event.key);
+    if (rootCanScroll(horizontal)) return;
+    if (hasScrollableAncestor(target, horizontal)) return;
+
+    event.preventDefault();
+  }, {capture: true, passive: false});
+})();</script><script data-bard-client-injected="true">(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script data-bard-client-injected="true">
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-client-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.h=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.extensions="";var l=0,t=null,r=null,q=[],F=new TextEncoder,
+G=new TextDecoder;c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*
+16|0;return(f==="x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;
+(g=t)==null||g.postMessage(a)}};Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script data-bard-client-injected="true">((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-client-injected="true">(function() {
+  const OVERLAY_SELECTOR =
+    'dialog[open], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="combobox"]';
+
+  function isVisibleOverlay(element) {
+    if (element.closest('[hidden], [aria-hidden="true"], [inert]')) {
+      return false;
+    }
+    if (window.getComputedStyle(element).visibility === 'hidden') {
+      return false;
+    }
+    for (let cur = element; cur; cur = cur.parentElement) {
+      if (window.getComputedStyle(cur).display === 'none') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function hasOpenOverlay() {
+    const candidates = document.querySelectorAll(OVERLAY_SELECTOR);
+    for (let i = 0; i < candidates.length; i++) {
+      if (isVisibleOverlay(candidates[i])) {
+        return true;
+      }
+    }
+    try {
+      if (document.querySelector('[popover]:popover-open')) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore engines that do not support :popover-open.
+    }
+    return false;
+  }
+
+  function isNonEmptySearchInput(target) {
+    return (
+      Boolean(target) &&
+      target.tagName === 'INPUT' &&
+      typeof target.type === 'string' &&
+      target.type.toLowerCase() === 'search' &&
+      typeof target.value === 'string' &&
+      target.value.length > 0
+    );
+  }
+
+  function shouldIgnoreEscape(event) {
+    return (
+      event.key !== 'Escape' ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing ||
+      event.repeat ||
+      event.keyCode === 229 ||
+      isNonEmptySearchInput(event.target)
+    );
+  }
+
+  let shouldIgnoreCaptureState = false;
+
+  window.addEventListener(
+    'keydown',
+    function(event) {
+      if (event.key === 'Escape') {
+        shouldIgnoreCaptureState =
+          hasOpenOverlay() || isNonEmptySearchInput(event.target);
+      }
+    },
+    {capture: true},
+  );
+
+  window.addEventListener('keydown', function(event) {
+    if (
+      shouldIgnoreEscape(event) ||
+      event.defaultPrevented ||
+      shouldIgnoreCaptureState
+    ) {
+      return;
+    }
+    const wasBlockedOnCapture = shouldIgnoreCaptureState;
+    queueMicrotask(function() {
+      if (event.defaultPrevented || wasBlockedOnCapture) {
+        return;
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({'type': 'escapeKey'}, '*');
+      }
+    });
+  });
+})();</script><script data-bard-client-injected="true">(function() {
+  function normalizeSlug(str) {
+    try {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^p{L}p{N}s_-]/gu, '')
+        .replace(/s+/g, '-');
+    } catch (e) {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9s_-]/g, '')
+        .replace(/s+/g, '-');
+    }
+  }
+
+  function findTargetElement(hash) {
+    if (!hash || hash === '#') {
+      return null;
+    }
+    const rawId = hash.startsWith('#') ? hash.slice(1) : hash;
+    let decodedId = rawId;
+    try {
+      decodedId = decodeURIComponent(rawId);
+    } catch (e) {
+      // Ignore URI malformed errors.
+    }
+
+    // 1. Direct ID match (raw and decoded).
+    let target = document.getElementById(rawId) || document.getElementById(decodedId);
+    if (target) {
+      return target;
+    }
+
+    // 2. Name attribute match (<a name="...">).
+    try {
+      if (typeof CSS !== 'undefined' && CSS.escape) {
+        target =
+          document.querySelector('[name="' + CSS.escape(rawId) + '"]') ||
+          document.querySelector('[name="' + CSS.escape(decodedId) + '"]');
+      } else {
+        const namedElements = document.getElementsByName(rawId);
+        if (namedElements && namedElements.length > 0) {
+          return namedElements[0];
+        }
+      }
+    } catch (e) {
+      // Ignore querySelector syntax errors.
+    }
+    if (target) {
+      return target;
+    }
+
+    // 3. Match heading text by slug (for Markdown TOCs where headings lack explicit IDs).
+    const targetSlug = normalizeSlug(decodedId);
+    if (targetSlug) {
+      for (const heading of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+        if (normalizeSlug(heading.textContent || '') === targetSlug) {
+          return heading;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
+    if (
+      !href ||
+      href.trim().toLowerCase().startsWith('javascript:') ||
+      anchor.hasAttribute('download')
+    ) {
+      return;
+    }
+
+    // Check if the link is an in-page hash / anchor link.
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      const targetElement = findTargetElement(href);
+      if (targetElement) {
+        targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+      return;
+    }
+
+    // Check if the URL has the same origin/pathname but with a hash.
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      if (
+        url.hash &&
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname
+      ) {
+        event.preventDefault();
+        const targetElement = findTargetElement(url.hash);
+        if (targetElement) {
+          targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+        return;
+      }
+    } catch (e) {
+      // Fall through if URL parsing fails.
+    }
+
+    // For all external or full navigation links, prevent iframe-level navigation
+    // (which breaks in AGSA WebView or sandboxed iframes) and ensure they open
+    // safely in a new tab/window.
+    if (anchor.target !== '_blank') {
+      event.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+    }
+  }, {capture: true});
+})();</script><script data-bard-client-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>미드나잇 헌터: 밝은 달빛의 숲</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&amp;family=Noto+Sans+KR:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #040914;
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      color: #f8fafc;
+    }
+    #gameCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+    .hud-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+      z-index: 10;
+    }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .panel {
+      background: rgba(7, 13, 28, 0.78);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.48);
+      pointer-events: auto;
+    }
+    .btn {
+      pointer-events: auto;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #f1f5f9;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      transition: all 0.16s ease;
+    }
+    .btn:hover:not(:disabled) {
+      background: rgba(30, 41, 59, 0.98);
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .status-badge.active {
+      background: rgba(14, 116, 144, 0.45);
+      border-color: #38bdf8;
+      color: #e0f2fe;
+    }
+    .status-badge.stealth {
+      background: rgba(6, 95, 70, 0.5);
+      border-color: #34d399;
+      color: #d1fae5;
+    }
+    #damageOverlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at center, transparent 48%, rgba(220, 38, 38, 0.72) 100%);
+      opacity: 0;
+      z-index: 15;
+    }
+    @keyframes hitFlashAnim {
+      0% { opacity: 0.95; }
+      100% { opacity: 0; }
+    }
+    .hit-flash {
+      animation: hitFlashAnim 0.48s ease-out forwards;
+    }
+    #bannerToast {
+      position: fixed;
+      top: 86px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(9, 16, 34, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.55);
+      color: #f8fafc;
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+      z-index: 25;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.22s ease;
+      text-align: center;
+      max-width: 90vw;
+    }
+    #startOverlay, #shopModal, #gameOverModal, #exportModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.86);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 40;
+    }
+    #shopModal, #gameOverModal, #exportModal {
+      display: none;
+    }
+    .shop-container {
+      width: 100%;
+      max-width: 780px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: rgba(10, 17, 34, 0.96);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+    }
+  </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.mb-0\.5{margin-bottom:0.125rem}.mb-1{margin-bottom:0.25rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.ml-1{margin-left:0.25rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-1\.5{margin-top:0.375rem}.mt-2{margin-top:0.5rem}.mt-4{margin-top:1rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-2\.5{height:0.625rem}.h-3{height:0.75rem}.h-4{height:1rem}.h-7{height:1.75rem}.h-full{height:100%}.w-0\.5{width:0.125rem}.w-56{width:14rem}.w-full{width:100%}.min-w-\[235px\]{min-width:235px}.min-w-\[245px\]{min-width:245px}.min-w-\[250px\]{min-width:250px}.min-w-\[290px\]{min-width:290px}.max-w-md{max-width:28rem}.max-w-sm{max-width:24rem}.max-w-xl{max-width:36rem}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-2\.5{gap:0.625rem}.gap-3{gap:0.75rem}.gap-3\.5{gap:0.875rem}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.375rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t{border-top-width:1px}.border-amber-500\/35{border-color:rgb(245 158 11 / 0.35)}.border-amber-500\/40{border-color:rgb(245 158 11 / 0.4)}.border-amber-500\/50{border-color:rgb(245 158 11 / 0.5)}.border-emerald-400{--tw-border-opacity:1;border-color:rgb(52 211 153 / var(--tw-border-opacity, 1))}.border-emerald-500\/50{border-color:rgb(16 185 129 / 0.5)}.border-emerald-500\/60{border-color:rgb(16 185 129 / 0.6)}.border-indigo-500\/40{border-color:rgb(99 102 241 / 0.4)}.border-red-500\/40{border-color:rgb(239 68 68 / 0.4)}.border-red-500\/50{border-color:rgb(239 68 68 / 0.5)}.border-red-500\/60{border-color:rgb(239 68 68 / 0.6)}.border-red-500\/70{border-color:rgb(239 68 68 / 0.7)}.border-rose-500\/40{border-color:rgb(244 63 94 / 0.4)}.border-rose-500\/50{border-color:rgb(244 63 94 / 0.5)}.border-sky-400{--tw-border-opacity:1;border-color:rgb(56 189 248 / var(--tw-border-opacity, 1))}.border-sky-400\/40{border-color:rgb(56 189 248 / 0.4)}.border-sky-500\/40{border-color:rgb(14 165 233 / 0.4)}.border-sky-500\/50{border-color:rgb(14 165 233 / 0.5)}.border-sky-500\/60{border-color:rgb(14 165 233 / 0.6)}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85 / var(--tw-border-opacity, 1))}.border-slate-700\/80{border-color:rgb(51 65 85 / 0.8)}.border-slate-800{--tw-border-opacity:1;border-color:rgb(30 41 59 / var(--tw-border-opacity, 1))}.bg-amber-400{--tw-bg-opacity:1;background-color:rgb(251 191 36 / var(--tw-bg-opacity, 1))}.bg-amber-950\/35{background-color:rgb(69 26 3 / 0.35)}.bg-emerald-700{--tw-bg-opacity:1;background-color:rgb(4 120 87 / var(--tw-bg-opacity, 1))}.bg-emerald-950\/80{background-color:rgb(2 44 34 / 0.8)}.bg-indigo-950\/35{background-color:rgb(30 27 75 / 0.35)}.bg-red-950\/35{background-color:rgb(69 10 10 / 0.35)}.bg-red-950\/85{background-color:rgb(69 10 10 / 0.85)}.bg-sky-400\/70{background-color:rgb(56 189 248 / 0.7)}.bg-sky-600{--tw-bg-opacity:1;background-color:rgb(2 132 199 / var(--tw-bg-opacity, 1))}.bg-sky-700{--tw-bg-opacity:1;background-color:rgb(3 105 161 / var(--tw-bg-opacity, 1))}.bg-sky-950\/90{background-color:rgb(8 47 73 / 0.9)}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-slate-900\/90{background-color:rgb(15 23 42 / 0.9)}.bg-slate-900\/95{background-color:rgb(15 23 42 / 0.95)}.bg-slate-950{--tw-bg-opacity:1;background-color:rgb(2 6 23 / var(--tw-bg-opacity, 1))}.bg-slate-950\/75{background-color:rgb(2 6 23 / 0.75)}.bg-slate-950\/80{background-color:rgb(2 6 23 / 0.8)}.bg-slate-950\/85{background-color:rgb(2 6 23 / 0.85)}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-red-700{--tw-gradient-from:#b91c1c var(--tw-gradient-from-position);--tw-gradient-to:rgb(185 28 28 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-rose-600{--tw-gradient-from:#e11d48 var(--tw-gradient-from-position);--tw-gradient-to:rgb(225 29 72 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-sky-500{--tw-gradient-from:#0ea5e9 var(--tw-gradient-from-position);--tw-gradient-to:rgb(14 165 233 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.via-rose-500{--tw-gradient-to:rgb(244 63 94 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), #f43f5e var(--tw-gradient-via-position), var(--tw-gradient-to)}.to-amber-400{--tw-gradient-to:#fbbf24 var(--tw-gradient-to-position)}.to-emerald-400{--tw-gradient-to:#34d399 var(--tw-gradient-to-position)}.to-indigo-600{--tw-gradient-to:#4f46e5 var(--tw-gradient-to-position)}.p-3\.5{padding:0.875rem}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-7{padding:1.75rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-3\.5{padding-left:0.875rem;padding-right:0.875rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.pb-3\.5{padding-bottom:0.875rem}.pt-3\.5{padding-top:0.875rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-\[11px\]{font-size:11px}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.uppercase{text-transform:uppercase}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-0.025em}.tracking-wider{letter-spacing:0.05em}.text-amber-200{--tw-text-opacity:1;color:rgb(253 230 138 / var(--tw-text-opacity, 1))}.text-amber-300{--tw-text-opacity:1;color:rgb(252 211 77 / var(--tw-text-opacity, 1))}.text-cyan-300{--tw-text-opacity:1;color:rgb(103 232 249 / var(--tw-text-opacity, 1))}.text-emerald-200{--tw-text-opacity:1;color:rgb(167 243 208 / var(--tw-text-opacity, 1))}.text-emerald-300{--tw-text-opacity:1;color:rgb(110 231 183 / var(--tw-text-opacity, 1))}.text-emerald-400{--tw-text-opacity:1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.text-indigo-300{--tw-text-opacity:1;color:rgb(165 180 252 / var(--tw-text-opacity, 1))}.text-red-200{--tw-text-opacity:1;color:rgb(254 202 202 / var(--tw-text-opacity, 1))}.text-red-300{--tw-text-opacity:1;color:rgb(252 165 165 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-rose-200{--tw-text-opacity:1;color:rgb(254 205 211 / var(--tw-text-opacity, 1))}.text-rose-300{--tw-text-opacity:1;color:rgb(253 164 175 / var(--tw-text-opacity, 1))}.text-rose-400{--tw-text-opacity:1;color:rgb(251 113 133 / var(--tw-text-opacity, 1))}.text-sky-300{--tw-text-opacity:1;color:rgb(125 211 252 / var(--tw-text-opacity, 1))}.text-sky-400{--tw-text-opacity:1;color:rgb(56 189 248 / var(--tw-text-opacity, 1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240 / var(--tw-text-opacity, 1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225 / var(--tw-text-opacity, 1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.opacity-0{opacity:0}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sky-950\/70{--tw-shadow-color:rgb(8 47 73 / 0.7);--tw-shadow:var(--tw-shadow-colored)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-100{transition-duration:100ms}.duration-150{transition-duration:150ms}.duration-200{transition-duration:200ms}.hover\:-translate-y-0\.5:hover{--tw-translate-y:-0.125rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:bg-emerald-600:hover{--tw-bg-opacity:1;background-color:rgb(5 150 105 / var(--tw-bg-opacity, 1))}.hover\:bg-sky-500:hover{--tw-bg-opacity:1;background-color:rgb(14 165 233 / var(--tw-bg-opacity, 1))}.hover\:bg-sky-600:hover{--tw-bg-opacity:1;background-color:rgb(2 132 199 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.hover\:from-sky-400:hover{--tw-gradient-from:#38bdf8 var(--tw-gradient-from-position);--tw-gradient-to:rgb(56 189 248 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.hover\:to-indigo-500:hover{--tw-gradient-to:#6366f1 var(--tw-gradient-to-position)}@media (min-width: 640px){.sm\:block{display:block}.sm\:w-auto{width:auto}.sm\:min-w-\[380px\]{min-width:380px}.sm\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.sm\:flex-row{flex-direction:row}.sm\:items-center{align-items:center}.sm\:p-8{padding:2rem}.sm\:text-2xl{font-size:1.5rem;line-height:2rem}.sm\:text-3xl{font-size:1.875rem;line-height:2.25rem}.sm\:text-4xl{font-size:2.25rem;line-height:2.5rem}.sm\:text-base{font-size:1rem;line-height:1.5rem}.sm\:text-sm{font-size:0.875rem;line-height:1.25rem}}@media (min-width: 768px){.md\:flex{display:flex}.md\:hidden{display:none}}</style></head>
+<body>
+  <!-- 메인 1인칭 렌더링 캔버스 -->
+  <canvas id="gameCanvas" width="948" height="828"></canvas>
+
+  <!-- 피격 붉은 화면 테두리 효과 -->
+  <div id="damageOverlay"></div>
+
+  <!-- 상단 알림 배너 -->
+  <div id="bannerToast" style="opacity: 0;">🌿 풀숲 한가운데 은신했습니다. 조준 사격 후 [E] 사냥칼로 전리품을 채취하세요!</div>
+
+  <!-- 게임 시작 오버레이 -->
+  <div id="startOverlay" style="display: flex;">
+    <div class="max-w-xl w-full bg-slate-900/90 border border-sky-500/40 rounded-3xl p-6 sm:p-8 text-center shadow-2xl">
+      <div class="inline-block px-3.5 py-1 rounded-full bg-sky-950/90 border border-sky-400/40 text-sky-300 text-xs font-extrabold tracking-wider mb-3">
+        1인칭 야간 야생 생존 &amp; 사냥 시뮬레이션
+      </div>
+      <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight mb-2">
+        🌕 미드나잇 헌터: 달빛의 숲
+      </h1>
+      <p class="text-sm sm:text-base text-slate-300 leading-relaxed mb-6">
+        우거진 <span class="text-emerald-300 font-bold">풀숲 한가운데 엎드려 은신</span>한 상태로 사냥을 시작합니다.<br>
+        맹수의 <span class="text-amber-300 font-bold">공격 전 붉은 예고</span>를 피해 사냥하고, <span class="text-rose-300 font-bold">사냥칼[4/E]</span>로 전리품을 채취해 <span class="text-sky-300 font-bold">상점[U]</span>에서 신규 무기·보스 열쇠를 구매하세요!
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center items-center mb-6">
+        <button id="btnStartGame" onclick="startGame()" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-lg shadow-lg shadow-sky-950/70 transition transform hover:-translate-y-0.5 cursor-pointer">
+          🎯 풀숲에서 사냥 시작하기
+        </button>
+        <button onclick="exportHtml(event)" class="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-300 font-extrabold text-sm transition cursor-pointer">
+          💾 HTML 파일로 다운로드
+        </button>
+      </div>
+
+      <div class="text-xs sm:text-sm text-slate-300 bg-slate-950/75 border border-slate-800 rounded-2xl p-4 text-left space-y-1.5">
+        <p><span class="text-sky-400 font-bold">[마우스 이동]</span> 부드러운 시점 회전 &amp; 조준 &nbsp;|&nbsp; <span class="text-sky-400 font-bold">[좌클릭]</span> 사격 / 칼 베기</p>
+        <p><span class="text-sky-400 font-bold">[우클릭 / Shift]</span> 스코프 확대 <span class="text-slate-400">(ESC로 확대 해제)</span> &nbsp;|&nbsp; <span class="text-sky-400 font-bold">[R]</span> 재장전</p>
+        <p><span class="text-sky-400 font-bold">[1~3]</span> 소총·샷건·카빈 &nbsp;|&nbsp; <span class="text-amber-300 font-bold">[4 / E]</span> 사냥칼 &amp; 고기·가죽 채취</p>
+        <p><span class="text-emerald-400 font-bold">[C]</span> 엎드리기 은신 &nbsp;|&nbsp; <span class="text-sky-400 font-bold">[F]</span> 손전등 &nbsp;|&nbsp; <span class="text-amber-300 font-bold">[U]</span> 상점 (무기·보스 열쇠)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 능력치 업그레이드 및 전리품 판매 상점 모달 -->
+  <div id="shopModal" style="display: none;">
+    <div class="shop-container">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3.5 mb-4 flex-wrap gap-2">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black text-sky-300">🛒 헌터 능력치 &amp; 전리품 거래소</h2>
+          <p class="text-xs text-slate-400 mt-0.5">사냥칼로 채취한 고기·가죽을 포인트(PT)로 판매하고 헌터의 능력치를 강화하세요.</p>
+        </div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <div class="px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-black text-sm sm:text-base">
+            💎 보유 포인트: <span id="shopPointsText">0</span> PT
+          </div>
+          <button class="btn bg-sky-700 hover:bg-sky-600 border-sky-400 text-sm" onclick="closeShop()">닫기 &amp; 사냥 재개 [U]</button>
+        </div>
+      </div>
+
+      <!-- 전리품(고기 & 가죽) 판매 구역 -->
+      <div class="mb-4 p-3.5 rounded-xl bg-amber-950/35 border border-amber-500/35 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <div class="text-xs font-black text-amber-300 uppercase tracking-wider mb-1">🗡️ 사냥 전리품 매입소</div>
+          <div class="text-sm text-slate-200 font-bold flex flex-wrap gap-3">
+            <span>🥩 신선한 고기: <span id="shopMeatCount" class="text-rose-300 font-black">0</span>개 <span class="text-xs text-slate-400">(개당 45 PT)</span></span>
+            <span>🧶 야생 가죽: <span id="shopHideCount" class="text-amber-300 font-black">0</span>장 <span class="text-xs text-slate-400">(장당 75 PT)</span></span>
+          </div>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button id="btnSellMeat" class="btn text-xs border-rose-500/50 text-rose-200" onclick="sellLoot('meat')">🥩 고기 판매</button>
+          <button id="btnSellHide" class="btn text-xs border-amber-500/50 text-amber-200" onclick="sellLoot('hide')">🧶 가죽 판매</button>
+          <button id="btnSellAll" class="btn text-xs border-emerald-500/60 text-emerald-200" onclick="sellLoot('all')">💰 일괄 판매</button>
+        </div>
+      </div>
+
+      <!-- 보스 소환 열쇠 상점 & 소환 구역 -->
+      <div class="mb-4 p-3.5 rounded-xl bg-red-950/35 border border-red-500/40">
+        <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+          <span class="text-xs font-black text-red-300 uppercase tracking-wider">🗝️ 보스 소환 열쇠 상점 (열쇠 아이템으로만 보스 소환 가능)</span>
+          <span class="text-[11px] text-slate-400">보유 열쇠: 🩸 <span id="shopBearKeyCount" class="text-red-300 font-bold">0</span>개 · ❄️ <span id="shopWolfKeyCount" class="text-cyan-300 font-bold">0</span>개</span>
+        </div>
+        <div id="bossKeyGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+
+      <!-- 신규 무기 무기고 구역 -->
+      <div class="mb-4 p-3.5 rounded-xl bg-indigo-950/35 border border-indigo-500/40">
+        <div class="text-xs font-black text-indigo-300 uppercase tracking-wider mb-2">🔫 신규 헌터 무기고 (구매 후 [1~3] 키로 즉시 교체)</div>
+        <div id="weaponShopGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+
+      <!-- 능력치 강화 그리드 -->
+      <div id="shopGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
+
+      <!-- 응급 치료 키트 구매 -->
+      <div class="mt-4 pt-3.5 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div class="text-xs text-slate-300">
+          🩹 부상을 입었다면 응급 키트로 즉시 체력을 회복할 수 있습니다.
+        </div>
+        <button id="btnBuyMedkit" class="btn border-emerald-500/60 text-emerald-300 text-sm" onclick="buyMedkit()">
+          응급 치료 (+45 HP) · 50 PT
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HTML 다운로드 안내/대체 모달 (일부 샌드박스 환경 대비) -->
+  <div id="exportModal" style="display: none;">
+    <div class="max-w-md w-full bg-slate-900 border border-emerald-500/50 rounded-2xl p-6 text-center shadow-2xl">
+      <h3 class="text-xl font-black text-emerald-300 mb-2">💾 HTML 게임 파일 저장 준비 완료</h3>
+      <p class="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
+        자동 다운로드가 시작되지 않았다면 아래 버튼을 눌러 <code class="text-sky-300">midnight-hunter.html</code> 파일을 직접 저장하거나 전체 HTML 코드를 복사할 수 있습니다.
+      </p>
+      <div class="flex flex-col gap-2.5">
+        <a id="exportDownloadLink" download="midnight-hunter.html" href="#" class="btn bg-emerald-700 hover:bg-emerald-600 border-emerald-400 text-white py-2.5 text-sm block text-center">
+          ⬇️ midnight-hunter.html 직접 다운로드
+        </a>
+        <button onclick="copyHtmlSource()" class="btn border-sky-500/50 text-sky-300 py-2 text-xs">
+          📋 전체 HTML 소스코드 클립보드 복사
+        </button>
+        <button onclick="closeExportModal()" class="btn text-xs text-slate-400 mt-1">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임 오버 모달 -->
+  <div id="gameOverModal" style="display: none;">
+    <div class="max-w-md w-full bg-slate-900/95 border border-red-500/50 rounded-3xl p-7 text-center shadow-2xl">
+      <div class="text-4xl mb-2">🩸</div>
+      <h2 class="text-2xl sm:text-3xl font-black text-red-400 mb-2">사냥 실패 · 쓰러졌습니다</h2>
+      <p class="text-sm text-slate-300 mb-5">맹수의 공격 예고가 뜰 때 뒤로 물러나거나 풀숲에 엎드려 은신하세요.</p>
+      <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 mb-5 space-y-1.5 text-sm">
+        <div class="flex justify-between"><span class="text-slate-400">최종 사냥 점수</span><span id="finalScoreText" class="font-black text-sky-300">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">누적 보유 포인트</span><span id="finalPointsText" class="font-black text-emerald-300">0 PT</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">사냥한 야생동물</span><span id="finalKillsText" class="font-black text-amber-300">0 마리</span></div>
+      </div>
+      <div class="flex gap-2.5 justify-center">
+        <button onclick="resetGame()" class="px-6 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm cursor-pointer">
+          🔄 풀숲에서 다시 시작
+        </button>
+        <button onclick="exportHtml(event)" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-emerald-500/50 text-emerald-300 font-bold text-sm cursor-pointer">
+          💾 HTML 저장
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인게임 HUD 레이어 -->
+  <div class="hud-layer">
+    <div class="hud-top">
+      <!-- 좌측 상단: 체력, 점수, 포인트, 은신/전리품 상태 -->
+      <div class="panel min-w-[235px]">
+        <div class="flex items-center justify-between gap-3 mb-1">
+          <span id="hpText" class="text-sm font-black text-rose-400">HP 65 / 65</span>
+          <div class="flex items-center gap-2 text-xs font-extrabold">
+            <span id="scoreText" class="text-sky-300">SCORE 0</span>
+            <span id="pointsText" class="text-emerald-300">💎 0 PT</span>
+          </div>
+        </div>
+        <div class="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+          <div id="hpBar" class="h-full bg-gradient-to-r from-rose-600 to-emerald-400 transition-all duration-150" style="width: 100%;"></div>
+        </div>
+        <div class="flex gap-1.5 mt-2 flex-wrap">
+          <span id="pillFlash" class="status-badge active" onclick="toggleFlashlight()">🔦 라이트 켜짐</span>
+          <span id="pillCrouch" class="status-badge stealth" onclick="toggleCrouch()">🌿 엎드려 은신 중 [C]</span>
+          <span id="pillGrass" class="status-badge stealth">🌾 풀숲 은폐</span>
+        </div>
+        <div class="flex gap-1.5 mt-1.5 flex-wrap">
+          <span class="status-badge border-rose-500/40 text-rose-200" onclick="openShop()">🥩 고기 <span id="meatCountText" class="ml-1 font-black">0</span></span>
+          <span class="status-badge border-amber-500/40 text-amber-200" onclick="openShop()">🧶 가죽 <span id="hideCountText" class="ml-1 font-black">0</span></span>
+          <span class="status-badge border-red-500/40 text-red-200" onclick="openShop()">🗝️ 보스열쇠 <span id="bossKeyHudCount" class="ml-1 font-black">0</span></span>
+        </div>
+      </div>
+
+      <!-- 중앙 상단: 주변 야생동물 방향 레이더 & 보스 체력바 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="panel hidden md:flex flex-col items-center px-3 py-2 min-w-[250px]">
+          <div class="text-[11px] text-slate-400 font-bold tracking-wider mb-1">주변 야생동물 방향 레이더</div>
+          <div id="radarStrip" class="relative w-56 h-7 bg-slate-950/85 border border-slate-700/80 rounded-full overflow-hidden flex items-center justify-center">
+            <div class="w-0.5 h-4 bg-sky-400/70"></div>
+            <div id="radarBlips" class="absolute inset-0 pointer-events-none"><div style="position: absolute; left: 6%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🐺</div><div style="position: absolute; left: 83.1821%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🦌</div><div style="position: absolute; left: 13.508%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🦌</div><div style="position: absolute; left: 34.3493%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🦌</div><div style="position: absolute; left: 38.4266%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🐺</div><div style="position: absolute; left: 9.58292%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🦌</div><div style="position: absolute; left: 71.1042%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; padding: 1px 3px; border-radius: 999px; background: rgba(15, 23, 42, 0.6);">🐻</div></div>
+          </div>
+        </div>
+
+        <div id="bossHud" class="panel hidden flex-col items-center px-4 py-2 min-w-[290px] sm:min-w-[380px] border-red-500/70 bg-red-950/85">
+          <div class="flex justify-between items-center w-full text-xs font-black text-red-200 mb-1 gap-2">
+            <span id="bossTitleText">👹 [BOSS] 핏빛 달의 군주 · 고대 다이어베어</span>
+            <span id="bossHpText">950 / 950</span>
+          </div>
+          <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-red-500/50">
+            <div id="bossHpBar" class="bg-gradient-to-r from-red-700 via-rose-500 to-amber-400 h-full w-full transition-all duration-150"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측 상단: 열쇠 소환, 상점, 밝기, HTML 다운로드 버튼 & 경계 게이지 -->
+      <div class="panel flex flex-col items-end gap-2 min-w-[245px]">
+        <div class="flex gap-1.5 flex-wrap justify-end">
+          <button class="btn text-xs border-red-500/60 text-red-300" id="btnBossKeySummon" onclick="summonWithOwnedKey(event)">🗝️ 보스 열쇠: 없음</button>
+          <button class="btn text-xs border-sky-500/60 text-sky-300" onclick="toggleShop(event)">🛒 상점 [U]</button>
+          <button class="btn text-xs" id="btnBright" onclick="toggleBrightness(event)">🌕 밝기: 밝음</button>
+          <button class="btn text-xs border-emerald-500/50 text-emerald-300" onclick="exportHtml(event)">💾 HTML 다운로드</button>
+        </div>
+        <div id="threatDisplay" class="flex flex-col items-end opacity-0 transition-opacity duration-200 w-full" style="opacity: 1;">
+          <div class="flex justify-between w-full text-[11px] font-bold mb-0.5">
+            <span id="threatAnimalText" class="text-amber-300">👁️ 불곰 경계 감지</span>
+            <span id="threatPercentText" class="text-slate-200">5%</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
+            <div id="threatBar" class="h-full bg-amber-400 transition-all duration-100" style="width: 5%; background-color: rgb(251, 191, 36);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 HUD: 장비(소총/샷건/카빈/사냥칼), 스코프, 장전, 채취 & 모바일 터치 지원 -->
+    <div class="hud-bottom">
+      <div class="panel">
+        <div class="flex items-center justify-between gap-2 mb-1 flex-wrap">
+          <span class="text-xs text-slate-400 font-bold uppercase tracking-wider" id="weaponTitleText">장비 (볼트액션 사냥 소총)</span>
+          <div class="flex gap-1 flex-wrap">
+            <span class="status-badge active" id="pillToolRifle" onclick="switchTool('rifle')">🔫 [1] 소총</span>
+            <span class="status-badge" id="pillToolShotgun" onclick="switchTool('shotgun')">💥 [2] 샷건🔒</span>
+            <span class="status-badge" id="pillToolCarbine" onclick="switchTool('carbine')">⚡ [3] 카빈🔒</span>
+            <span class="status-badge" id="pillToolKnife" onclick="switchTool('knife')">🗡️ [4] 칼</span>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2" id="ammoRow">
+          <span class="text-3xl sm:text-4xl font-black text-sky-400" id="ammoText">3</span>
+          <span class="text-lg text-slate-400 font-bold" id="maxAmmoText">/ 3</span>
+        </div>
+        <div class="flex gap-1.5 mt-2 flex-wrap">
+          <span class="status-badge" id="scopePill" onclick="toggleScope()">🎯 스코프: <span id="scopeStateText" class="ml-1">1.4x</span></span>
+          <span class="status-badge" onclick="reloadWeapon()">🔄 장전 [R]</span>
+          <span class="status-badge border-amber-500/40 text-amber-200" onclick="tryHarvestNearby()">🗡️ 채취 [E]</span>
+        </div>
+      </div>
+
+      <!-- 모바일/태블릿 터치 조작 보조 패드 (작은 화면에서 자동 표시) -->
+      <div class="panel flex md:hidden gap-2 items-center">
+        <button class="btn text-xs px-3 py-2" ontouchstart="keys['KeyW']=true" ontouchend="keys['KeyW']=false">▲ 전진</button>
+        <button class="btn text-xs px-3 py-2" ontouchstart="keys['KeyS']=true" ontouchend="keys['KeyS']=false">▼ 후퇴</button>
+        <button class="btn text-xs px-3 py-2 border-sky-400 text-sky-300" onclick="fireWeapon()">🔥 발사/베기</button>
+      </div>
+
+      <div class="panel text-right hidden sm:block max-w-sm">
+        <div class="text-xs text-slate-400 font-bold mb-1">보스 소환 &amp; 무기고 수칙</div>
+        <div class="text-xs text-slate-300 space-y-1">
+          <p>보스 몬스터는 <span class="text-red-300 font-bold">상점[U]의 보스 소환 열쇠</span>로만 불러낼 수 있습니다.</p>
+          <p>쓰러진 동물에게 <span class="text-emerald-300 font-bold">[E] 사냥칼</span>로 고기·가죽을 채취해 <span class="text-sky-300 font-bold">샷건·카빈</span>을 해금하세요!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================================================
+    // 1. 캔버스 및 기본 전역 상태 초기화
+    // ==========================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let screenW = window.innerWidth;
+    let screenH = window.innerHeight;
+    let isPlaying = false;
+    let isGameOver = false;
+    let lastTimestamp = 0;
+    let bannerTimeout = null;
+    let latestBlobUrl = null;
+
+    function resizeCanvas() {
+      screenW = window.innerWidth;
+      screenH = window.innerHeight;
+      canvas.width = screenW;
+      canvas.height = screenH;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // 야생동물 종별 스펙 (해부학적 색상, 공격력 하향, 전리품 수확량 포함)
+    const ANIMAL_TYPES = [
+      {
+        id: 'bear',
+        name: '불곰',
+        emoji: '🐻',
+        maxHp: 230,
+        damage: 18,
+        speed: 7.8,
+        wanderSpeed: 1.4,
+        baseSens: 24,
+        scale: 1.58,
+        score: 500,
+        points: 260,
+        meatYield: 4,
+        hideYield: 3,
+        coatPrimary: '#2c1a12',
+        coatSecondary: '#4e342e',
+        coatHighlight: '#8d6e63',
+        weight: 0.28
+      },
+      {
+        id: 'wolf',
+        name: '회색늑대',
+        emoji: '🐺',
+        maxHp: 130,
+        damage: 11,
+        speed: 10.2,
+        wanderSpeed: 2.1,
+        baseSens: 34,
+        scale: 1.08,
+        score: 300,
+        points: 150,
+        meatYield: 2,
+        hideYield: 2,
+        coatPrimary: '#334155',
+        coatSecondary: '#64748b',
+        coatHighlight: '#cbd5e1',
+        weight: 0.38
+      },
+      {
+        id: 'deer',
+        name: '붉은수사슴',
+        emoji: '🦌',
+        maxHp: 90,
+        damage: 8,
+        speed: 9.2,
+        wanderSpeed: 1.8,
+        baseSens: 30,
+        scale: 1.28,
+        score: 200,
+        points: 100,
+        meatYield: 2,
+        hideYield: 1,
+        coatPrimary: '#6c2710',
+        coatSecondary: '#9a3412',
+        coatHighlight: '#fdba74',
+        weight: 0.34
+      }
+    ];
+
+    // 보스 몬스터 2종 스펙 (상점 소환 열쇠 아이템으로만 소환, 빠른 공격 속도 적용)
+    const BOSS_SPECS = {
+      bear: {
+        id: 'boss_bear',
+        keyProp: 'bearKey',
+        keyName: '핏빛 달의 봉인 열쇠',
+        keyCost: 450,
+        keyDesc: '핏빛 달 아래 잠든 고대 다이어베어를 깨웁니다. (빠른 맹공격 & 광폭화)',
+        name: '핏빛 달의 군주 · 고대 다이어베어',
+        shortName: '고대 다이어베어',
+        emoji: '👹',
+        maxHp: 950,
+        damage: 54,
+        speed: 9.8,
+        wanderSpeed: 2.2,
+        baseSens: 100,
+        windupMax: 0.62,
+        attackCooldown: 0.78,
+        scale: 2.35,
+        score: 3000,
+        points: 1200,
+        meatYield: 10,
+        hideYield: 8,
+        coatPrimary: '#1c0a0a',
+        coatSecondary: '#450a0a',
+        coatHighlight: '#b91c1c',
+        isBoss: true
+      },
+      wolf: {
+        id: 'boss_wolf',
+        keyProp: 'wolfKey',
+        keyName: '서리달의 빙결 열쇠',
+        keyCost: 700,
+        keyDesc: '만년설의 포식자 펜리르 알파를 소환합니다. (초고속 연타 돌진 & 냉기 뿔)',
+        name: '창백한 서리군주 · 펜리르 알파',
+        shortName: '펜리르 알파',
+        emoji: '🐺❄️',
+        maxHp: 1350,
+        damage: 64,
+        speed: 11.6,
+        wanderSpeed: 2.6,
+        baseSens: 100,
+        windupMax: 0.50,
+        attackCooldown: 0.62,
+        scale: 2.15,
+        score: 5000,
+        points: 2000,
+        meatYield: 14,
+        hideYield: 12,
+        coatPrimary: '#0f172a',
+        coatSecondary: '#1e3a5f',
+        coatHighlight: '#7dd3fc',
+        isBoss: true
+      }
+    };
+
+    // 무기별 스펙 정의
+    const WEAPON_SPECS = {
+      rifle: {
+        id: 'rifle',
+        slot: 1,
+        icon: '🔫',
+        name: '볼트액션 사냥 소총',
+        shortName: '소총',
+        cost: 0,
+        desc: '3.2x 정밀 스코프를 갖춘 표준 사냥용 소총입니다. 장거리 급소 저격에 특화되어 있습니다.',
+        dmgMult: 1.0,
+        pellets: 1,
+        spreadPx: 0,
+        baseAmmo: 3,
+        ammoPerLv: 2,
+        baseInterval: 0.72,
+        intervalStep: 0.08,
+        minInterval: 0.28,
+        baseReload: 2.1,
+        reloadStep: 0.26,
+        minReload: 0.65,
+        zoomMult: 2.25,
+        scopeLabel: '3.2x (ESC)'
+      },
+      shotgun: {
+        id: 'shotgun',
+        slot: 2,
+        icon: '💥',
+        name: '더블배럴 펌프 샷건',
+        shortName: '샷건',
+        cost: 320,
+        desc: '한 번에 6발의 산탄을 퍼부어 돌진하는 맹수와 보스에게 폭발적인 근접 저지력을 발휘합니다.',
+        dmgMult: 0.42,
+        pellets: 6,
+        spreadPx: 38,
+        baseAmmo: 2,
+        ammoPerLv: 1,
+        baseInterval: 0.85,
+        intervalStep: 0.08,
+        minInterval: 0.38,
+        baseReload: 1.9,
+        reloadStep: 0.22,
+        minReload: 0.75,
+        zoomMult: 1.45,
+        scopeLabel: '1.8x 견착 (ESC)'
+      },
+      carbine: {
+        id: 'carbine',
+        slot: 3,
+        icon: '⚡',
+        name: '택티컬 반자동 카빈',
+        shortName: '카빈',
+        cost: 580,
+        desc: '대용량 탄창과 초고속 연사력을 갖춘 전술 카빈입니다. 좌클릭 유지로 연속 사격이 가능합니다.',
+        dmgMult: 0.72,
+        pellets: 1,
+        spreadPx: 4,
+        baseAmmo: 10,
+        ammoPerLv: 4,
+        baseInterval: 0.19,
+        intervalStep: 0.015,
+        minInterval: 0.10,
+        baseReload: 1.65,
+        reloadStep: 0.18,
+        minReload: 0.65,
+        zoomMult: 1.75,
+        scopeLabel: '2.2x 홀로그램 (ESC)'
+      }
+    };
+
+    // 통합 게임 상태 객체
+    const gameState = {
+      time: 0,
+      score: 0,
+      points: 0,
+      killsCount: 0,
+      activeTool: 'rifle', // 'rifle' | 'shotgun' | 'carbine' | 'knife'
+      unlockedWeapons: {
+        rifle: true,
+        shotgun: false,
+        carbine: false
+      },
+      knifeSwing: 0,
+      inventory: {
+        meat: 0,
+        hide: 0,
+        bearKey: 0,
+        wolfKey: 0
+      },
+      brightnessLevel: 1, // 0: 보통 달빛, 1: 밝은 달빛, 2: 초밝은 달빛
+      isShopOpen: false,
+      lockedTarget: null,
+      upgrades: {
+        firepower: 1,
+        magazine: 1,
+        vitality: 1,
+        stealth: 1
+      },
+      player: {
+        x: 0,
+        z: 0,
+        yaw: 0,
+        pitch: 0,
+        hp: 65,
+        maxHp: 65,
+        damage: 38,
+        headshotMult: 1.75,
+        moveSpeed: 5.4,
+        crouchSpeed: 2.8,
+        aimAssistRadius: 48,
+        stealthFactor: 1.0,
+        isCrouching: true, // 시작 시 풀숲 안에 엎드린 상태로 스폰
+        inTallGrass: true,
+        flashlightOn: true,
+        walkBob: 0,
+        recoilKick: 0,
+        screenShake: 0,
+        lastCombatTime: -99
+      },
+      weapon: {
+        ammo: 3,
+        maxAmmo: 3,
+        isReloading: false,
+        reloadTimer: 0,
+        reloadDuration: 2.1,
+        fireCooldown: 0,
+        fireInterval: 0.72,
+        scoped: false,
+        zoom: 1.4
+      },
+      weaponStates: {
+        rifle: { ammo: 3, maxAmmo: 3, isReloading: false, reloadTimer: 0, reloadDuration: 2.1, fireCooldown: 0, fireInterval: 0.72, scoped: false },
+        shotgun: { ammo: 2, maxAmmo: 2, isReloading: false, reloadTimer: 0, reloadDuration: 1.9, fireCooldown: 0, fireInterval: 0.85, scoped: false },
+        carbine: { ammo: 10, maxAmmo: 10, isReloading: false, reloadTimer: 0, reloadDuration: 1.65, fireCooldown: 0, fireInterval: 0.19, scoped: false }
+      },
+      mouse: {
+        x: screenW * 0.5,
+        y: screenH * 0.5,
+        isDown: false,
+        isDragging: false,
+        lastX: screenW * 0.5,
+        lastY: screenH * 0.5
+      },
+      world: {
+        trees: [],
+        rocks: [],
+        grassPatches: [],
+        animals: [],
+        particles: [],
+        floatingTexts: [],
+        attackAuras: []
+      }
+    };
+
+    const keys = {};
+
+    // ==========================================================================
+    // 2. Web Audio API 합성 효과음 엔진 (외부 사운드 파일 불필요)
+    // ==========================================================================
+    let audioCtx = null;
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function playSound(type) {
+      try {
+        ensureAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'shoot') {
+          // 묵직한 소총 격발음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(190, now);
+          osc.frequency.exponentialRampToValueAtTime(34, now + 0.24);
+          gain.gain.setValueAtTime(0.45, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.27);
+        } else if (type === 'shotgun') {
+          // 펌프 샷건 묵직한 산탄 폭발음
+          [135, 78].forEach((freq) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+            osc.frequency.exponentialRampToValueAtTime(24, now + 0.34);
+            gain.gain.setValueAtTime(0.36, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.37);
+          });
+        } else if (type === 'carbine') {
+          // 택티컬 카빈 날카로운 연발 격발음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(290, now);
+          osc.frequency.exponentialRampToValueAtTime(52, now + 0.13);
+          gain.gain.setValueAtTime(0.32, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'empty') {
+          // 빈 탄창 딸깍음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(920, now);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } else if (type === 'reload') {
+          // 볼트 장전 금속음
+          [0, 0.14].forEach((offset, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(idx === 0 ? 520 : 760, now + offset);
+            gain.gain.setValueAtTime(0.18, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.09);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.1);
+          });
+        } else if (type === 'hit') {
+          // 표적 명중 타격음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(640, now);
+          osc.frequency.exponentialRampToValueAtTime(180, now + 0.11);
+          gain.gain.setValueAtTime(0.28, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.13);
+        } else if (type === 'roar') {
+          // 맹수 발각 포효음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(125, now);
+          osc.frequency.linearRampToValueAtTime(75, now + 0.42);
+          gain.gain.setValueAtTime(0.28, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.46);
+        } else if (type === 'warn') {
+          // 공격 전 위협 경고음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(92, now);
+          osc.frequency.linearRampToValueAtTime(148, now + 0.24);
+          osc.frequency.exponentialRampToValueAtTime(62, now + 0.44);
+          gain.gain.setValueAtTime(0.01, now);
+          gain.gain.linearRampToValueAtTime(0.28, now + 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.46);
+        } else if (type === 'hurt') {
+          // 플레이어 피격 충격음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(145, now);
+          osc.frequency.exponentialRampToValueAtTime(36, now + 0.32);
+          gain.gain.setValueAtTime(0.48, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'knife') {
+          // 사냥칼 베기 및 채취 효과음
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1320, now);
+          osc.frequency.exponentialRampToValueAtTime(280, now + 0.16);
+          gain.gain.setValueAtTime(0.24, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.17);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        } else if (type === 'bossRoar') {
+          // 보스 등장 웅장한 포효음
+          [68, 102].forEach((freq) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+            osc.frequency.linearRampToValueAtTime(freq * 0.62, now + 0.95);
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.28, now + 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.05);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 1.1);
+          });
+        } else if (type === 'upgrade') {
+          // 상점 업그레이드 및 판매 효과음
+          [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.07);
+            gain.gain.setValueAtTime(0.16, now + i * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.22);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + i * 0.07);
+            osc.stop(now + i * 0.07 + 0.24);
+          });
+        }
+      } catch (err) {
+        // 오디오 재생 오류 무시
+      }
+    }
+
+    function showBanner(msg) {
+      const el = document.getElementById('bannerToast');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.opacity = '1';
+      if (bannerTimeout) clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => {
+        el.style.opacity = '0';
+      }, 2800);
+    }
+
+    // ==========================================================================
+    // 3. 능력치 업그레이드 & 전리품 거래소 상점 시스템
+    // ==========================================================================
+    const UPGRADE_SPECS = [
+      {
+        key: 'firepower',
+        icon: '🔥',
+        title: '화력 & 강선 개조',
+        desc: '소총 기본 공격력과 급소 치명타 배율을 크게 높입니다.',
+        baseCost: 110,
+        stepCost: 85,
+        maxLv: 6,
+        statText: (lv) => `공격력 ${38 + (lv - 1) * 18} · 급소 ${(1.75 + (lv - 1) * 0.12).toFixed(2)}x`
+      },
+      {
+        key: 'magazine',
+        icon: '⚙️',
+        title: '대용량 탄창 & 고속 볼트',
+        desc: '최대 장탄수를 늘리고 재장전 및 사격 간격을 단축합니다.',
+        baseCost: 100,
+        stepCost: 80,
+        maxLv: 6,
+        statText: (lv) => `탄창 ${3 + (lv - 1) * 2}발 · 장전 ${Math.max(0.65, 2.1 - (lv - 1) * 0.26).toFixed(2)}초`
+      },
+      {
+        key: 'vitality',
+        icon: '❤️',
+        title: '헌터 체력 & 기동력',
+        desc: '최대 체력을 높이고 걷기·은신 이동 속도를 빠르게 합니다.',
+        baseCost: 95,
+        stepCost: 75,
+        maxLv: 6,
+        statText: (lv) => `최대 HP ${65 + (lv - 1) * 22} · 이동속도 ${(5.4 + (lv - 1) * 0.65).toFixed(1)}`
+      },
+      {
+        key: 'stealth',
+        icon: '🎯',
+        title: '정밀 조준경 & 위장술',
+        desc: '자석 조준 보정 반경을 넓히고 동물에게 들킬 확률을 줄입니다.',
+        baseCost: 95,
+        stepCost: 75,
+        maxLv: 6,
+        statText: (lv) => `조준보정 ${48 + (lv - 1) * 14}px · 위장효율 +${(lv - 1) * 12}%`
+      }
+    ];
+
+    function applyUpgradeStats() {
+      const u = gameState.upgrades;
+      const p = gameState.player;
+
+      const prevMaxHp = p.maxHp;
+      p.damage = 38 + (u.firepower - 1) * 18;
+      p.headshotMult = 1.75 + (u.firepower - 1) * 0.12;
+
+      // 모든 총기(소총, 샷건, 카빈)에 탄창·연사·재장전 강화 반영
+      Object.keys(WEAPON_SPECS).forEach((wKey) => {
+        const spec = WEAPON_SPECS[wKey];
+        const ws = gameState.weaponStates[wKey];
+        ws.maxAmmo = spec.baseAmmo + (u.magazine - 1) * spec.ammoPerLv;
+        ws.reloadDuration = Math.max(spec.minReload, spec.baseReload - (u.magazine - 1) * spec.reloadStep);
+        ws.fireInterval = Math.max(spec.minInterval, spec.baseInterval - (u.magazine - 1) * spec.intervalStep);
+        if (ws.ammo > ws.maxAmmo) ws.ammo = ws.maxAmmo;
+      });
+
+      if (WEAPON_SPECS[gameState.activeTool]) {
+        gameState.weapon = gameState.weaponStates[gameState.activeTool];
+      }
+
+      p.maxHp = 65 + (u.vitality - 1) * 22;
+      if (p.maxHp > prevMaxHp) {
+        p.hp = Math.min(p.maxHp, p.hp + (p.maxHp - prevMaxHp));
+      }
+      p.moveSpeed = 5.4 + (u.vitality - 1) * 0.65;
+      p.crouchSpeed = 2.8 + (u.vitality - 1) * 0.35;
+
+      p.aimAssistRadius = 48 + (u.stealth - 1) * 14;
+      p.stealthFactor = Math.max(0.35, 1.0 - (u.stealth - 1) * 0.12);
+    }
+
+    function renderShop() {
+      const grid = document.getElementById('shopGrid');
+      const bossKeyGrid = document.getElementById('bossKeyGrid');
+      const weaponShopGrid = document.getElementById('weaponShopGrid');
+      const ptText = document.getElementById('shopPointsText');
+      const medBtn = document.getElementById('btnBuyMedkit');
+      if (!grid) return;
+
+      ptText.textContent = gameState.points;
+
+      // 전리품 판매 버튼 갱신
+      const meatEl = document.getElementById('shopMeatCount');
+      const hideEl = document.getElementById('shopHideCount');
+      if (meatEl) meatEl.textContent = gameState.inventory.meat;
+      if (hideEl) hideEl.textContent = gameState.inventory.hide;
+
+      const bearKeyEl = document.getElementById('shopBearKeyCount');
+      const wolfKeyEl = document.getElementById('shopWolfKeyCount');
+      if (bearKeyEl) bearKeyEl.textContent = gameState.inventory.bearKey;
+      if (wolfKeyEl) wolfKeyEl.textContent = gameState.inventory.wolfKey;
+
+      const btnSellMeat = document.getElementById('btnSellMeat');
+      const btnSellHide = document.getElementById('btnSellHide');
+      const btnSellAll = document.getElementById('btnSellAll');
+      if (btnSellMeat) {
+        btnSellMeat.disabled = gameState.inventory.meat <= 0;
+        btnSellMeat.textContent = `🥩 고기 판매 (+${gameState.inventory.meat * 45} PT)`;
+      }
+      if (btnSellHide) {
+        btnSellHide.disabled = gameState.inventory.hide <= 0;
+        btnSellHide.textContent = `🧶 가죽 판매 (+${gameState.inventory.hide * 75} PT)`;
+      }
+      if (btnSellAll) {
+        const totalSell = gameState.inventory.meat * 45 + gameState.inventory.hide * 75;
+        btnSellAll.disabled = totalSell <= 0;
+        btnSellAll.textContent = `💰 일괄 판매 (+${totalSell} PT)`;
+      }
+
+      // 1) 보스 소환 열쇠 상점 카드 렌더링
+      if (bossKeyGrid) {
+        bossKeyGrid.innerHTML = '';
+        ['bear', 'wolf'].forEach((bType) => {
+          const bSpec = BOSS_SPECS[bType];
+          const ownedCount = gameState.inventory[bSpec.keyProp] || 0;
+          const canBuy = gameState.points >= bSpec.keyCost;
+          const activeBoss = gameState.world.animals.find((a) => a.isBoss && !a.dead);
+
+          const card = document.createElement('div');
+          card.className = 'p-3 rounded-xl bg-slate-900/90 border border-red-500/35 flex flex-col justify-between gap-2.5';
+          card.innerHTML = `
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-black text-sm text-red-200">🗝️ ${bSpec.keyName}</span>
+                <span class="text-xs font-extrabold px-2 py-0.5 rounded-full bg-red-950 border border-red-500/40 text-red-300">보유 ${ownedCount}개</span>
+              </div>
+              <div class="text-xs font-bold text-amber-300 mb-1">${bSpec.emoji} 대상 보스: ${bSpec.shortName} (HP ${bSpec.maxHp})</div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">${bSpec.keyDesc}</p>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn flex-1 text-xs ${canBuy ? 'border-amber-400 text-amber-200 bg-amber-950/50' : ''}" ${canBuy ? '' : 'disabled'} onclick="buyBossKey('${bType}')">
+                🛒 열쇠 구매 · 💎 ${bSpec.keyCost} PT
+              </button>
+              <button class="btn text-xs ${ownedCount > 0 && !activeBoss ? 'border-red-400 text-red-100 bg-red-800/80' : ''}" ${ownedCount > 0 && !activeBoss ? '' : 'disabled'} onclick="useBossKey('${bType}')">
+                ${activeBoss ? '⚔️ 보스 교전 중' : '🔥 열쇠 사용 소환'}
+              </button>
+            </div>
+          `;
+          bossKeyGrid.appendChild(card);
+        });
+      }
+
+      // 2) 신규 무기 무기고 카드 렌더링
+      if (weaponShopGrid) {
+        weaponShopGrid.innerHTML = '';
+        ['shotgun', 'carbine'].forEach((wKey) => {
+          const wSpec = WEAPON_SPECS[wKey];
+          const unlocked = Boolean(gameState.unlockedWeapons[wKey]);
+          const equipped = gameState.activeTool === wKey;
+          const canBuy = !unlocked && gameState.points >= wSpec.cost;
+
+          const card = document.createElement('div');
+          card.className = 'p-3 rounded-xl bg-slate-900/90 border border-indigo-500/35 flex flex-col justify-between gap-2.5';
+          card.innerHTML = `
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-black text-sm text-indigo-200">${wSpec.icon} ${wSpec.name} [${wSpec.slot}]</span>
+                <span class="text-xs font-extrabold px-2 py-0.5 rounded-full ${unlocked ? 'bg-emerald-950 border border-emerald-500/40 text-emerald-300' : 'bg-slate-950 border border-slate-700 text-slate-400'}">
+                  ${unlocked ? (equipped ? '장착 중' : '보유 중') : '미해금'}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">${wSpec.desc}</p>
+            </div>
+            <button
+              class="btn w-full text-xs ${unlocked ? 'border-emerald-400 text-emerald-200 bg-emerald-950/50' : (canBuy ? 'border-indigo-400 text-indigo-200 bg-indigo-950/60' : '')}"
+              ${unlocked || canBuy ? '' : 'disabled'}
+              onclick="${unlocked ? `equipWeaponFromShop('${wKey}')` : `buyWeapon('${wKey}')`}"
+            >
+              ${unlocked ? (equipped ? '✅ 현재 장착 완료' : `🔫 [${wSpec.slot}] 키로 즉시 장착하기`) : `🛒 무기 구매 · 💎 ${wSpec.cost} PT`}
+            </button>
+          `;
+          weaponShopGrid.appendChild(card);
+        });
+      }
+
+      // 3) 능력치 업그레이드 카드 렌더링
+      grid.innerHTML = '';
+      UPGRADE_SPECS.forEach((spec) => {
+        const lv = gameState.upgrades[spec.key];
+        const isMax = lv >= spec.maxLv;
+        const cost = spec.baseCost + (lv - 1) * spec.stepCost;
+        const canAfford = !isMax && gameState.points >= cost;
+
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-2xl bg-slate-900/90 border border-slate-700/80 flex flex-col justify-between gap-3';
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-black text-base text-slate-100">${spec.icon} ${spec.title}</span>
+              <span class="text-xs font-extrabold px-2 py-0.5 rounded-full bg-sky-950 border border-sky-500/40 text-sky-300">Lv.${lv} / ${spec.maxLv}</span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed mb-2">${spec.desc}</p>
+            <div class="text-xs font-bold text-emerald-300 bg-slate-950/70 px-2.5 py-1.5 rounded-lg border border-slate-800">
+              현재 효과: ${spec.statText(lv)}
+            </div>
+          </div>
+          <button
+            class="btn w-full text-xs sm:text-sm ${canAfford ? 'border-sky-400 text-sky-200 bg-sky-950/60' : ''}"
+            ${canAfford ? '' : 'disabled'}
+            onclick="buyUpgrade('${spec.key}')"
+          >
+            ${isMax ? '✅ 최고 단계 달성 (MAX)' : `⬆️ 강화하기 · 💎 ${cost} PT`}
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+
+      const p = gameState.player;
+      medBtn.disabled = gameState.points < 50 || p.hp >= p.maxHp;
+      medBtn.textContent = p.hp >= p.maxHp
+        ? '체력 가득 참 (MAX)'
+        : '응급 치료 (+45 HP) · 50 PT';
+    }
+
+    function buyUpgrade(key) {
+      const spec = UPGRADE_SPECS.find((s) => s.key === key);
+      if (!spec) return;
+      const lv = gameState.upgrades[key];
+      if (lv >= spec.maxLv) return;
+      const cost = spec.baseCost + (lv - 1) * spec.stepCost;
+      if (gameState.points < cost) return;
+
+      gameState.points -= cost;
+      gameState.upgrades[key] = lv + 1;
+      applyUpgradeStats();
+      if (key === 'magazine') {
+        Object.keys(gameState.weaponStates).forEach((wKey) => {
+          gameState.weaponStates[wKey].ammo = gameState.weaponStates[wKey].maxAmmo;
+        });
+      }
+      playSound('upgrade');
+      renderShop();
+      updateHUD();
+      showBanner(`✨ ${spec.title} Lv.${lv + 1} 강화 완료!`);
+    }
+
+    function buyWeapon(wKey) {
+      const wSpec = WEAPON_SPECS[wKey];
+      if (!wSpec || gameState.unlockedWeapons[wKey]) return;
+      if (gameState.points < wSpec.cost) return;
+
+      gameState.points -= wSpec.cost;
+      gameState.unlockedWeapons[wKey] = true;
+      applyUpgradeStats();
+      gameState.weaponStates[wKey].ammo = gameState.weaponStates[wKey].maxAmmo;
+      switchTool(wKey);
+      playSound('upgrade');
+      renderShop();
+      updateHUD();
+      showBanner(`🔫 신규 무기 [${wSpec.name}] 구매 및 장착 완료! ([${wSpec.slot}] 키로 전환)`);
+    }
+
+    function equipWeaponFromShop(wKey) {
+      if (!gameState.unlockedWeapons[wKey]) return;
+      switchTool(wKey);
+      closeShop();
+      showBanner(`🔫 [${WEAPON_SPECS[wKey].name}]을(를) 장착했습니다!`);
+    }
+
+    function buyBossKey(bType) {
+      const bSpec = BOSS_SPECS[bType];
+      if (!bSpec || gameState.points < bSpec.keyCost) return;
+
+      gameState.points -= bSpec.keyCost;
+      gameState.inventory[bSpec.keyProp] = (gameState.inventory[bSpec.keyProp] || 0) + 1;
+      playSound('upgrade');
+      renderShop();
+      updateHUD();
+      showBanner(`🗝️ [${bSpec.keyName}]을(를) 구매했습니다! 열쇠를 사용해 보스를 소환할 수 있습니다.`);
+    }
+
+    function useBossKey(bType) {
+      const bSpec = BOSS_SPECS[bType];
+      if (!bSpec) return;
+
+      const owned = gameState.inventory[bSpec.keyProp] || 0;
+      if (owned <= 0) {
+        showBanner(`🗝️ [${bSpec.keyName}]가 없습니다! 상점[U]에서 열쇠 아이템을 구매하세요.`);
+        return;
+      }
+
+      const existingBoss = gameState.world.animals.find((a) => a.isBoss && !a.dead);
+      if (existingBoss) {
+        showBanner(`⚔️ 이미 보스 [${existingBoss.shortName}]가 숲에 출현해 있습니다!`);
+        return;
+      }
+
+      gameState.inventory[bSpec.keyProp] = owned - 1;
+      if (gameState.isShopOpen) {
+        closeShop();
+      }
+      spawnBossByType(bType);
+    }
+
+    function summonWithOwnedKey(e) {
+      if (e) e.stopPropagation();
+      if (!isPlaying || isGameOver) return;
+      if (gameState.inventory.wolfKey > 0) {
+        useBossKey('wolf');
+      } else if (gameState.inventory.bearKey > 0) {
+        useBossKey('bear');
+      } else {
+        openShop();
+        showBanner('🗝️ 보스 소환 열쇠가 없습니다! 상점에서 보스 열쇠를 구매하세요.');
+      }
+    }
+
+    function buyMedkit() {
+      const p = gameState.player;
+      if (gameState.points < 50 || p.hp >= p.maxHp) return;
+      gameState.points -= 50;
+      p.hp = Math.min(p.maxHp, p.hp + 45);
+      playSound('upgrade');
+      renderShop();
+      updateHUD();
+      showBanner('🩹 응급 치료 완료! (+45 HP)');
+    }
+
+    function sellLoot(kind) {
+      let earned = 0;
+      let label = '';
+      if (kind === 'meat' && gameState.inventory.meat > 0) {
+        earned = gameState.inventory.meat * 45;
+        label = `🥩 고기 ${gameState.inventory.meat}개 판매`;
+        gameState.inventory.meat = 0;
+      } else if (kind === 'hide' && gameState.inventory.hide > 0) {
+        earned = gameState.inventory.hide * 75;
+        label = `🧶 가죽 ${gameState.inventory.hide}장 판매`;
+        gameState.inventory.hide = 0;
+      } else if (kind === 'all') {
+        const m = gameState.inventory.meat;
+        const h = gameState.inventory.hide;
+        if (m <= 0 && h <= 0) return;
+        earned = m * 45 + h * 75;
+        label = `🥩 고기 ${m}개 · 🧶 가죽 ${h}장 일괄 판매`;
+        gameState.inventory.meat = 0;
+        gameState.inventory.hide = 0;
+      }
+
+      if (earned <= 0) return;
+      gameState.points += earned;
+      playSound('upgrade');
+      renderShop();
+      updateHUD();
+      showBanner(`💰 ${label} 완료! (+💎 ${earned} PT 획득)`);
+    }
+
+    function openShop() {
+      if (!isPlaying || isGameOver) return;
+      gameState.isShopOpen = true;
+      gameState.weapon.scoped = false;
+      renderShop();
+      document.getElementById('shopModal').style.display = 'flex';
+    }
+
+    function closeShop() {
+      gameState.isShopOpen = false;
+      document.getElementById('shopModal').style.display = 'none';
+      lastTimestamp = performance.now();
+    }
+
+    function toggleShop(e) {
+      if (e) e.stopPropagation();
+      if (gameState.isShopOpen) closeShop();
+      else openShop();
+    }
+
+    // ==========================================================================
+    // 4. 월드 초기화 (주인공 풀숲 은신 스폰, 나무, 바위, 풀숲, 동물/보스 스폰)
+    // ==========================================================================
+    function initWorld() {
+      const w = gameState.world;
+      w.trees = [];
+      w.rocks = [];
+      w.grassPatches = [];
+      w.animals = [];
+      w.particles = [];
+      w.floatingTexts = [];
+      w.attackAuras = [];
+
+      const p = gameState.player;
+      p.x = 0;
+      p.z = 0;
+      p.yaw = 0;
+      p.pitch = 0;
+      p.isCrouching = true; // 풀숲 한가운데 엎드린 상태로 안전하게 스폰
+      p.inTallGrass = true;
+
+      // 주인공 스폰 위치 주변을 감싸는 은신 풀숲 군락 배치
+      for (let i = 0; i < 16; i++) {
+        const ang = (i / 16) * Math.PI * 2;
+        const rad = 1.4 + (i % 3) * 1.1;
+        w.grassPatches.push({
+          x: Math.cos(ang) * rad,
+          z: Math.sin(ang) * rad,
+          radius: 3.2,
+          blades: 16,
+          seed: Math.random() * 100
+        });
+      }
+
+      // 숲 전역에 은신용 풀숲 군락 배치
+      for (let i = 0; i < 55; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 10 + Math.random() * 115;
+        w.grassPatches.push({
+          x: Math.cos(ang) * dist,
+          z: Math.sin(ang) * dist,
+          radius: 3.4 + Math.random() * 1.5,
+          blades: 15,
+          seed: Math.random() * 100
+        });
+      }
+
+      // 침엽수(전나무/소나무) 배치 (스폰 반경 7m 이내에는 시야를 가리지 않도록 비움)
+      for (let i = 0; i < 130; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 8 + Math.random() * 125;
+        w.trees.push({
+          x: Math.cos(ang) * dist,
+          z: Math.sin(ang) * dist,
+          height: 7.5 + Math.random() * 5.5,
+          radius: 1.4 + Math.random() * 0.8,
+          shade: 0.8 + Math.random() * 0.35
+        });
+      }
+
+      // 바위 배치
+      for (let i = 0; i < 42; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 11 + Math.random() * 115;
+        w.rocks.push({
+          x: Math.cos(ang) * dist,
+          z: Math.sin(ang) * dist,
+          size: 0.9 + Math.random() * 1.2
+        });
+      }
+
+      // 초기 야생동물 7마리 스폰
+      for (let i = 0; i < 7; i++) {
+        spawnAnimal(true);
+      }
+    }
+
+    function spawnAnimal(initial = false) {
+      const r = Math.random();
+      let acc = 0;
+      let spec = ANIMAL_TYPES[0];
+      for (const t of ANIMAL_TYPES) {
+        acc += t.weight;
+        if (r <= acc) {
+          spec = t;
+          break;
+        }
+      }
+
+      const p = gameState.player;
+      const angle = initial
+        ? (Math.random() - 0.5) * Math.PI * 1.6 // 시작 시 전방 시야 쪽에도 적절히 분포
+        : Math.random() * Math.PI * 2;
+      const dist = initial ? (22 + Math.random() * 34) : (32 + Math.random() * 38);
+
+      gameState.world.animals.push({
+        id: spec.id,
+        name: spec.name,
+        emoji: spec.emoji,
+        x: p.x + Math.sin(angle) * dist,
+        z: p.z + Math.cos(angle) * dist,
+        hp: spec.maxHp,
+        maxHp: spec.maxHp,
+        damage: spec.damage,
+        speed: spec.speed,
+        wanderSpeed: spec.wanderSpeed,
+        baseSens: spec.baseSens,
+        scale: spec.scale,
+        score: spec.score,
+        points: spec.points,
+        meatYield: spec.meatYield,
+        hideYield: spec.hideYield,
+        coatPrimary: spec.coatPrimary,
+        coatSecondary: spec.coatSecondary,
+        coatHighlight: spec.coatHighlight,
+        isBoss: false,
+        enraged: false,
+        awareness: 0,
+        noticed: false,
+        dead: false,
+        harvested: false,
+        deathTimer: 0,
+        hitFlash: 0,
+        windupTimer: 0,
+        windupMax: 0.95,
+        attackCooldown: 0,
+        facing: Math.random() * Math.PI * 2,
+        wanderAngle: Math.random() * Math.PI * 2,
+        wanderTimer: 2 + Math.random() * 3,
+        animPhase: Math.random() * Math.PI * 2
+      });
+    }
+
+    function spawnBossByType(bType = 'bear') {
+      const spec = BOSS_SPECS[bType] || BOSS_SPECS.bear;
+      const p = gameState.player;
+      const spawnDist = 26;
+      const bx = p.x + Math.sin(p.yaw) * spawnDist;
+      const bz = p.z + Math.cos(p.yaw) * spawnDist;
+
+      gameState.world.animals.push({
+        id: spec.id,
+        name: spec.name,
+        shortName: spec.shortName,
+        emoji: spec.emoji,
+        x: bx,
+        z: bz,
+        hp: spec.maxHp,
+        maxHp: spec.maxHp,
+        damage: spec.damage,
+        speed: spec.speed,
+        wanderSpeed: spec.wanderSpeed,
+        baseSens: 100,
+        scale: spec.scale,
+        score: spec.score,
+        points: spec.points,
+        meatYield: spec.meatYield,
+        hideYield: spec.hideYield,
+        coatPrimary: spec.coatPrimary,
+        coatSecondary: spec.coatSecondary,
+        coatHighlight: spec.coatHighlight,
+        isBoss: true,
+        enraged: false,
+        awareness: 100,
+        noticed: true,
+        dead: false,
+        harvested: false,
+        deathTimer: 0,
+        hitFlash: 0,
+        windupTimer: 0,
+        windupMax: spec.windupMax,
+        attackCooldown: 0.5,
+        facing: Math.atan2(p.x - bx, p.z - bz),
+        wanderAngle: 0,
+        wanderTimer: 1,
+        animPhase: 0
+      });
+
+      p.screenShake = 0.35;
+      playSound('bossRoar');
+      updateHUD();
+      showBanner(`👹 보스 출현! [${spec.name}]이(가) 전방 숲에서 포효합니다!`);
+    }
+
+    // ==========================================================================
+    // 5. 게임 시작, 재시작, 게임 오버 및 HTML 다운로드/내보내기
+    // ==========================================================================
+    function startGame() {
+      ensureAudio();
+      document.getElementById('startOverlay').style.display = 'none';
+      document.getElementById('gameOverModal').style.display = 'none';
+      if (gameState.world.animals.length === 0) {
+        initWorld();
+      }
+      applyUpgradeStats();
+      isPlaying = true;
+      isGameOver = false;
+      lastTimestamp = performance.now();
+      updateHUD();
+      showBanner('🌿 풀숲 한가운데 은신했습니다. 조준 사격 후 [E] 사냥칼로 전리품을 채취하세요!');
+    }
+
+    function resetGame() {
+      gameState.score = 0;
+      gameState.points = 0;
+      gameState.killsCount = 0;
+      gameState.activeTool = 'rifle';
+      gameState.unlockedWeapons = { rifle: true, shotgun: false, carbine: false };
+      gameState.knifeSwing = 0;
+      gameState.inventory = { meat: 0, hide: 0, bearKey: 0, wolfKey: 0 };
+      gameState.upgrades = { firepower: 1, magazine: 1, vitality: 1, stealth: 1 };
+      gameState.isShopOpen = false;
+      gameState.lockedTarget = null;
+
+      applyUpgradeStats();
+      gameState.player.hp = gameState.player.maxHp;
+      gameState.player.lastCombatTime = -99;
+
+      Object.keys(gameState.weaponStates).forEach((wKey) => {
+        const ws = gameState.weaponStates[wKey];
+        ws.ammo = ws.maxAmmo;
+        ws.isReloading = false;
+        ws.reloadTimer = 0;
+        ws.fireCooldown = 0;
+        ws.scoped = false;
+      });
+      gameState.weapon = gameState.weaponStates.rifle;
+
+      initWorld();
+      document.getElementById('gameOverModal').style.display = 'none';
+      document.getElementById('shopModal').style.display = 'none';
+      isPlaying = true;
+      isGameOver = false;
+      lastTimestamp = performance.now();
+      updateHUD();
+      showBanner('🔄 풀숲에서 새로운 사냥을 시작합니다!');
+    }
+
+    function triggerGameOver() {
+      isGameOver = true;
+      isPlaying = false;
+      gameState.mouse.isDown = false;
+      gameState.weapon.scoped = false;
+      document.getElementById('finalScoreText').textContent = gameState.score;
+      document.getElementById('finalPointsText').textContent = `${gameState.points} PT`;
+      document.getElementById('finalKillsText').textContent = `${gameState.killsCount} 마리`;
+      document.getElementById('gameOverModal').style.display = 'flex';
+    }
+
+    function buildStandaloneHtml() {
+      const clone = document.documentElement.cloneNode(true);
+      const startOv = clone.querySelector('#startOverlay');
+      if (startOv) startOv.style.display = 'flex';
+      const shopMod = clone.querySelector('#shopModal');
+      if (shopMod) shopMod.style.display = 'none';
+      const overMod = clone.querySelector('#gameOverModal');
+      if (overMod) overMod.style.display = 'none';
+      const expMod = clone.querySelector('#exportModal');
+      if (expMod) expMod.style.display = 'none';
+      return '<!DOCTYPE html>\n' + clone.outerHTML;
+    }
+
+    function exportHtml(e) {
+      if (e) e.stopPropagation();
+      try {
+        const htmlContent = buildStandaloneHtml();
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        if (latestBlobUrl) URL.revokeObjectURL(latestBlobUrl);
+        latestBlobUrl = URL.createObjectURL(blob);
+
+        const dlLink = document.getElementById('exportDownloadLink');
+        if (dlLink) dlLink.href = latestBlobUrl;
+
+        const tempA = document.createElement('a');
+        tempA.href = latestBlobUrl;
+        tempA.download = 'midnight-hunter.html';
+        document.body.appendChild(tempA);
+        tempA.click();
+        document.body.removeChild(tempA);
+
+        document.getElementById('exportModal').style.display = 'flex';
+        showBanner('💾 midnight-hunter.html 파일 다운로드를 시작했습니다!');
+      } catch (err) {
+        document.getElementById('exportModal').style.display = 'flex';
+      }
+    }
+
+    function copyHtmlSource() {
+      try {
+        const htmlContent = buildStandaloneHtml();
+        const ta = document.createElement('textarea');
+        ta.value = htmlContent;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showBanner('📋 전체 HTML 소스코드가 클립보드에 복사되었습니다!');
+      } catch (err) {
+        showBanner('⚠️ 클립보드 복사에 실패했습니다. 직접 다운로드 버튼을 이용해 주세요.');
+      }
+    }
+
+    function closeExportModal() {
+      document.getElementById('exportModal').style.display = 'none';
+    }
+
+    // ==========================================================================
+    // 6. 무기 전환, 사격, 장전, 스코프, 은신 및 사냥칼 전리품 채취
+    // ==========================================================================
+    function switchTool(tool) {
+      if (!isPlaying || isGameOver) return;
+      if (tool !== 'knife' && !gameState.unlockedWeapons[tool]) {
+        const spec = WEAPON_SPECS[tool];
+        showBanner(`🔒 [${spec.name}]은(는) 미해금 상태입니다! 상점[U]에서 구매하세요.`);
+        return;
+      }
+
+      if (gameState.weapon) {
+        gameState.weapon.scoped = false;
+      }
+      gameState.activeTool = tool;
+      if (WEAPON_SPECS[tool]) {
+        gameState.weapon = gameState.weaponStates[tool];
+      }
+      updateHUD();
+    }
+
+    function fireWeapon() {
+      if (!isPlaying || isGameOver || gameState.isShopOpen) return;
+      const p = gameState.player;
+
+      // 사냥칼 장착 시: 전리품 채취 우선, 근처에 시체가 없으면 근접 베기
+      if (gameState.activeTool === 'knife') {
+        if (gameState.knifeSwing > 0.25) return;
+        gameState.knifeSwing = 1.0;
+        playSound('knife');
+
+        if (tryHarvestNearby(true)) {
+          return;
+        }
+
+        // 살아있는 근접 동물에게 사냥칼 근접 피해
+        let hitAny = false;
+        gameState.world.animals.forEach((a) => {
+          if (a.dead) return;
+          const dist = Math.hypot(a.x - p.x, a.z - p.z);
+          if (dist <= 4.2) {
+            const knifeDmg = Math.round(p.damage * 0.75);
+            applyDamageToAnimal(a, knifeDmg, false, screenW * 0.5, screenH * 0.45);
+            hitAny = true;
+          }
+        });
+        if (!hitAny) {
+          showBanner('🗡️ 사냥칼 휘두름 (쓰러진 동물 근처에서 [E] 또는 클릭으로 채취)');
+        }
+        return;
+      }
+
+      const w = gameState.weapon;
+      const spec = WEAPON_SPECS[gameState.activeTool] || WEAPON_SPECS.rifle;
+      if (w.isReloading || w.fireCooldown > 0) return;
+
+      if (w.ammo <= 0) {
+        playSound('empty');
+        showBanner('⚠️ 탄약이 없습니다! [R] 키를 눌러 재장전하세요.');
+        return;
+      }
+
+      w.ammo -= 1;
+      w.fireCooldown = w.fireInterval;
+      p.recoilKick = spec.id === 'shotgun' ? 1.45 : (spec.id === 'carbine' ? 0.55 : 1.0);
+      p.screenShake = spec.id === 'shotgun' ? 0.22 : (spec.id === 'carbine' ? 0.06 : 0.12);
+      p.lastCombatTime = gameState.time;
+
+      if (spec.id === 'shotgun') playSound('shotgun');
+      else if (spec.id === 'carbine') playSound('carbine');
+      else playSound('shoot');
+
+      // 사격 소음으로 인해 반경 28m 이내 동물의 경계도 상승
+      gameState.world.animals.forEach((a) => {
+        if (a.dead || a.noticed) return;
+        const d = Math.hypot(a.x - p.x, a.z - p.z);
+        if (d < 28) {
+          a.awareness = Math.min(100, a.awareness + (28 - d) * 1.6);
+          if (a.awareness >= 100) {
+            a.noticed = true;
+            playSound('roar');
+          }
+        }
+      });
+
+      const aimX = w.scoped ? screenW * 0.5 : gameState.mouse.x;
+      const aimY = w.scoped ? screenH * 0.5 : gameState.mouse.y;
+      const pellets = spec.pellets || 1;
+      let totalHits = 0;
+
+      for (let i = 0; i < pellets; i++) {
+        const ox = pellets > 1 ? (Math.random() - 0.5) * spec.spreadPx * 2 : (Math.random() - 0.5) * spec.spreadPx;
+        const oy = pellets > 1 ? (Math.random() - 0.5) * spec.spreadPx * 2 : (Math.random() - 0.5) * spec.spreadPx;
+        const hitInfo = findBestAimTarget(aimX + ox, aimY + oy, p.aimAssistRadius);
+        if (hitInfo) {
+          totalHits++;
+          const baseDmg = Math.max(8, Math.round(p.damage * spec.dmgMult));
+          const finalDmg = hitInfo.isHeadshot ? Math.round(baseDmg * p.headshotMult) : baseDmg;
+          applyDamageToAnimal(hitInfo.animal, finalDmg, hitInfo.isHeadshot, hitInfo.screenX, hitInfo.screenY);
+        }
+      }
+
+      if (totalHits > 0) {
+        playSound('hit');
+      }
+
+      if (w.ammo === 0) {
+        reloadWeapon();
+      }
+      updateHUD();
+    }
+
+    function applyDamageToAnimal(a, dmg, isHeadshot, fxX, fxY) {
+      if (a.dead) return;
+      a.hp = Math.max(0, a.hp - dmg);
+      a.hitFlash = 0.22;
+
+      // 한 발이라도 맞으면 즉시 발각 및 돌진
+      if (!a.noticed && a.hp > 0) {
+        a.awareness = 100;
+        a.noticed = true;
+        playSound('roar');
+        showBanner(`⚠️ 피격된 ${a.isBoss ? a.shortName : a.name}이(가) 당신을 발견하고 돌진합니다!`);
+      }
+
+      // 보스 체력 50% 이하 광폭화
+      if (a.isBoss && !a.enraged && a.hp > 0 && a.hp <= a.maxHp * 0.5) {
+        a.enraged = true;
+        a.damage = Math.round(a.damage * 1.22);
+        a.speed *= 1.15;
+        playSound('bossRoar');
+        showBanner(`🔥 [${a.shortName}] 광폭화! 공격 속도와 공격력이 한층 상승했습니다!`);
+      }
+
+      // 피격 파티클 및 부유 데미지 텍스트
+      for (let k = 0; k < (isHeadshot ? 12 : 7); k++) {
+        gameState.world.particles.push({
+          x: fxX,
+          y: fxY,
+          vx: (Math.random() - 0.5) * 190,
+          vy: (Math.random() - 0.7) * 170,
+          size: 2.5 + Math.random() * 3,
+          color: isHeadshot ? '#facc15' : '#ef4444',
+          life: 0.45 + Math.random() * 0.25
+        });
+      }
+
+      gameState.world.floatingTexts.push({
+        x: fxX,
+        y: fxY - 16,
+        text: isHeadshot ? `💥 급소 -${dmg}` : `-${dmg}`,
+        color: isHeadshot ? '#fde047' : '#f87171',
+        life: 0.95
+      });
+
+      if (a.hp <= 0) {
+        a.dead = true;
+        a.deathTimer = 28; // 28초 동안 사냥칼로 고기·가죽 채취 가능
+        a.windupTimer = 0;
+        gameState.score += a.score;
+        gameState.points += a.points;
+        gameState.killsCount += 1;
+        playSound('upgrade');
+        showBanner(`🎯 ${a.isBoss ? a.shortName : a.name} 사냥 성공! (+${a.score}점 · +💎 ${a.points} PT) — 다가가 [E]로 고기·가죽을 채취하세요!`);
+      }
+    }
+
+    function reloadWeapon() {
+      if (!isPlaying || isGameOver || gameState.activeTool === 'knife') return;
+      const w = gameState.weapon;
+      if (w.isReloading || w.ammo >= w.maxAmmo) return;
+      w.isReloading = true;
+      w.reloadTimer = w.reloadDuration;
+      w.scoped = false;
+      playSound('reload');
+      updateHUD();
+    }
+
+    function toggleScope() {
+      if (!isPlaying || isGameOver || gameState.isShopOpen) return;
+      if (gameState.activeTool === 'knife') {
+        showBanner('🗡️ 사냥칼 장착 중에는 스코프를 사용할 수 없습니다. [1~3] 키로 총기를 선택하세요.');
+        return;
+      }
+      gameState.weapon.scoped = !gameState.weapon.scoped;
+      updateHUD();
+    }
+
+    function toggleCrouch() {
+      if (!isPlaying || isGameOver) return;
+      gameState.player.isCrouching = !gameState.player.isCrouching;
+      updateHUD();
+    }
+
+    function toggleFlashlight() {
+      if (!isPlaying || isGameOver) return;
+      gameState.player.flashlightOn = !gameState.player.flashlightOn;
+      updateHUD();
+    }
+
+    function toggleBrightness(e) {
+      if (e) e.stopPropagation();
+      gameState.brightnessLevel = (gameState.brightnessLevel + 1) % 3;
+      updateHUD();
+    }
+
+    function tryHarvestNearby(silentFail = false) {
+      if (!isPlaying || isGameOver) return false;
+      const p = gameState.player;
+      let closest = null;
+      let minDist = 4.6;
+
+      gameState.world.animals.forEach((a) => {
+        if (a.dead && !a.harvested) {
+          const d = Math.hypot(a.x - p.x, a.z - p.z);
+          if (d < minDist) {
+            minDist = d;
+            closest = a;
+          }
+        }
+      });
+
+      if (!closest) {
+        if (!silentFail) {
+          showBanner('🗡️ 주변에 채취할 수 있는 쓰러진 동물이 없습니다.');
+        }
+        return false;
+      }
+
+      closest.harvested = true;
+      closest.deathTimer = Math.min(closest.deathTimer, 3.0);
+      gameState.inventory.meat += closest.meatYield;
+      gameState.inventory.hide += closest.hideYield;
+      gameState.knifeSwing = 1.0;
+      playSound('knife');
+      updateHUD();
+      showBanner(`🥩 ${closest.isBoss ? closest.shortName : closest.name} 채취 완료! (고기 +${closest.meatYield}개 · 가죽 +${closest.hideYield}장) — 상점[U]에서 판매 가능!`);
+      return true;
+    }
+
+    // ==========================================================================
+    // 7. 3D 월드 -> 2D 화면 원근 투영 및 자석 조준 보정
+    // ==========================================================================
+    function projectWorld(wx, wy, wz) {
+      const p = gameState.player;
+      const dx = wx - p.x;
+      const dz = wz - p.z;
+
+      const sinY = Math.sin(p.yaw);
+      const cosY = Math.cos(p.yaw);
+
+      // 카메라 기준 좌표 변환 (전방 zCam > 0, 우측 xCam)
+      const xCam = dx * cosY - dz * sinY;
+      const zCam = dx * sinY + dz * cosY;
+
+      if (zCam <= 0.35) return null;
+
+      const spec = WEAPON_SPECS[gameState.activeTool] || WEAPON_SPECS.rifle;
+      const zoom = (gameState.weapon && gameState.weapon.scoped) ? spec.zoomMult : 1.0;
+      const fov = Math.min(screenW, screenH) * 0.85 * zoom;
+
+      const eyeHeight = p.isCrouching ? 0.88 : 1.65;
+      const bobOffset = Math.sin(p.walkBob) * 1.1;
+      const shakeX = (Math.random() - 0.5) * p.screenShake * 18;
+      const shakeY = (Math.random() - 0.5) * p.screenShake * 18;
+
+      const horizonY = screenH * 0.52 + p.pitch * screenH * 0.65 + bobOffset + shakeY;
+      const sx = screenW * 0.5 + (xCam / zCam) * fov + shakeX;
+      const sy = horizonY - ((wy - eyeHeight) / zCam) * fov;
+      const scale = fov / zCam;
+
+      return { sx, sy, zCam, scale };
+    }
+
+    function findBestAimTarget(aimX, aimY, extraRadius = 0) {
+      let best = null;
+      let bestDist = Infinity;
+
+      gameState.world.animals.forEach((a) => {
+        if (a.dead) return;
+        const proj = projectWorld(a.x, 0, a.z);
+        if (!proj || proj.zCam > 95) return;
+
+        const bodyW = 62 * a.scale * (proj.scale / 520);
+        const bodyH = 46 * a.scale * (proj.scale / 520);
+        const centerX = proj.sx;
+        const centerY = proj.sy - bodyH * 0.58;
+        const headX = proj.sx + Math.sin(a.facing - gameState.player.yaw) * bodyW * 0.36;
+        const headY = proj.sy - bodyH * 0.84;
+
+        const dHead = Math.hypot(aimX - headX, aimY - headY);
+        const headRadius = Math.max(14, bodyH * 0.34) + extraRadius * 0.45;
+        if (dHead <= headRadius && dHead < bestDist) {
+          bestDist = dHead;
+          best = { animal: a, isHeadshot: true, screenX: headX, screenY: headY };
+          return;
+        }
+
+        const dBody = Math.hypot(aimX - centerX, aimY - centerY);
+        const bodyRadius = Math.max(24, Math.max(bodyW, bodyH) * 0.65) + extraRadius;
+        if (dBody <= bodyRadius && dBody < bestDist) {
+          bestDist = dBody;
+          best = { animal: a, isHeadshot: false, screenX: centerX, screenY: centerY };
+        }
+      });
+
+      return best;
+    }
+
+    // ==========================================================================
+    // 8. HUD 및 상단 레이더 UI 실시간 동기화
+    // ==========================================================================
+    function updateHUD() {
+      const p = gameState.player;
+      const w = gameState.weapon;
+
+      const hpText = document.getElementById('hpText');
+      const hpBar = document.getElementById('hpBar');
+      if (hpText) hpText.textContent = `HP ${Math.ceil(p.hp)} / ${p.maxHp}`;
+      if (hpBar) hpBar.style.width = `${Math.max(0, Math.min(100, (p.hp / p.maxHp) * 100))}%`;
+
+      const scoreText = document.getElementById('scoreText');
+      const pointsText = document.getElementById('pointsText');
+      if (scoreText) scoreText.textContent = `SCORE ${gameState.score}`;
+      if (pointsText) pointsText.textContent = `💎 ${gameState.points} PT`;
+
+      const pillFlash = document.getElementById('pillFlash');
+      if (pillFlash) {
+        pillFlash.classList.toggle('active', p.flashlightOn);
+        pillFlash.textContent = p.flashlightOn ? '🔦 라이트 켜짐' : '🔦 라이트 꺼짐';
+      }
+
+      const pillCrouch = document.getElementById('pillCrouch');
+      if (pillCrouch) {
+        pillCrouch.classList.toggle('stealth', p.isCrouching);
+        pillCrouch.textContent = p.isCrouching ? '🌿 엎드려 은신 중 [C]' : '🧍 서서 이동 중 [C]';
+      }
+
+      const pillGrass = document.getElementById('pillGrass');
+      if (pillGrass) {
+        pillGrass.classList.toggle('stealth', p.inTallGrass);
+        pillGrass.textContent = p.inTallGrass ? '🌾 풀숲 은폐' : '🌲 개활지 노출';
+      }
+
+      const meatCountText = document.getElementById('meatCountText');
+      const hideCountText = document.getElementById('hideCountText');
+      const bossKeyHudCount = document.getElementById('bossKeyHudCount');
+      const totalKeys = (gameState.inventory.bearKey || 0) + (gameState.inventory.wolfKey || 0);
+      if (meatCountText) meatCountText.textContent = gameState.inventory.meat;
+      if (hideCountText) hideCountText.textContent = gameState.inventory.hide;
+      if (bossKeyHudCount) bossKeyHudCount.textContent = totalKeys;
+
+      const btnBossKey = document.getElementById('btnBossKeySummon');
+      if (btnBossKey) {
+        btnBossKey.textContent = totalKeys > 0
+          ? `🗝️ 보스 소환 (${totalKeys}개 보유)`
+          : '🗝️ 보스 열쇠: 없음';
+      }
+
+      const btnBright = document.getElementById('btnBright');
+      if (btnBright) {
+        const labels = ['🌑 밝기: 보통', '🌕 밝기: 밝음', '☀️ 밝기: 초밝음'];
+        btnBright.textContent = labels[gameState.brightnessLevel] || '🌕 밝기: 밝음';
+      }
+
+      // 장비 및 탄약 HUD 갱신
+      const weaponTitleText = document.getElementById('weaponTitleText');
+      const ammoText = document.getElementById('ammoText');
+      const maxAmmoText = document.getElementById('maxAmmoText');
+      const scopePill = document.getElementById('scopePill');
+      const scopeStateText = document.getElementById('scopeStateText');
+
+      const pillRifle = document.getElementById('pillToolRifle');
+      const pillShotgun = document.getElementById('pillToolShotgun');
+      const pillCarbine = document.getElementById('pillToolCarbine');
+      const pillKnife = document.getElementById('pillToolKnife');
+
+      if (pillRifle) pillRifle.classList.toggle('active', gameState.activeTool === 'rifle');
+      if (pillShotgun) {
+        pillShotgun.classList.toggle('active', gameState.activeTool === 'shotgun');
+        pillShotgun.textContent = gameState.unlockedWeapons.shotgun ? '💥 [2] 샷건' : '💥 [2] 샷건🔒';
+      }
+      if (pillCarbine) {
+        pillCarbine.classList.toggle('active', gameState.activeTool === 'carbine');
+        pillCarbine.textContent = gameState.unlockedWeapons.carbine ? '⚡ [3] 카빈' : '⚡ [3] 카빈🔒';
+      }
+      if (pillKnife) pillKnife.classList.toggle('active', gameState.activeTool === 'knife');
+
+      if (gameState.activeTool === 'knife') {
+        if (weaponTitleText) weaponTitleText.textContent = '장비 (헌터 단검 · 전리품 채취)';
+        if (ammoText) ammoText.textContent = '🗡️';
+        if (maxAmmoText) maxAmmoText.textContent = '/ 내구도 ∞';
+        if (scopePill) scopePill.classList.remove('active');
+        if (scopeStateText) scopeStateText.textContent = '미지원';
+      } else {
+        const spec = WEAPON_SPECS[gameState.activeTool] || WEAPON_SPECS.rifle;
+        if (weaponTitleText) weaponTitleText.textContent = `장비 (${spec.name})`;
+        if (ammoText) {
+          ammoText.textContent = w.isReloading ? '장전중' : `${w.ammo}`;
+        }
+        if (maxAmmoText) maxAmmoText.textContent = `/ ${w.maxAmmo}`;
+        if (scopePill) scopePill.classList.toggle('active', Boolean(w.scoped));
+        if (scopeStateText) scopeStateText.textContent = w.scoped ? spec.scopeLabel : '1.4x';
+      }
+
+      // 보스 체력바 및 최대 경계도 게이지 & 레이더 갱신
+      const bossHud = document.getElementById('bossHud');
+      const activeBoss = gameState.world.animals.find((a) => a.isBoss && !a.dead);
+      if (bossHud) {
+        if (activeBoss) {
+          bossHud.classList.remove('hidden');
+          bossHud.classList.add('flex');
+          document.getElementById('bossTitleText').textContent = `${activeBoss.emoji} [BOSS] ${activeBoss.name}${activeBoss.enraged ? ' 🔥광폭화' : ''}`;
+          document.getElementById('bossHpText').textContent = `${Math.ceil(activeBoss.hp)} / ${activeBoss.maxHp}`;
+          document.getElementById('bossHpBar').style.width = `${Math.max(0, (activeBoss.hp / activeBoss.maxHp) * 100)}%`;
+        } else {
+          bossHud.classList.add('hidden');
+          bossHud.classList.remove('flex');
+        }
+      }
+
+      let maxAware = 0;
+      let awareAnimal = null;
+      const radarBlips = document.getElementById('radarBlips');
+      if (radarBlips) radarBlips.innerHTML = '';
+
+      gameState.world.animals.forEach((a) => {
+        if (a.dead) return;
+        if (a.awareness > maxAware) {
+          maxAware = a.awareness;
+          awareAnimal = a;
+        }
+        if (radarBlips) {
+          const dx = a.x - p.x;
+          const dz = a.z - p.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 75) {
+            let relAng = Math.atan2(dx, dz) - p.yaw;
+            while (relAng > Math.PI) relAng -= Math.PI * 2;
+            while (relAng < -Math.PI) relAng += Math.PI * 2;
+            const norm = Math.max(-1, Math.min(1, relAng / (Math.PI * 0.65)));
+            const leftPct = 50 + norm * 44;
+
+            const blip = document.createElement('div');
+            blip.style.position = 'absolute';
+            blip.style.left = `${leftPct}%`;
+            blip.style.top = '50%';
+            blip.style.transform = 'translate(-50%, -50%)';
+            blip.style.fontSize = a.isBoss ? '14px' : '11px';
+            blip.style.padding = '1px 3px';
+            blip.style.borderRadius = '999px';
+            blip.style.background = a.noticed ? 'rgba(220,38,38,0.65)' : 'rgba(15,23,42,0.6)';
+            blip.textContent = a.emoji;
+            radarBlips.appendChild(blip);
+          }
+        }
+      });
+
+      const threatDisplay = document.getElementById('threatDisplay');
+      if (threatDisplay) {
+        if (maxAware > 5 && awareAnimal) {
+          threatDisplay.style.opacity = '1';
+          document.getElementById('threatAnimalText').textContent = awareAnimal.noticed
+            ? `🚨 ${awareAnimal.isBoss ? awareAnimal.shortName : awareAnimal.name} 돌진 중!`
+            : `👁️ ${awareAnimal.name} 경계 감지`;
+          document.getElementById('threatPercentText').textContent = `${Math.round(maxAware)}%`;
+          const bar = document.getElementById('threatBar');
+          bar.style.width = `${Math.round(maxAware)}%`;
+          bar.style.backgroundColor = awareAnimal.noticed ? '#ef4444' : '#fbbf24';
+        } else {
+          threatDisplay.style.opacity = '0';
+        }
+      }
+    }
+
+    // ==========================================================================
+    // 9. 1인칭 달빛 숲 & 사실적인 야생동물 렌더링 파이프라인
+    // ==========================================================================
+    function renderScene() {
+      ctx.clearRect(0, 0, screenW, screenH);
+
+      // 1) 밤하늘, 보름달, 안개 및 달빛 지면
+      drawSkyAndMoon();
+
+      // 2) 깊이 정렬(원거리 -> 근거리)된 나무, 바위, 풀숲, 야생동물 렌더링
+      const renderables = [];
+
+      gameState.world.trees.forEach((t) => {
+        const proj = projectWorld(t.x, 0, t.z);
+        if (proj && proj.zCam < 130 && proj.sx > -220 && proj.sx < screenW + 220) {
+          renderables.push({ type: 'tree', zCam: proj.zCam, data: t, proj });
+        }
+      });
+
+      gameState.world.rocks.forEach((r) => {
+        const proj = projectWorld(r.x, 0, r.z);
+        if (proj && proj.zCam < 120 && proj.sx > -160 && proj.sx < screenW + 160) {
+          renderables.push({ type: 'rock', zCam: proj.zCam, data: r, proj });
+        }
+      });
+
+      gameState.world.grassPatches.forEach((g) => {
+        const proj = projectWorld(g.x, 0, g.z);
+        if (proj && proj.zCam < 85 && proj.sx > -200 && proj.sx < screenW + 200) {
+          renderables.push({ type: 'grass', zCam: proj.zCam, data: g, proj });
+        }
+      });
+
+      gameState.world.animals.forEach((a) => {
+        const proj = projectWorld(a.x, 0, a.z);
+        if (proj && proj.zCam < 120 && proj.sx > -260 && proj.sx < screenW + 260) {
+          renderables.push({ type: 'animal', zCam: proj.zCam, data: a, proj });
+        }
+      });
+
+      renderables.sort((a, b) => b.zCam - a.zCam);
+
+      renderables.forEach((item) => {
+        if (item.type === 'tree') drawTree(item.data, item.proj);
+        else if (item.type === 'rock') drawRock(item.data, item.proj);
+        else if (item.type === 'grass') drawGrassPatch(item.data, item.proj);
+        else if (item.type === 'animal') drawRealisticAnimal(item.data, item.proj);
+      });
+
+      // 3) 손전등 빔 조명 효과
+      if (gameState.player.flashlightOn && !(gameState.weapon && gameState.weapon.scoped)) {
+        const beamX = gameState.mouse.x;
+        const beamY = gameState.mouse.y;
+        const beamRadius = Math.min(screenW, screenH) * 0.42;
+        const beamGrad = ctx.createRadialGradient(beamX, beamY, 12, beamX, beamY, beamRadius);
+        beamGrad.addColorStop(0, 'rgba(224, 242, 254, 0.18)');
+        beamGrad.addColorStop(0.55, 'rgba(186, 230, 253, 0.07)');
+        beamGrad.addColorStop(1, 'rgba(186, 230, 253, 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.fillRect(0, 0, screenW, screenH);
+      }
+
+      // 4) 풀숲 은신 시 화면 하단 가장자리 잎사귀 비네트
+      if (gameState.player.inTallGrass) {
+        drawForegroundGrassVignette();
+      }
+
+      // 5) 적 공격 방향성 붉은 아우라
+      drawDirectionalAuras();
+
+      // 6) 파티클 효과
+      gameState.world.particles.forEach((pt) => {
+        ctx.save();
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = Math.max(0, Math.min(1, pt.life * 2));
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 7) 데미지 부유 텍스트
+      gameState.world.floatingTexts.forEach((ft) => {
+        ctx.save();
+        ctx.font = '900 14px Noto Sans KR, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ft.color;
+        ctx.shadowColor = '#020617';
+        ctx.shadowBlur = 6;
+        ctx.globalAlpha = Math.max(0, Math.min(1, ft.life * 1.4));
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      });
+
+      // 8) 1인칭 소총, 샷건, 카빈, 사냥칼 또는 스코프 오버레이
+      drawFirstPersonWeapon();
+    }
+
+    function drawSkyAndMoon() {
+      const p = gameState.player;
+      const bLv = gameState.brightnessLevel;
+      const horizonY = screenH * 0.52 + p.pitch * screenH * 0.65;
+
+      const skyTop = bLv === 0 ? '#050b18' : (bLv === 1 ? '#0c1b36' : '#162d54');
+      const skyBottom = bLv === 0 ? '#11223d' : (bLv === 1 ? '#1e3a63' : '#2d538a');
+
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, Math.max(100, horizonY));
+      skyGrad.addColorStop(0, skyTop);
+      skyGrad.addColorStop(1, skyBottom);
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, screenW, Math.max(0, horizonY + 2));
+
+      // 보름달 렌더링 (카메라 좌우 회전 반영)
+      let moonRelYaw = -p.yaw;
+      while (moonRelYaw > Math.PI) moonRelYaw -= Math.PI * 2;
+      while (moonRelYaw < -Math.PI) moonRelYaw += Math.PI * 2;
+      const moonX = screenW * 0.5 + moonRelYaw * screenW * 0.65;
+      const moonY = horizonY - screenH * 0.27;
+
+      const halo = ctx.createRadialGradient(moonX, moonY, 18, moonX, moonY, 175);
+      halo.addColorStop(0, 'rgba(224, 242, 254, 0.42)');
+      halo.addColorStop(0.5, 'rgba(147, 197, 253, 0.14)');
+      halo.addColorStop(1, 'rgba(147, 197, 253, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 175, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 달빛 반사 숲 지면
+      const groundTop = bLv === 0 ? '#091512' : (bLv === 1 ? '#10241e' : '#18362d');
+      const groundBot = bLv === 0 ? '#040a08' : (bLv === 1 ? '#081410' : '#0d211b');
+      const groundGrad = ctx.createLinearGradient(0, horizonY, 0, screenH);
+      groundGrad.addColorStop(0, groundTop);
+      groundGrad.addColorStop(1, groundBot);
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, horizonY, screenW, screenH - horizonY);
+
+      // 지평선 은은한 달빛 안개띠
+      const fogGrad = ctx.createLinearGradient(0, horizonY - 35, 0, horizonY + 55);
+      fogGrad.addColorStop(0, 'rgba(148, 163, 184, 0)');
+      fogGrad.addColorStop(0.5, bLv === 2 ? 'rgba(186, 230, 253, 0.22)' : 'rgba(148, 163, 184, 0.14)');
+      fogGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = fogGrad;
+      ctx.fillRect(0, horizonY - 35, screenW, 90);
+    }
+
+    function drawTree(t, proj) {
+      const s = proj.scale;
+      const baseX = proj.sx;
+      const baseY = proj.sy;
+      const h = t.height * s;
+      const w = t.radius * s * 1.45;
+
+      // 지면 그림자
+      ctx.fillStyle = 'rgba(2, 6, 12, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(baseX, baseY, w * 0.9, w * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 나무 줄기
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(baseX - w * 0.12, baseY - h * 0.28, w * 0.24, h * 0.28);
+
+      // 3단 침엽수 수관 + 달빛 림라이트
+      for (let tier = 0; tier < 3; tier++) {
+        const tierBottom = baseY - h * (0.22 + tier * 0.22);
+        const tierTop = baseY - h * (0.58 + tier * 0.21);
+        const tierHalfW = w * (1.0 - tier * 0.24);
+
+        ctx.fillStyle = tier === 0 ? '#071c16' : (tier === 1 ? '#0a261e' : '#0f3328');
+        ctx.beginPath();
+        ctx.moveTo(baseX, tierTop);
+        ctx.lineTo(baseX - tierHalfW, tierBottom);
+        ctx.lineTo(baseX + tierHalfW, tierBottom);
+        ctx.closePath();
+        ctx.fill();
+
+        // 달빛 림 하이라이트
+        ctx.strokeStyle = 'rgba(125, 211, 252, 0.18)';
+        ctx.lineWidth = Math.max(1, s * 0.03);
+        ctx.beginPath();
+        ctx.moveTo(baseX, tierTop);
+        ctx.lineTo(baseX - tierHalfW, tierBottom);
+        ctx.stroke();
+      }
+    }
+
+    function drawRock(r, proj) {
+      const s = proj.scale * r.size;
+      const x = proj.sx;
+      const y = proj.sy;
+
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(x - s * 0.85, y);
+      ctx.lineTo(x - s * 0.55, y - s * 0.58);
+      ctx.lineTo(x + s * 0.15, y - s * 0.72);
+      ctx.lineTo(x + s * 0.82, y - s * 0.32);
+      ctx.lineTo(x + s * 0.92, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+      ctx.lineWidth = Math.max(1, s * 0.03);
+      ctx.stroke();
+    }
+
+    function drawGrassPatch(g, proj) {
+      const s = proj.scale;
+      const x = proj.sx;
+      const y = proj.sy;
+      const sway = Math.sin(gameState.time * 2.1 + g.seed) * s * 0.14;
+
+      for (let i = 0; i < 9; i++) {
+        const offset = ((i / 8) - 0.5) * s * 2.4;
+        const bladeH = s * (0.75 + ((i * 19) % 5) * 0.12);
+        ctx.strokeStyle = i % 2 === 0 ? '#065f46' : '#059669';
+        ctx.lineWidth = Math.max(1.5, s * 0.06);
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y);
+        ctx.quadraticCurveTo(x + offset + sway * 0.5, y - bladeH * 0.55, x + offset + sway, y - bladeH);
+        ctx.stroke();
+      }
+    }
+
+    function drawForegroundGrassVignette() {
+      const grad = ctx.createLinearGradient(0, screenH * 0.76, 0, screenH);
+      grad.addColorStop(0, 'rgba(6, 78, 59, 0)');
+      grad.addColorStop(1, 'rgba(6, 78, 59, 0.36)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, screenH * 0.76, screenW, screenH * 0.24);
+    }
+
+    function drawRealisticAnimal(a, proj) {
+      const s = proj.scale * a.scale * 0.85;
+      const x = proj.sx;
+      const y = proj.sy;
+
+      // 카메라 기준 동물의 상대적 방향(정면/측면 원근 비율)
+      let relAngle = a.facing - gameState.player.yaw;
+      while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+      while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+      const sideFactor = Math.sin(relAngle); // -1 좌측면, 0 정/후면, +1 우측면
+      const dirSign = Math.abs(sideFactor) < 0.2 ? 1 : Math.sign(sideFactor);
+      const profileScale = 0.58 + Math.abs(sideFactor) * 0.42;
+
+      ctx.save();
+
+      // 1) 공격 전 경고 붉은 지면 파동
+      if (!a.dead && a.windupTimer > 0) {
+        const prog = 1 - a.windupTimer / Math.max(0.1, a.windupMax);
+        ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + prog * 0.55})`;
+        ctx.lineWidth = Math.max(2, s * 0.06);
+        ctx.beginPath();
+        ctx.ellipse(x, y, s * (0.9 + prog * 0.55), s * 0.28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 2) 지면 그림자
+      ctx.fillStyle = 'rgba(2, 6, 17, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, s * 0.95 * profileScale, s * 0.24, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 쓰러진(사망) 동물 렌더링
+      if (a.dead) {
+        ctx.translate(x, y - s * 0.22);
+        ctx.rotate(dirSign * 0.14);
+        ctx.fillStyle = a.coatPrimary;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s * 0.95 * profileScale, s * 0.34, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = a.coatSecondary;
+        ctx.beginPath();
+        ctx.ellipse(dirSign * s * 0.65 * profileScale, -s * 0.05, s * 0.32, s * 0.24, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 채취 가능 안내 표시
+        if (!a.harvested && proj.zCam < 16) {
+          ctx.save();
+          ctx.font = '800 12px Noto Sans KR, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#fde047';
+          ctx.shadowColor = '#020617';
+          ctx.shadowBlur = 5;
+          ctx.fillText(`🗡️ [E] ${a.isBoss ? a.shortName : a.name} 채취 (고기 ${a.meatYield} · 가죽 ${a.hideYield})`, x, y - s * 0.72);
+          ctx.restore();
+        }
+        return;
+      }
+
+      const rearLift = a.windupTimer > 0 ? s * 0.26 : 0;
+      const stride = Math.sin(a.animPhase) * s * 0.22 * profileScale;
+
+      // 3) 뒷다리 & 앞다리 다관절 렌더링
+      const legPairs = [
+        { ox: -dirSign * s * 0.48 * profileScale, phase: 1, front: false },
+        { ox: dirSign * s * 0.46 * profileScale, phase: -1, front: true }
+      ];
+
+      legPairs.forEach((lp) => {
+        const swing = stride * lp.phase;
+        const hipX = x + lp.ox;
+        const hipY = y - s * 0.56 - (lp.front ? rearLift : 0);
+        const kneeX = hipX + swing * 0.6;
+        const kneeY = y - s * 0.28 - (lp.front ? rearLift * 1.15 : 0);
+        const pawX = hipX + swing;
+        const pawY = y - (lp.front ? rearLift * 1.3 : 0);
+
+        ctx.strokeStyle = a.coatPrimary;
+        ctx.lineWidth = Math.max(2.5, s * (a.id.includes('bear') ? 0.16 : 0.10));
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(hipX, hipY);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(pawX, pawY);
+        ctx.stroke();
+
+        // 발톱 / 발굽 디테일
+        ctx.fillStyle = a.id === 'deer' ? '#0f172a' : '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(pawX + dirSign * s * 0.04, pawY, Math.max(1.5, s * 0.045), 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 4) 꼬리
+      ctx.strokeStyle = a.coatSecondary;
+      ctx.lineWidth = Math.max(2, s * (a.id.includes('wolf') ? 0.14 : 0.08));
+      ctx.beginPath();
+      const tailBaseX = x - dirSign * s * 0.72 * profileScale;
+      const tailBaseY = y - s * 0.68;
+      ctx.moveTo(tailBaseX, tailBaseY);
+      ctx.quadraticCurveTo(
+        tailBaseX - dirSign * s * 0.26 * profileScale,
+        tailBaseY - s * 0.12,
+        tailBaseX - dirSign * s * 0.34 * profileScale,
+        tailBaseY + (a.id.includes('wolf') ? s * 0.18 : -s * 0.14)
+      );
+      ctx.stroke();
+
+      // 5) 근육질 몸통 & 털 명암
+      const bodyCenterY = y - s * 0.66 - rearLift * 0.5;
+      const bodyRx = s * 0.78 * profileScale;
+      const bodyRy = s * (a.id.includes('bear') ? 0.44 : 0.34);
+
+      const bodyGrad = ctx.createLinearGradient(x, bodyCenterY - bodyRy, x, bodyCenterY + bodyRy);
+      bodyGrad.addColorStop(0, a.hitFlash > 0 ? '#fca5a5' : a.coatHighlight);
+      bodyGrad.addColorStop(0.35, a.hitFlash > 0 ? '#ef4444' : a.coatSecondary);
+      bodyGrad.addColorStop(1, a.coatPrimary);
+
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(x, bodyCenterY, bodyRx, bodyRy, -dirSign * (a.windupTimer > 0 ? 0.22 : 0.03), 0, Math.PI * 2);
+      ctx.fill();
+
+      // 곰의 어깨 근육 혹 / 늑대의 풍성한 목 갈기
+      if (a.id.includes('bear')) {
+        ctx.fillStyle = a.coatSecondary;
+        ctx.beginPath();
+        ctx.arc(x + dirSign * s * 0.35 * profileScale, bodyCenterY - bodyRy * 0.68, s * 0.26, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (a.id.includes('wolf')) {
+        ctx.fillStyle = a.coatHighlight;
+        ctx.beginPath();
+        ctx.arc(x + dirSign * s * 0.48 * profileScale, bodyCenterY - bodyRy * 0.25, s * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 6) 머리, 주둥이, 귀, 뿔
+      const headX = x + dirSign * s * (a.id === 'deer' ? 0.76 : 0.72) * profileScale;
+      const headY = bodyCenterY - bodyRy * (a.id === 'deer' ? 0.92 : 0.45) - rearLift * 0.75;
+
+      if (a.id === 'deer') {
+        // 수사슴의 우아한 긴 목
+        ctx.strokeStyle = a.coatSecondary;
+        ctx.lineWidth = Math.max(3, s * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(x + dirSign * s * 0.48 * profileScale, bodyCenterY - bodyRy * 0.25);
+        ctx.lineTo(headX, headY);
+        ctx.stroke();
+      }
+
+      // 두상
+      ctx.fillStyle = a.hitFlash > 0 ? '#f87171' : a.coatSecondary;
+      ctx.beginPath();
+      ctx.ellipse(headX, headY, s * 0.26, s * 0.21, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 주둥이 & 포효 시 송곳니
+      const snoutX = headX + dirSign * s * 0.24 * profileScale;
+      const snoutY = headY + s * 0.05;
+      ctx.fillStyle = a.coatPrimary;
+      ctx.beginPath();
+      ctx.ellipse(snoutX, snoutY, s * 0.15, s * 0.10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if ((a.noticed || a.windupTimer > 0) && a.id !== 'deer') {
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(snoutX, snoutY + s * 0.04);
+        ctx.lineTo(snoutX + dirSign * s * 0.04, snoutY + s * 0.13);
+        ctx.lineTo(snoutX + dirSign * s * 0.08, snoutY + s * 0.04);
+        ctx.fill();
+      }
+
+      // 귀
+      ctx.fillStyle = a.coatPrimary;
+      ctx.beginPath();
+      ctx.arc(headX - dirSign * s * 0.08, headY - s * 0.19, s * (a.id.includes('bear') ? 0.08 : 0.10), 0, Math.PI * 2);
+      ctx.fill();
+
+      // 수사슴 다지 뿔 또는 서리군주 펜리르 빙결 뿔
+      if (a.id === 'deer' || a.id === 'boss_wolf') {
+        ctx.strokeStyle = a.id === 'boss_wolf' ? '#7dd3fc' : '#fde68a';
+        ctx.lineWidth = Math.max(1.5, s * 0.04);
+        [-1, 1].forEach((side) => {
+          const baseAx = headX - dirSign * s * 0.05;
+          const baseAy = headY - s * 0.18;
+          ctx.beginPath();
+          ctx.moveTo(baseAx, baseAy);
+          ctx.lineTo(baseAx + side * s * 0.22, baseAy - s * 0.56);
+          ctx.moveTo(baseAx + side * s * 0.12, baseAy - s * 0.30);
+          ctx.lineTo(baseAx + side * s * 0.28, baseAy - s * 0.40);
+          ctx.moveTo(baseAx + side * s * 0.2, baseAy - s * 0.45);
+          ctx.lineTo(baseAx + side * s * 0.2 + dirSign * s * 0.16, baseAy - s * 0.64);
+          ctx.stroke();
+        });
+      }
+
+      // 7) 눈 (발각/경고 시 강렬한 안광, 평상시 달빛 반사)
+      const eyeX = headX + dirSign * s * 0.11 * profileScale;
+      const eyeY = headY - s * 0.04;
+      ctx.fillStyle = a.id === 'boss_wolf'
+        ? '#38bdf8'
+        : ((a.noticed || a.windupTimer > 0) ? '#ef4444' : '#fde047');
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, Math.max(1.8, s * 0.045), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      // 8) 머리 위 체력바 및 공격 경고 배지
+      if (proj.zCam < 48) {
+        const barW = Math.max(46, s * 1.15);
+        const barH = 5;
+        const barX = x - barW * 0.5;
+        const barY = y - s * 1.38 - rearLift;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.75)';
+        ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+        ctx.fillStyle = a.isBoss ? '#f43f5e' : (a.noticed ? '#ef4444' : '#34d399');
+        ctx.fillRect(barX, barY, barW * Math.max(0, a.hp / a.maxHp), barH);
+
+        ctx.font = '800 11px Noto Sans KR, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = a.windupTimer > 0 ? '#fca5a5' : '#f1f5f9';
+        ctx.shadowColor = '#020617';
+        ctx.shadowBlur = 4;
+        const label = a.windupTimer > 0
+          ? `⚡ 공격 예고! (${a.isBoss ? a.shortName : a.name})`
+          : `${a.emoji} ${a.isBoss ? a.shortName : a.name}`;
+        ctx.fillText(label, x, barY - 5);
+        ctx.restore();
+      }
+    }
+
+    function drawFirstPersonWeapon() {
+      const w = gameState.weapon;
+      const p = gameState.player;
+
+      // 스코프 확대 상태 오버레이
+      if (w && w.scoped && gameState.activeTool !== 'knife') {
+        const cx = screenW * 0.5;
+        const cy = screenH * 0.5;
+        const radius = Math.min(screenW, screenH) * 0.36;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(2, 6, 17, 0.86)';
+        ctx.beginPath();
+        ctx.rect(0, 0, screenW, screenH);
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 십자 조준선
+        ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - radius, cy);
+        ctx.lineTo(cx + radius, cy);
+        ctx.moveTo(cx, cy - radius);
+        ctx.lineTo(cx, cy + radius);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      // 비확대 시 자유 마우스 커서 조준선
+      const aimX = gameState.mouse.x;
+      const aimY = gameState.mouse.y;
+      const targetLock = gameState.activeTool !== 'knife' ? findBestAimTarget(aimX, aimY, p.aimAssistRadius) : null;
+
+      ctx.save();
+      ctx.strokeStyle = targetLock ? '#facc15' : 'rgba(224, 242, 254, 0.85)';
+      ctx.lineWidth = targetLock ? 2 : 1.5;
+      const gap = targetLock ? 6 : 9;
+      const len = 10;
+
+      ctx.beginPath();
+      ctx.moveTo(aimX - gap - len, aimY);
+      ctx.lineTo(aimX - gap, aimY);
+      ctx.moveTo(aimX + gap, aimY);
+      ctx.lineTo(aimX + gap + len, aimY);
+      ctx.moveTo(aimX, aimY - gap - len);
+      ctx.lineTo(aimX, aimY - gap);
+      ctx.moveTo(aimX, aimY + gap);
+      ctx.lineTo(aimX, aimY + gap + len);
+      ctx.stroke();
+
+      if (targetLock) {
+        ctx.font = '800 11px Noto Sans KR, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = targetLock.isHeadshot ? '#fde047' : '#38bdf8';
+        ctx.fillText(targetLock.isHeadshot ? '🎯 급소 포착!' : '🎯 조준 포착', aimX, aimY - 22);
+      }
+      ctx.restore();
+
+      // 우측 하단 1인칭 무기/사냥칼 모델 렌더링
+      const baseX = screenW * 0.72 + (aimX - screenW * 0.5) * 0.14;
+      const baseY = screenH + p.recoilKick * 28 + Math.sin(p.walkBob) * 3;
+
+      ctx.save();
+      if (gameState.activeTool === 'knife') {
+        const swingAngle = -0.35 - Math.sin(gameState.knifeSwing * Math.PI) * 1.1;
+        ctx.translate(baseX - 30, baseY - 120);
+        ctx.rotate(swingAngle);
+
+        // 칼날
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-16, -135);
+        ctx.lineTo(8, -110);
+        ctx.lineTo(14, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // 손잡이
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(-6, 0, 22, 58);
+      } else {
+        const gunColor = gameState.activeTool === 'shotgun'
+          ? '#451a03'
+          : (gameState.activeTool === 'carbine' ? '#1e293b' : '#334155');
+        ctx.translate(baseX, baseY);
+        ctx.rotate(-0.22 - p.recoilKick * 0.08);
+
+        // 총열 및 몸통
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-14, -230, 22, 160);
+        ctx.fillStyle = gunColor;
+        ctx.fillRect(-20, -110, 36, 130);
+      }
+      ctx.restore();
+    }
+
+    function drawDirectionalAuras() {
+      const p = gameState.player;
+      gameState.world.attackAuras.forEach((aura) => {
+        const dx = aura.x - p.x;
+        const dz = aura.z - p.z;
+        let relAng = Math.atan2(dx, dz) - p.yaw;
+        while (relAng > Math.PI) relAng -= Math.PI * 2;
+        while (relAng < -Math.PI) relAng += Math.PI * 2;
+
+        const alpha = Math.max(0, aura.life / aura.maxLife) * 0.72;
+        const edgeX = screenW * 0.5 + Math.sin(relAng) * screenW * 0.46;
+        const edgeY = relAng > Math.PI * 0.5 || relAng < -Math.PI * 0.5 ? screenH * 0.9 : screenH * 0.5;
+
+        ctx.save();
+        const grad = ctx.createRadialGradient(edgeX, edgeY, 10, edgeX, edgeY, 170);
+        grad.addColorStop(0, `rgba(239, 68, 68, ${alpha})`);
+        grad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, screenW, screenH);
+        ctx.restore();
+      });
+    }
+
+    // ==========================================================================
+    // 10. 메인 시뮬레이션 업데이트 루프
+    // ==========================================================================
+    function update(dt) {
+      if (!isPlaying || isGameOver || gameState.isShopOpen) return;
+      gameState.time += dt;
+      const p = gameState.player;
+      const w = gameState.weapon;
+
+      // 무기 쿨다운 및 재장전 타이머
+      if (w.fireCooldown > 0) w.fireCooldown = Math.max(0, w.fireCooldown - dt);
+      if (p.recoilKick > 0) p.recoilKick = Math.max(0, p.recoilKick - dt * 5.5);
+      if (p.screenShake > 0) p.screenShake = Math.max(0, p.screenShake - dt * 1.8);
+      if (gameState.knifeSwing > 0) gameState.knifeSwing = Math.max(0, gameState.knifeSwing - dt * 3.8);
+
+      if (w.isReloading) {
+        w.reloadTimer -= dt;
+        if (w.reloadTimer <= 0) {
+          w.isReloading = false;
+          w.ammo = w.maxAmmo;
+        }
+      }
+
+      // 반자동 카빈 좌클릭 유지 시 연속 사격 지원
+      if (gameState.mouse.isDown && gameState.activeTool === 'carbine' && !w.isReloading && w.fireCooldown <= 0 && w.ammo > 0) {
+        fireWeapon();
+      }
+      if (keys['ArrowLeft']) p.yaw -= 1.45 * dt;
+      if (keys['ArrowRight']) p.yaw += 1.45 * dt;
+
+      // 화면 외곽 영역 부드러운 시점 회전 및 상하 시점 추종
+      const normX = (gameState.mouse.x - screenW * 0.5) / Math.max(1, screenW * 0.5);
+      const normY = (gameState.mouse.y - screenH * 0.5) / Math.max(1, screenH * 0.5);
+      if (Math.abs(normX) > 0.45) {
+        const edgeRatio = (Math.abs(normX) - 0.45) / 0.55;
+        p.yaw += Math.sign(normX) * edgeRatio * 1.15 * dt;
+      }
+      const targetPitch = -normY * 0.22;
+      p.pitch += (targetPitch - p.pitch) * Math.min(1, dt * 6);
+
+      // WASD 이동
+      let moveForward = 0;
+      let moveRight = 0;
+      if (keys['KeyW'] || keys['ArrowUp']) moveForward += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveForward -= 1;
+      if (keys['KeyD']) moveRight += 1;
+      if (keys['KeyA']) moveRight -= 1;
+
+      const isMoving = moveForward !== 0 || moveRight !== 0;
+      if (isMoving) {
+        const len = Math.hypot(moveForward, moveRight);
+        moveForward /= len;
+        moveRight /= len;
+
+        const speed = p.isCrouching ? p.crouchSpeed : p.moveSpeed;
+        const sinY = Math.sin(p.yaw);
+        const cosY = Math.cos(p.yaw);
+
+        p.x += (sinY * moveForward + cosY * moveRight) * speed * dt;
+        p.z += (cosY * moveForward - sinY * moveRight) * speed * dt;
+        p.walkBob += dt * (p.isCrouching ? 6 : 10);
+      }
+
+      // 풀숲 은폐 여부 판정
+      p.inTallGrass = gameState.world.grassPatches.some(
+        (g) => Math.hypot(p.x - g.x, p.z - g.z) <= g.radius
+      );
+
+      // 비전투 & 은신 중 서서히 체력 회복
+      if (gameState.time - p.lastCombatTime > 5.0 && p.hp < p.maxHp) {
+        const healRate = (p.isCrouching && p.inTallGrass) ? 4.5 : 2.0;
+        p.hp = Math.min(p.maxHp, p.hp + healRate * dt);
+      }
+
+      // 야생동물 & 보스 AI 업데이트
+      let aliveCount = 0;
+      for (let i = gameState.world.animals.length - 1; i >= 0; i--) {
+        const a = gameState.world.animals[i];
+        if (a.hitFlash > 0) a.hitFlash = Math.max(0, a.hitFlash - dt);
+
+        if (a.dead) {
+          a.deathTimer -= dt;
+          if (a.deathTimer <= 0) {
+            gameState.world.animals.splice(i, 1);
+          }
+          continue;
+        }
+
+        aliveCount++;
+        const dx = p.x - a.x;
+        const dz = p.z - a.z;
+        const dist = Math.hypot(dx, dz);
+
+        if (a.noticed) {
+          if (a.attackCooldown > 0) a.attackCooldown -= dt;
+
+          // 공격 전 경고(선딜레이) 상태 처리
+          if (a.windupTimer > 0) {
+            a.windupTimer -= dt;
+            const dirX = dx / Math.max(0.01, dist);
+            const dirZ = dz / Math.max(0.01, dist);
+            a.facing = Math.atan2(dirX, dirZ);
+
+            // 예고 타이머 종료 시 실제 타격 판정 (플레이어가 뒤로 물러나면 회피 성공!)
+            if (a.windupTimer <= 0) {
+              a.windupTimer = 0;
+              a.attackCooldown = a.isBoss ? (a.enraged ? 0.48 : 0.68) : 1.45;
+              if (dist < 3.45) {
+                p.hp = Math.max(0, p.hp - a.damage);
+                p.screenShake = a.isBoss ? 0.28 : 0.2;
+                p.lastCombatTime = gameState.time;
+                playSound('hurt');
+
+                const attackerLabel = a.isBoss ? a.shortName : a.name;
+                gameState.world.attackAuras.push({
+                  x: a.x,
+                  z: a.z,
+                  emoji: a.emoji,
+                  name: attackerLabel,
+                  life: 1.45,
+                  maxLife: 1.45
+                });
+
+                const dmgEl = document.getElementById('damageOverlay');
+                dmgEl.classList.remove('hit-flash');
+                void dmgEl.offsetWidth;
+                dmgEl.classList.add('hit-flash');
+
+                showBanner(`🩸 ${attackerLabel}의 공격 적중! (-${a.damage} HP)`);
+
+                if (p.hp <= 0) {
+                  triggerGameOver();
+                  return;
+                }
+              } else {
+                showBanner(`💨 ${a.isBoss ? a.shortName : a.name}의 공격을 회피했습니다!`);
+              }
+            }
+          } else {
+            // 플레이어를 향해 방향을 틀고 돌진
+            const dirX = dx / Math.max(0.01, dist);
+            const dirZ = dz / Math.max(0.01, dist);
+            a.facing = Math.atan2(dirX, dirZ);
+            if (dist > 2.35) {
+              a.x += dirX * a.speed * dt;
+              a.z += dirZ * a.speed * dt;
+            }
+            a.animPhase += dt * 12;
+
+            // 사거리 진입 시 즉시 때리지 않고 공격 전 경고(선딜레이) 발동
+            if (dist < 3.05 && a.attackCooldown <= 0) {
+              a.windupMax = a.isBoss ? (a.enraged ? 0.40 : 0.56) : 0.95;
+              a.windupTimer = a.windupMax;
+              playSound('warn');
+              showBanner(`⚡ 경고! ${a.isBoss ? a.shortName : a.name}이(가) 공격을 준비합니다! 뒤로 물러나세요!`);
+            }
+          }
+        } else {
+          // 평상시 숲 배회 및 시각적 눈치(Awareness) 계산
+          a.wanderTimer -= dt;
+          if (a.wanderTimer <= 0) {
+            a.wanderTimer = 2.5 + Math.random() * 4.0;
+            a.wanderAngle += (Math.random() - 0.5) * 2.2;
+          }
+          a.facing = a.wanderAngle;
+          a.x += Math.sin(a.wanderAngle) * a.wanderSpeed * dt;
+          a.z += Math.cos(a.wanderAngle) * a.wanderSpeed * dt;
+          a.animPhase += dt * 5.2;
+
+          // 감지 확률 증감 (풀숲 + 엎드림 시 은신 효과 극대화)
+          if (dist < 34) {
+            let gain = ((34 - dist) / 34) * a.baseSens * p.stealthFactor;
+            if (p.inTallGrass && p.isCrouching) gain *= 0.08;
+            else if (p.inTallGrass || p.isCrouching) gain *= 0.35;
+            if (p.flashlightOn && dist < 24) gain *= 1.45;
+            if (isMoving && !p.isCrouching) gain *= 1.5;
+
+            a.awareness = Math.min(100, a.awareness + gain * dt);
+            if (a.awareness >= 100) {
+              a.noticed = true;
+              playSound('roar');
+              showBanner(`⚠️ ${a.name}에게 발각되었습니다! 조준 사격하거나 회피하세요!`);
+            }
+          } else {
+            a.awareness = Math.max(0, a.awareness - 8 * dt);
+          }
+        }
+      }
+
+      // 맵에 동물이 6마리 미만이면 새로 보충
+      while (aliveCount < 6) {
+        spawnAnimal(false);
+        aliveCount++;
+      }
+
+      // 파티클, 부유 텍스트, 방향성 아우라 수명 업데이트
+      for (let i = gameState.world.particles.length - 1; i >= 0; i--) {
+        const pt = gameState.world.particles[i];
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.life -= dt;
+        if (pt.life <= 0) gameState.world.particles.splice(i, 1);
+      }
+
+      for (let i = gameState.world.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = gameState.world.floatingTexts[i];
+        ft.y -= 30 * dt;
+        ft.life -= dt;
+        if (ft.life <= 0) gameState.world.floatingTexts.splice(i, 1);
+      }
+
+      for (let i = gameState.world.attackAuras.length - 1; i >= 0; i--) {
+        const aura = gameState.world.attackAuras[i];
+        aura.life -= dt;
+        if (aura.life <= 0) gameState.world.attackAuras.splice(i, 1);
+      }
+
+      updateHUD();
+    }
+
+    // ==========================================================================
+    // 12. 키보드, 마우스, 터치 입력 및 메인 게임 루프 시작
+    // ==========================================================================
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+      keys[e.code] = true;
+
+      if (e.code === 'Escape') {
+        const exportModal = document.getElementById('exportModal');
+        if (exportModal && exportModal.style.display === 'flex') {
+          closeExportModal();
+          return;
+        }
+        if (gameState.isShopOpen) {
+          closeShop();
+          return;
+        }
+        if (gameState.weapon && gameState.weapon.scoped) {
+          gameState.weapon.scoped = false;
+          updateHUD();
+        }
+        return;
+      }
+
+      if (!isPlaying || isGameOver) return;
+
+      if (e.code === 'KeyU') {
+        toggleShop();
+        return;
+      }
+      if (gameState.isShopOpen) return;
+
+      if (e.code === 'Digit1') switchTool('rifle');
+      else if (e.code === 'Digit2') switchTool('shotgun');
+      else if (e.code === 'Digit3') switchTool('carbine');
+      else if (e.code === 'Digit4') switchTool('knife');
+      else if (e.code === 'KeyR') reloadWeapon();
+      else if (e.code === 'KeyE') tryHarvestNearby();
+      else if (e.code === 'KeyC') toggleCrouch();
+      else if (e.code === 'KeyF') toggleFlashlight();
+      else if (e.code === 'KeyB') summonWithOwnedKey();
+      else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') toggleScope();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const dx = e.clientX - gameState.mouse.lastX;
+      gameState.mouse.x = e.clientX;
+      gameState.mouse.y = e.clientY;
+      gameState.mouse.lastX = e.clientX;
+      gameState.mouse.lastY = e.clientY;
+
+      if (isPlaying && !isGameOver && !gameState.isShopOpen) {
+        gameState.player.yaw += dx * 0.0012;
+      }
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      ensureAudio();
+      if (!isPlaying || isGameOver || gameState.isShopOpen) return;
+      if (e.button === 0) {
+        gameState.mouse.isDown = true;
+        fireWeapon();
+      } else if (e.button === 2) {
+        toggleScope();
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        gameState.mouse.isDown = false;
+      }
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      ensureAudio();
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        gameState.mouse.x = t.clientX;
+        gameState.mouse.y = t.clientY;
+        gameState.mouse.lastX = t.clientX;
+        gameState.mouse.lastY = t.clientY;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        const dx = t.clientX - gameState.mouse.lastX;
+        gameState.mouse.x = t.clientX;
+        gameState.mouse.y = t.clientY;
+        gameState.mouse.lastX = t.clientX;
+        gameState.mouse.lastY = t.clientY;
+        if (isPlaying && !isGameOver && !gameState.isShopOpen) {
+          gameState.player.yaw += dx * 0.0024;
+        }
+      }
+    }, { passive: true });
+
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min(0.05, Math.max(0.001, (timestamp - lastTimestamp) / 1000));
+      lastTimestamp = timestamp;
+
+      update(dt);
+      renderScene();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = function () {
+      resizeCanvas();
+      applyUpgradeStats();
+      updateHUD();
+      lastTimestamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+
+</body></html>

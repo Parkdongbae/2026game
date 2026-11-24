@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T04:37:21.706Z",
+  "updatedAt": "2026-11-24T05:13:29.653Z",
   "games": [
     {
       "id": "2105",
@@ -13,6 +13,19 @@
       "size": 120813,
       "addedAt": "2026-11-24T01:19:09.149Z",
       "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "2203",
+      "studentNo": "2203",
+      "name": "김태윤",
+      "title": "엑소더스 궤도 방정식: 신세계 항법 (Exodus Orbital Navigation)",
+      "file": "2203.html",
+      "driveId": "1y1y2dddt6q6Iu_yh6PkJjc-ApznriDA6",
+      "sourceName": "teayun's  - 2203김태윤.html",
+      "hash": "9eba06dcd4421f33",
+      "size": 98935,
+      "addedAt": "2026-11-24T05:13:29.653Z",
+      "updatedAt": "2026-11-24T05:13:29.653Z"
     },
     {
       "id": "3102",
@@ -137,12 +150,16 @@
       "name": "김성민",
       "title": "조개마을 — 파도와 장사",
       "file": "3303.html",
-      "driveId": "1mduf7ngtizPRNB9hyPzldvbaWSARihto",
-      "sourceName": "seashell-game (3) - 3303김성민.html",
-      "hash": "23ac3775eaf244c3",
-      "size": 59694,
+      "driveId": "18KV_5ft4vHE0XXSfnlLB-ld_Q_sSyMLl",
+      "sourceName": "seashell-game (5) - 3303김성민.html",
+      "hash": "23d1ee0a15e1f1e8",
+      "size": 69011,
       "addedAt": "2026-11-24T04:28:20.180Z",
-      "updatedAt": "2026-11-24T04:28:20.180Z"
+      "updatedAt": "2026-11-24T05:13:29.653Z",
+      "replaced": [
+        "1mduf7ngtizPRNB9hyPzldvbaWSARihto",
+        "1gEUwPmaK8-vssvEhK8yz9QDAN6PxLCvv"
+      ]
     },
     {
       "id": "3307",
@@ -169,6 +186,19 @@
       "size": 309045,
       "addedAt": "2026-11-24T04:33:55.006Z",
       "updatedAt": "2026-11-24T04:33:55.006Z"
+    },
+    {
+      "id": "3308-2",
+      "studentNo": "3308",
+      "name": "윤시현",
+      "title": "미드나잇 헌터: 밝은 달빛의 숲",
+      "file": "3308-2.html",
+      "driveId": "1aZHd6OglK6S__SoCiKRvOF9MCGO82SAR",
+      "sourceName": "midnight-hunter (1) - 3308윤시현.html",
+      "hash": "534040749597d44b",
+      "size": 174990,
+      "addedAt": "2026-11-24T05:13:29.653Z",
+      "updatedAt": "2026-11-24T05:13:29.653Z"
     },
     {
       "id": "3311",
@@ -221,9 +251,40 @@
       "size": 93908,
       "addedAt": "2026-11-24T04:32:47.884Z",
       "updatedAt": "2026-11-24T04:37:21.706Z"
+    },
+    {
+      "id": "3313-2",
+      "studentNo": "3313",
+      "name": "정세영",
+      "title": "NEON SURVIVOR v8 - 맵 경계 & 미니맵 업데이트",
+      "file": "3313-2.html",
+      "driveId": "1kF8asMx3n_Hgim1QJWcW2GGn-Tx73gx_",
+      "sourceName": "neon_survivor_v8 - 3313정세영.html",
+      "hash": "cdd24c89b263f347",
+      "size": 58047,
+      "addedAt": "2026-11-24T05:13:29.653Z",
+      "updatedAt": "2026-11-24T05:13:29.653Z"
+    },
+    {
+      "id": "3316",
+      "studentNo": "3316",
+      "name": "한지훈",
+      "title": "좀비 서바이벌 3D FPS - 100일 생존 & 구조작전",
+      "file": "3316.html",
+      "driveId": "1skF0DJ6XYNd-LtRVeyNu_IOO480yU_BH",
+      "sourceName": "3d_fps_100 (1) - 3316한지훈.html",
+      "hash": "c41ea2cd3e40b387",
+      "size": 121267,
+      "addedAt": "2026-11-24T05:13:29.653Z",
+      "updatedAt": "2026-11-24T05:13:29.653Z"
     }
   ],
   "rejected": [
+    {
+      "who": "2d_rpg (24) - 이이든.html",
+      "reason": "파일명에서 학번·이름을 찾지 못함",
+      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
+    },
     {
       "who": "3114 이주형",
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
