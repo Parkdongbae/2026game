@@ -1,0 +1,3949 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>🎱 클래식 8-BALL 포켓볼 — PRO TOURNAMENT</title>
+  <style>
+    :root {
+      --bg-deep: #05080e;
+      --panel-bg: rgba(12, 18, 30, 0.95);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --emerald: #10b981;
+      --emerald-bright: #34d399;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100dvh;
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 50% 35%, #151f30 0%, #05080e 100%);
+      color: var(--text-main);
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* ==================== 1. 상단 HUD 바 ==================== */
+    .top-hud {
+      width: 100%;
+      padding: 8px 14px;
+      background: rgba(7, 11, 19, 0.96);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .player-card {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 7px 12px;
+      border-radius: 14px;
+      background: rgba(16, 24, 39, 0.96);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      min-width: 220px;
+      transition: border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .player-card.active-p1 {
+      border-color: #34d399;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.24);
+      opacity: 1;
+    }
+
+    .player-card.active-p2 {
+      border-color: #fbbf24;
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.24);
+      opacity: 1;
+    }
+
+    .player-card.inactive {
+      opacity: 0.68;
+    }
+
+    .player-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .player-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .player-name {
+      font-size: 12.5px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .turn-tag {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 1.5px 6px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.22);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .turn-tag.opp {
+      background: rgba(245, 158, 11, 0.22);
+      color: #fcd34d;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+
+    .turn-tag.wait {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+      border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .group-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 7px;
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+
+    .group-badge.opp {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    .group-badge.unassigned {
+      background: rgba(148, 163, 184, 0.14);
+      color: #cbd5e1;
+      border-color: rgba(148, 163, 184, 0.25);
+    }
+
+    .group-badge.eight-target {
+      background: rgba(251, 191, 36, 0.24);
+      color: #fef08a;
+      border-color: rgba(251, 191, 36, 0.55);
+    }
+
+    .mini-balls-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 21px;
+      flex-wrap: wrap;
+    }
+
+    .mini-ball {
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9.5px;
+      font-weight: 900;
+      position: relative;
+      box-shadow: inset -2px -2px 3px rgba(0, 0, 0, 0.55), inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.55), 0 1px 3px rgba(0, 0, 0, 0.75);
+      flex-shrink: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
+    }
+
+    .mini-ball.pocketed {
+      opacity: 0.32;
+      filter: grayscale(85%);
+      transform: scale(0.86);
+    }
+
+    .mini-ball.pocketed::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      color: #34d399;
+      text-shadow: 0 1px 2px #000, 0 0 4px #000;
+    }
+
+    /* 중앙 상태 & 거리 표시 */
+    .hud-center {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .status-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .status-pill.opp-turn {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fcd34d;
+      border-color: rgba(251, 191, 36, 0.42);
+    }
+
+    .status-pill.foul-turn {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.45);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      animation: pulseDot 1.3s infinite ease-in-out;
+    }
+
+    .status-pill.opp-turn .status-dot {
+      background: #fbbf24;
+    }
+
+    .status-pill.foul-turn .status-dot {
+      background: #fb7185;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.38); opacity: 0.55; }
+    }
+
+    .dist-badge {
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #cbd5e1;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .dist-badge strong {
+      color: #34d399;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-btn {
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f1f5f9;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+    }
+
+    .hud-btn:hover {
+      background: rgba(51, 65, 85, 0.98);
+    }
+
+    .hud-btn:active {
+      transform: translateY(1px);
+    }
+
+    .hud-btn.primary {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(52, 211, 153, 0.4);
+      color: #6ee7b7;
+    }
+
+    .hud-btn.primary:hover {
+      background: rgba(16, 185, 129, 0.32);
+    }
+
+    .hud-btn.cloth-blue {
+      background: rgba(37, 99, 235, 0.24);
+      border-color: rgba(96, 165, 250, 0.48);
+      color: #93c5fd;
+    }
+
+    /* ==================== 2. 중앙 당구대 + 우측 넣은 공 기록 ==================== */
+    .arena-main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+    }
+
+    .arena-layout {
+      width: 100%;
+      max-width: 1236px;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .table-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      max-width: 1048px;
+      height: auto;
+      aspect-ratio: 1048 / 568;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+      border-radius: 22px;
+      box-shadow: 0 28px 68px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .foul-banner {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: rgba(225, 29, 72, 0.96);
+      color: #ffffff;
+      font-size: 12.5px;
+      font-weight: 800;
+      border: 1px solid rgba(253, 164, 175, 0.48);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65);
+      display: none;
+      align-items: center;
+      gap: 6px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast-banner {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: rgba(8, 13, 22, 0.94);
+      color: #f8fafc;
+      font-size: 12.5px;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.68);
+      display: none;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ==================== 오른쪽 '넣은 공 기록' 패널 (밑에서 위로 쌓임) ==================== */
+    .pocketed-sidebar {
+      width: 164px;
+      flex-shrink: 0;
+      border-radius: 18px;
+      background: rgba(11, 17, 29, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.72);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      max-height: 568px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-title {
+      font-size: 12.5px;
+      font-weight: 900;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    .sidebar-count {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.32);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+
+    .stack-well {
+      position: relative;
+      flex: 1;
+      min-height: 180px;
+      border-radius: 12px;
+      background: rgba(6, 10, 18, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+    }
+
+    .stack-empty-hint {
+      margin: auto;
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #64748b;
+      padding: 0 4px;
+    }
+
+    /* column-reverse로 #1이 맨 아래에 쌓이고 이후 공들이 위로 누적됨 */
+    .pocketed-stack-list {
+      display: flex;
+      flex-direction: column-reverse;
+      justify-content: flex-start;
+      gap: 6px;
+      width: 100%;
+      max-height: 100%;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+    }
+
+    .pocketed-stack-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .pocketed-stack-list::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 999px;
+    }
+
+    @keyframes stackDropIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-22px) scale(0.88);
+      }
+      70% {
+        opacity: 1;
+        transform: translateY(2px) scale(1.02);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .stack-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      padding: 5px 7px;
+      border-radius: 10px;
+      background: rgba(19, 29, 46, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.11);
+    }
+
+    .stack-item.new-drop {
+      animation: stackDropIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .stack-item.foul-item {
+      border-color: rgba(244, 63, 94, 0.5);
+    }
+
+    .stack-item.eight-item {
+      border-color: rgba(251, 191, 36, 0.6);
+    }
+
+    .stack-item-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .stack-order {
+      font-size: 9.5px;
+      font-weight: 900;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+
+    .stack-ball-3d {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset -3px -3px 5px rgba(0, 0, 0, 0.55), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.5), 0 2px 4px rgba(0, 0, 0, 0.65);
+      flex-shrink: 0;
+    }
+
+    .stack-ball-num {
+      width: 11.5px;
+      height: 11.5px;
+      border-radius: 50%;
+      background: #f8fafc;
+      color: #0f172a;
+      font-size: 7.5px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stack-meta {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      line-height: 1.2;
+    }
+
+    .stack-label {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stack-type {
+      font-size: 9px;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .stack-who {
+      font-size: 9.5px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      flex-shrink: 0;
+    }
+
+    .stack-who.opp {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+
+    /* ==================== 3. 하단 컨트롤 바 ==================== */
+    .bottom-controls {
+      width: 100%;
+      padding: 8px 16px;
+      background: rgba(7, 11, 19, 0.96);
+      border-top: 1px solid var(--panel-border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .spin-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 24, 39, 0.96);
+      padding: 5px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+    }
+
+    .spin-pad {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fffef7 0%, #eae4d3 68%, #a89f8d 100%);
+      box-shadow: inset -3px -3px 6px rgba(15, 23, 42, 0.35), 0 2px 6px rgba(0, 0, 0, 0.55);
+      position: relative;
+      cursor: pointer;
+      touch-action: none;
+      flex-shrink: 0;
+    }
+
+    .spin-cross-h {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      top: 50%;
+      height: 1px;
+      background: rgba(100, 116, 139, 0.45);
+      pointer-events: none;
+    }
+
+    .spin-cross-v {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      left: 50%;
+      width: 1px;
+      background: rgba(100, 116, 139, 0.45);
+      pointer-events: none;
+    }
+
+    .spin-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 1.5px solid #ffffff;
+      box-shadow: 0 0 4px rgba(239, 68, 68, 0.95);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .spin-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+    }
+
+    .spin-title {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .spin-val {
+      font-size: 11px;
+      color: #6ee7b7;
+      font-weight: 800;
+    }
+
+    .spin-reset-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #94a3b8;
+      font-size: 10px;
+      text-decoration: underline;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .spin-reset-btn:hover {
+      color: #ffffff;
+    }
+
+    .power-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(16, 24, 39, 0.96);
+      padding: 7px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      flex: 1;
+      max-width: 420px;
+      min-width: 240px;
+    }
+
+    .power-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    input[type="range"].power-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 55%, #ef4444 100%);
+      outline: none;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    input[type="range"].power-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+    }
+
+    input[type="range"].power-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #0f172a;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+    }
+
+    .power-pct {
+      font-size: 13px;
+      font-weight: 900;
+      color: #fbbf24;
+      font-variant-numeric: tabular-nums;
+      min-width: 44px;
+      text-align: right;
+    }
+
+    .lock-badge {
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 800;
+      background: rgba(30, 41, 59, 0.92);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .lock-badge.locked {
+      background: rgba(16, 185, 129, 0.22);
+      color: #6ee7b7;
+      border-color: rgba(52, 211, 153, 0.55);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.28);
+    }
+
+    .btn-shoot {
+      padding: 9px 20px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: transform 0.1s ease, filter 0.12s ease;
+      white-space: nowrap;
+    }
+
+    .btn-shoot:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-shoot:active {
+      transform: translateY(1px);
+    }
+
+    /* ==================== 4. 시작 화면 오버레이 & 승리 모달 ==================== */
+    .overlay-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(4, 7, 13, 0.68);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 500px;
+      border-radius: 26px;
+      background: rgba(12, 19, 32, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.92);
+      padding: 28px 26px;
+      text-align: center;
+    }
+
+    .modal-pill {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      color: #6ee7b7;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      margin-bottom: 10px;
+    }
+
+    .modal-title {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .modal-guide {
+      margin: 0 0 20px 0;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(7, 11, 19, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #cbd5e1;
+    }
+
+    .modal-guide strong {
+      color: #6ee7b7;
+    }
+
+    .mode-section-label {
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      padding-left: 2px;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+
+    .mode-btn {
+      padding: 11px 8px;
+      border-radius: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.11);
+      background: rgba(15, 23, 42, 0.82);
+      color: #cbd5e1;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn:hover {
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .mode-btn.selected {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.2);
+      color: #ffffff;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.28);
+    }
+
+    .mode-btn-title {
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .mode-btn-sub {
+      font-size: 10.5px;
+      color: #94a3b8;
+    }
+
+    .mode-btn.selected .mode-btn-sub {
+      color: #6ee7b7;
+    }
+
+    .btn-start-main {
+      width: 100%;
+      padding: 16px 20px;
+      border-radius: 18px;
+      border: none;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+      transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .btn-start-main:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 16px 34px rgba(16, 185, 129, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.48);
+    }
+
+    .btn-start-main:active {
+      transform: translateY(1px);
+    }
+
+    .victory-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin: 18px 0 22px 0;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(7, 11, 19, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .victory-stat-label {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .victory-stat-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #34d399;
+      margin-top: 2px;
+    }
+
+    .victory-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-secondary {
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(30, 41, 59, 0.92);
+      color: #f1f5f9;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    /* ==================== 모바일 & 태블릿 반응형 ==================== */
+    @media (max-width: 920px) {
+      .arena-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .pocketed-sidebar {
+        width: 100%;
+        max-width: 1048px;
+        max-height: 165px;
+      }
+
+      .stack-well {
+        min-height: 80px;
+      }
+
+      .player-card {
+        min-width: 185px;
+        padding: 6px 10px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .mode-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-title {
+        font-size: 23px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== 1. 상단 HUD 바 ==================== -->
+  <header class="top-hud">
+    <!-- 좌측 플레이어 카드 ('나 (1P)') -->
+    <div id="p1Card" class="player-card active-p1">
+      <div class="player-card-top">
+        <div class="player-title-wrap">
+          <span class="player-name">나 (1P)</span>
+          <span id="p1TurnTag" class="turn-tag">내 차례</span>
+        </div>
+        <span id="p1GroupBadge" class="group-badge unassigned">내 공: 미배정</span>
+      </div>
+      <div id="p1BallsRow" class="mini-balls-row"></div>
+    </div>
+
+    <!-- 중앙 상태 & 목적구 이동 거리 배지 + 매트 색상 전환 -->
+    <div class="hud-center">
+      <div id="statusPill" class="status-pill">
+        <span class="status-dot"></span>
+        <span id="statusText">내 차례 (1P) — 마우스로 조준 후 뒤로 당겨 샷</span>
+      </div>
+
+      <div class="dist-badge" title="직전 샷에서 처음 맞은 목적구가 굴러간 거리 (254cm × 127cm 규격 환산)">
+        <span>목적구 이동:</span>
+        <strong id="rollDistText">0 cm</strong>
+      </div>
+
+      <button type="button" id="btnClothToggle" class="hud-btn" title="당구대 천 색상 전환 (토너먼트 그린 / 프로 블루)">🎨 토너먼트 그린</button>
+      <button type="button" id="btnSoundToggle" class="hud-btn" title="효과음 켜기/끄기">🔊 소리</button>
+      <button type="button" id="btnOpenMode" class="hud-btn" title="게임 모드 변경">⚙️ 모드</button>
+    </div>
+
+    <!-- 우측 플레이어 카드 ('상대 (AI)' / '상대 (2P)') + 새 게임 버튼 -->
+    <div id="p2Card" class="player-card inactive">
+      <div class="player-card-top">
+        <div class="player-title-wrap">
+          <span id="p2NameText" class="player-name">상대 (AI)</span>
+          <span id="p2TurnTag" class="turn-tag wait">대기 중</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span id="p2GroupBadge" class="group-badge opp unassigned">상대 공: 미배정</span>
+          <button type="button" id="btnNewGame" class="hud-btn primary" title="현재 모드로 새 게임 시작">새 게임</button>
+        </div>
+      </div>
+      <div id="p2BallsRow" class="mini-balls-row"></div>
+    </div>
+  </header>
+
+  <!-- ==================== 2. 중앙 당구대 + 우측 '넣은 공 기록' ==================== -->
+  <main class="arena-main">
+    <div class="arena-layout">
+      <!-- 당구 테이블 캔버스 -->
+      <div class="table-wrapper">
+        <canvas id="gameCanvas" width="1048" height="568"></canvas>
+
+        <div id="foulBanner" class="foul-banner">
+          <span>⚠️</span>
+          <span id="foulBannerText">파울! 흰 공을 원하는 위치에 클릭하여 놓으세요</span>
+        </div>
+
+        <div id="toastBanner" class="toast-banner"></div>
+      </div>
+
+      <!-- 오른쪽 패널: 넣은 공 기록 (column-reverse로 밑에서 위로 쌓임) -->
+      <aside class="pocketed-sidebar" aria-label="넣은 공 기록">
+        <div class="sidebar-header">
+          <h2 class="sidebar-title">🎱 넣은 공 기록</h2>
+          <span id="pocketedCountBadge" class="sidebar-count">0개</span>
+        </div>
+
+        <div class="stack-well">
+          <div id="stackEmptyHint" class="stack-empty-hint">
+            포켓에 공을 넣으면<br />맨 아래(#1)부터<br />차례대로 쌓입니다
+          </div>
+          <div id="pocketedStackList" class="pocketed-stack-list"></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ==================== 3. 하단 컨트롤 바 ==================== -->
+  <footer class="bottom-controls">
+    <!-- 당점 (스핀) 조절 위젯 -->
+    <div class="spin-box" title="흰 공의 타격 지점(당점)을 클릭해 밀어치기·끌어치기·좌우회전을 조절하세요">
+      <div id="spinPad" class="spin-pad">
+        <div class="spin-cross-h"></div>
+        <div class="spin-cross-v"></div>
+        <div id="spinDot" class="spin-dot"></div>
+      </div>
+      <div class="spin-info">
+        <span class="spin-title">당점 (스핀)</span>
+        <span id="spinValueText" class="spin-val">정중앙</span>
+        <button type="button" id="btnResetSpin" class="spin-reset-btn">초기화</button>
+      </div>
+    </div>
+
+    <!-- 파워 슬라이더 (5% ~ 100%, 기본 45%) -->
+    <div class="power-box">
+      <span class="power-label">샷 파워</span>
+      <input type="range" id="powerSlider" class="power-slider" min="5" max="100" value="45" />
+      <span id="powerPctText" class="power-pct">45%</span>
+    </div>
+
+    <!-- 방향 고정 상태 배지 -->
+    <div id="lockBadge" class="lock-badge">🔓 마우스 조준 중</div>
+
+    <!-- 샷 발사 버튼 -->
+    <button type="button" id="btnShoot" class="btn-shoot">🎱 샷 발사 (SPACE)</button>
+  </footer>
+
+  <!-- ==================== 4. 시작 화면 오버레이 (#startOverlay) ==================== -->
+  <div id="startOverlay" class="overlay-backdrop" style="z-index: 9999;">
+    <div class="modal-card">
+      <div class="modal-pill">BROADCAST 9-FT TOURNAMENT • 254cm × 127cm</div>
+      <h1 class="modal-title">🎱 클래식 8-BALL 포켓볼</h1>
+      <p class="modal-guide">
+        마우스 이동: <strong>조준</strong> / 클릭 후 뒤로 드래그: <strong>🔒 방향 고정됨 &amp; 파워 조절</strong><br />
+        스페이스바 또는 하단 <strong>🎱 샷 발사 (SPACE)</strong> 버튼으로도 즉시 샷 가능
+      </p>
+
+      <div class="mode-section-label">게임 모드 선택</div>
+      <div class="mode-grid">
+        <button type="button" class="mode-btn selected" data-mode="AI">
+          <div class="mode-btn-title">1P vs AI 대전</div>
+          <div class="mode-btn-sub">스마트 AI와 1:1 승부</div>
+        </button>
+        <button type="button" class="mode-btn" data-mode="2P">
+          <div class="mode-btn-title">2P 로컬 대전</div>
+          <div class="mode-btn-sub">둘이서 번갈아 대전</div>
+        </button>
+        <button type="button" class="mode-btn" data-mode="SOLO">
+          <div class="mode-btn-title">솔로 연습 모드</div>
+          <div class="mode-btn-sub">15개 공 자유 연습</div>
+        </button>
+      </div>
+
+      <button type="button" id="btnStartGame" class="btn-start-main" onclick="startGame()">
+        게임 시작하기
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 5. 경기 종료 / 승리 모달 (#victoryModal) ==================== -->
+  <div id="victoryModal" class="overlay-backdrop" style="z-index: 9998; display: none;">
+    <div class="modal-card">
+      <div id="victoryEmoji" style="font-size: 48px; margin-bottom: 8px;">🏆</div>
+      <h2 id="victoryTitle" class="modal-title" style="font-size: 26px;">승리했습니다!</h2>
+      <p id="victoryDesc" style="margin: 0; font-size: 13.5px; color: #cbd5e1;">
+        8번 블랙볼을 포켓에 넣었습니다!
+      </p>
+
+      <div class="victory-stats">
+        <div>
+          <div class="victory-stat-label">총 진행 샷</div>
+          <div id="statShots" class="victory-stat-val">0회</div>
+        </div>
+        <div>
+          <div class="victory-stat-label">경기 시간</div>
+          <div id="statTime" class="victory-stat-val" style="color: #fbbf24;">00:00</div>
+        </div>
+      </div>
+
+      <div class="victory-actions">
+        <button type="button" id="btnRematch" class="btn-start-main" style="flex: 1; font-size: 15px; padding: 14px;">
+          다시 하기
+        </button>
+        <button type="button" id="btnModalMode" class="btn-secondary">
+          모드 변경
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 6. 단일 인라인 실사 당구 엔진 스크립트 ==================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. 실사 음향 합성기 (Web Audio API — 모든 호출 try/catch 보호)
+      // =========================================================================
+      function SoundManager() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      SoundManager.prototype.unlock = function () {
+        try {
+          if (!this.ctx) {
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(function () {});
+          }
+        } catch (e) {}
+      };
+
+      SoundManager.prototype.toggleMute = function () {
+        this.muted = !this.muted;
+        return this.muted;
+      };
+
+      // 가죽 팁 & 초크 타격음
+      SoundManager.prototype.playCueHit = function (power) {
+        if (this.muted) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var osc = this.ctx.createOscillator();
+          var gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(240 + power * 180, now);
+          osc.frequency.exponentialRampToValueAtTime(58, now + 0.08);
+          gain.gain.setValueAtTime(Math.min(0.42, 0.12 + power * 0.3), now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } catch (e) {}
+      };
+
+      // 페놀릭 수지 공 경질 충돌음 (Aramith Clack)
+      SoundManager.prototype.playBallClack = function (relSpeed) {
+        if (this.muted || relSpeed < 10) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var intensity = Math.min(1, relSpeed / 850);
+
+          // 고주파 세라믹/페놀릭 공명 + 중역 바디 타격음 조합
+          var osc1 = this.ctx.createOscillator();
+          var osc2 = this.ctx.createOscillator();
+          var gain = this.ctx.createGain();
+
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(1650 + intensity * 650, now);
+          osc1.frequency.exponentialRampToValueAtTime(420, now + 0.036);
+
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(780 + intensity * 260, now);
+          osc2.frequency.exponentialRampToValueAtTime(210, now + 0.042);
+
+          gain.gain.setValueAtTime(0.025 + intensity * 0.28, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.05);
+          osc2.stop(now + 0.05);
+        } catch (e) {}
+      };
+
+      // 고무 쿠션 묵직한 반사음
+      SoundManager.prototype.playRailBounce = function (speed) {
+        if (this.muted || speed < 18) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var intensity = Math.min(1, speed / 780);
+          var osc = this.ctx.createOscillator();
+          var gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(118, now);
+          osc.frequency.exponentialRampToValueAtTime(38, now + 0.085);
+          gain.gain.setValueAtTime(0.03 + intensity * 0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.095);
+        } catch (e) {}
+      };
+
+      // 가죽 포켓 드롭 사운드
+      SoundManager.prototype.playPocketSink = function () {
+        if (this.muted) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var osc = this.ctx.createOscillator();
+          var gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(165, now);
+          osc.frequency.exponentialRampToValueAtTime(44, now + 0.22);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } catch (e) {}
+      };
+
+      SoundManager.prototype.playFoul = function () {
+        if (this.muted) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var osc = this.ctx.createOscillator();
+          var gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(155, now);
+          osc.frequency.linearRampToValueAtTime(98, now + 0.23);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        } catch (e) {}
+      };
+
+      SoundManager.prototype.playWin = function () {
+        if (this.muted) return;
+        try {
+          this.unlock();
+          if (!this.ctx) return;
+          var now = this.ctx.currentTime;
+          var notes = [523.25, 659.25, 783.99, 1046.5];
+          for (var i = 0; i < notes.length; i++) {
+            var osc = this.ctx.createOscillator();
+            var gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(notes[i], now + i * 0.095);
+            gain.gain.setValueAtTime(0.18, now + i * 0.095);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.095 + 0.38);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.095);
+            osc.stop(now + i * 0.095 + 0.4);
+          }
+        } catch (e) {}
+      };
+
+      var sound = new SoundManager();
+
+      // =========================================================================
+      // 2. 국제 9피트 토너먼트 규격 및 물리 상수 (960x480 내경 = 254cm x 127cm)
+      // =========================================================================
+      var CANVAS_W = 1048;
+      var CANVAS_H = 568;
+      var FELT_W = 960;
+      var FELT_H = 480;
+      var FELT_LEFT = (CANVAS_W - FELT_W) / 2;   // 44
+      var FELT_TOP = (CANVAS_H - FELT_H) / 2;    // 44
+      var FELT_RIGHT = FELT_LEFT + FELT_W;       // 1004
+      var FELT_BOTTOM = FELT_TOP + FELT_H;       // 524
+
+      var PX_PER_CM = FELT_W / 254;              // ~3.7795 px/cm (30cm ≈ 113.4px)
+      var BALL_RADIUS = 13.2;
+      var POCKET_RADIUS = 23.5;
+      var MAX_PULL_PX = 150;
+      var MAX_SHOT_SPEED = 2400;                 // 100% 풀파워 속도
+      var SUBSTEPS = 16;                         // 고속 충돌 터널링 방지
+
+      var POCKETS = [
+        { x: FELT_LEFT + 4, y: FELT_TOP + 4, isCorner: true, cornerIdx: 0 },
+        { x: FELT_LEFT + FELT_W / 2, y: FELT_TOP - 3, isCorner: false, sideIdx: 0 },
+        { x: FELT_RIGHT - 4, y: FELT_TOP + 4, isCorner: true, cornerIdx: 1 },
+        { x: FELT_LEFT + 4, y: FELT_BOTTOM - 4, isCorner: true, cornerIdx: 2 },
+        { x: FELT_LEFT + FELT_W / 2, y: FELT_BOTTOM + 3, isCorner: false, sideIdx: 1 },
+        { x: FELT_RIGHT - 4, y: FELT_BOTTOM - 4, isCorner: true, cornerIdx: 3 }
+      ];
+
+      // 아라미스(Aramith) 토너먼트 페놀릭 수지 공 컬러 팔레트
+      var BALL_COLORS = {
+        0:  { main: '#fbf8ee', deep: '#d6ccb8', stripe: false, name: '흰 공 (수구)', typeLabel: '파울' },
+        1:  { main: '#f5b800', deep: '#9c6c00', stripe: false, name: '1번 공', typeLabel: '솔리드' },
+        2:  { main: '#1649b8', deep: '#0a2569', stripe: false, name: '2번 공', typeLabel: '솔리드' },
+        3:  { main: '#d92323', deep: '#7a0d0d', stripe: false, name: '3번 공', typeLabel: '솔리드' },
+        4:  { main: '#5b21b6', deep: '#2e0d66', stripe: false, name: '4번 공', typeLabel: '솔리드' },
+        5:  { main: '#ea580c', deep: '#8a2c04', stripe: false, name: '5번 공', typeLabel: '솔리드' },
+        6:  { main: '#0f7a3a', deep: '#06421d', stripe: false, name: '6번 공', typeLabel: '솔리드' },
+        7:  { main: '#881327', deep: '#470611', stripe: false, name: '7번 공', typeLabel: '솔리드' },
+        8:  { main: '#181c24', deep: '#030407', stripe: false, name: '8번 블랙볼', typeLabel: '블랙볼' },
+        9:  { main: '#f5b800', deep: '#9c6c00', stripe: true,  name: '9번 공', typeLabel: '스트라이프' },
+        10: { main: '#1649b8', deep: '#0a2569', stripe: true,  name: '10번 공', typeLabel: '스트라이프' },
+        11: { main: '#d92323', deep: '#7a0d0d', stripe: true,  name: '11번 공', typeLabel: '스트라이프' },
+        12: { main: '#5b21b6', deep: '#2e0d66', stripe: true,  name: '12번 공', typeLabel: '스트라이프' },
+        13: { main: '#ea580c', deep: '#8a2c04', stripe: true,  name: '13번 공', typeLabel: '스트라이프' },
+        14: { main: '#0f7a3a', deep: '#06421d', stripe: true,  name: '14번 공', typeLabel: '스트라이프' },
+        15: { main: '#881327', deep: '#470611', stripe: true,  name: '15번 공', typeLabel: '스트라이프' }
+      };
+
+      // =========================================================================
+      // 3. 사전 렌더링 오프스크린 캔버스 (60FPS 실사 소모모직 매트 + 로즈우드 프레임 + 황동/가죽 포켓)
+      // =========================================================================
+      var clothCacheCanvas = document.createElement('canvas');
+      clothCacheCanvas.width = CANVAS_W;
+      clothCacheCanvas.height = CANVAS_H;
+
+      var frameCacheCanvas = document.createElement('canvas');
+      frameCacheCanvas.width = CANVAS_W;
+      frameCacheCanvas.height = CANVAS_H;
+
+      var currentClothTheme = 'GREEN'; // 'GREEN' | 'BLUE'
+
+      function roundRectPath(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
+      }
+
+      // 결정적 의사 난수 생성기 (재현 가능하고 자연스러운 직물·나무결 질감)
+      function seededRandom(seed) {
+        var s = seed % 2147483647;
+        if (s <= 0) s += 2147483646;
+        return function () {
+          s = (s * 16807) % 2147483647;
+          return (s - 1) / 2147483646;
+        };
+      }
+
+      // 타일 가능한 소모모직(Simonis Worsted Wool) 직조 패턴 생성
+      function createWoolWeavePattern(theme) {
+        var tile = document.createElement('canvas');
+        tile.width = 64;
+        tile.height = 64;
+        var tctx = tile.getContext('2d');
+        var rand = seededRandom(theme === 'BLUE' ? 202611 : 108947);
+
+        // 미세 직물 날실·씨실 교차 결
+        for (var y = 0; y < 64; y += 2) {
+          for (var x = 0; x < 64; x += 2) {
+            var diag = ((x + y) % 4 === 0);
+            var n = rand();
+            if (diag) {
+              tctx.fillStyle = n > 0.5
+                ? 'rgba(255, 255, 255, 0.032)'
+                : 'rgba(0, 0, 0, 0.036)';
+            } else {
+              tctx.fillStyle = n > 0.48
+                ? 'rgba(255, 255, 255, 0.016)'
+                : 'rgba(0, 0, 0, 0.025)';
+            }
+            tctx.fillRect(x, y, 2, 2);
+          }
+        }
+
+        // 미세 양모 섬유 가닥
+        tctx.lineWidth = 0.7;
+        for (var f = 0; f < 45; f++) {
+          var fx = rand() * 64;
+          var fy = rand() * 64;
+          var ang = (rand() - 0.5) * 0.9;
+          tctx.strokeStyle = rand() > 0.5 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
+          tctx.beginPath();
+          tctx.moveTo(fx, fy);
+          tctx.lineTo(fx + Math.cos(ang) * 5, fy + Math.sin(ang) * 5);
+          tctx.stroke();
+        }
+
+        return tctx.createPattern(tile, 'repeat');
+      }
+
+      // 1) 실사 당구 천 & 상단 스튜디오 소프트박스 조명 & 쿠션 그림자 사전 렌더링
+      function buildClothCache(theme) {
+        var c = clothCacheCanvas.getContext('2d');
+        c.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        var rand = seededRandom(theme === 'BLUE' ? 7731 : 4419);
+
+        var isBlue = (theme === 'BLUE');
+        var cCenter = isBlue ? '#196ec7' : '#158253';
+        var cMid    = isBlue ? '#105096' : '#0e633f';
+        var cEdge   = isBlue ? '#093263' : '#074027';
+        var cRubber = isBlue ? '#062247' : '#042c1b';
+
+        // 기본 방사형 조명 그라데이션
+        var baseGrad = c.createRadialGradient(
+          CANVAS_W * 0.5, CANVAS_H * 0.5, 40,
+          CANVAS_W * 0.5, CANVAS_H * 0.5, FELT_W * 0.64
+        );
+        baseGrad.addColorStop(0, cCenter);
+        baseGrad.addColorStop(0.68, cMid);
+        baseGrad.addColorStop(1, cEdge);
+        c.fillStyle = baseGrad;
+        c.fillRect(FELT_LEFT, FELT_TOP, FELT_W, FELT_H);
+
+        // 오버헤드 토너먼트 소프트박스 3연등 조명 효과 (중앙선 따라 따뜻한 백색광 확산)
+        var lampXs = [FELT_LEFT + FELT_W * 0.28, FELT_LEFT + FELT_W * 0.5, FELT_LEFT + FELT_W * 0.72];
+        for (var l = 0; l < lampXs.length; l++) {
+          var lampGrad = c.createRadialGradient(
+            lampXs[l], CANVAS_H * 0.5, 10,
+            lampXs[l], CANVAS_H * 0.5, 250
+          );
+          lampGrad.addColorStop(0, 'rgba(255, 252, 240, 0.085)');
+          lampGrad.addColorStop(0.55, 'rgba(255, 252, 240, 0.025)');
+          lampGrad.addColorStop(1, 'rgba(255, 252, 240, 0)');
+          c.fillStyle = lampGrad;
+          c.fillRect(FELT_LEFT, FELT_TOP, FELT_W, FELT_H);
+        }
+
+        // 시모니스 소모모직 직조 패턴 오버레이
+        var weavePat = createWoolWeavePattern(theme);
+        if (weavePat) {
+          c.fillStyle = weavePat;
+          c.fillRect(FELT_LEFT, FELT_TOP, FELT_W, FELT_H);
+        }
+
+        // 실제 경기 테이블의 미세한 브레이크 마찰 자국 & 초크 가루 입자
+        var headX = FELT_LEFT + FELT_W * 0.25;
+        var footX = FELT_LEFT + FELT_W * 0.75;
+        var centerY = FELT_TOP + FELT_H * 0.5;
+
+        // 브레이크 트랙 미세 마찰 자국 (헤드 스팟 -> 풋 스팟 방향)
+        var burnGrad = c.createLinearGradient(headX, centerY, footX, centerY);
+        burnGrad.addColorStop(0, 'rgba(255, 255, 255, 0.045)');
+        burnGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.015)');
+        burnGrad.addColorStop(1, 'rgba(255, 255, 255, 0.055)');
+        c.fillStyle = burnGrad;
+        c.beginPath();
+        c.ellipse((headX + footX) * 0.5, centerY, FELT_W * 0.24, 16, 0, 0, Math.PI * 2);
+        c.fill();
+
+        // 풋 스팟(랙 꼭짓점) 주위 미세 초크·마찰 입자
+        for (var s = 0; s < 260; s++) {
+          var isRackZone = s < 150;
+          var cx = isRackZone
+            ? footX + (rand() - 0.35) * 140
+            : headX + (rand() - 0.5) * 180;
+          var cy = centerY + (rand() - 0.5) * 150;
+          var rad = 0.5 + rand() * 1.1;
+          c.fillStyle = isBlue
+            ? 'rgba(186, 230, 253, ' + (0.04 + rand() * 0.07) + ')'
+            : 'rgba(187, 247, 208, ' + (0.04 + rand() * 0.065) + ')';
+          c.beginPath();
+          c.arc(cx, cy, rad, 0, Math.PI * 2);
+          c.fill();
+        }
+
+        // 헤드 스트링 (바크 라인), 센터 스팟 & 풋 스팟 토너먼트 데칼
+        c.strokeStyle = 'rgba(248, 250, 252, 0.22)';
+        c.lineWidth = 1.4;
+        c.beginPath();
+        c.moveTo(headX, FELT_TOP + 10);
+        c.lineTo(headX, FELT_BOTTOM - 10);
+        c.stroke();
+
+        // 헤드 스팟 & 센터 스팟
+        c.fillStyle = 'rgba(248, 250, 252, 0.34)';
+        c.beginPath();
+        c.arc(headX, centerY, 3.2, 0, Math.PI * 2);
+        c.arc(FELT_LEFT + FELT_W * 0.5, centerY, 2.8, 0, Math.PI * 2);
+        c.fill();
+
+        // 풋 스팟 전용 스티커 데칼 (검은 원 + 흰 점)
+        c.fillStyle = 'rgba(15, 23, 42, 0.65)';
+        c.beginPath();
+        c.arc(footX, centerY, 5.2, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = 'rgba(248, 250, 252, 0.85)';
+        c.beginPath();
+        c.arc(footX, centerY, 1.8, 0, Math.PI * 2);
+        c.fill();
+
+        // 다층 3D 고무 쿠션 턱 및 투사 그림자 (Ambient Occlusion + Soft Drop Shadow)
+        // 1) 넓은 방향성 쿠션 그림자
+        var topShadow = c.createLinearGradient(0, FELT_TOP, 0, FELT_TOP + 24);
+        topShadow.addColorStop(0, 'rgba(0, 0, 0, 0.56)');
+        topShadow.addColorStop(0.35, 'rgba(0, 0, 0, 0.24)');
+        topShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        c.fillStyle = topShadow;
+        c.fillRect(FELT_LEFT, FELT_TOP, FELT_W, 24);
+
+        var botShadow = c.createLinearGradient(0, FELT_BOTTOM, 0, FELT_BOTTOM - 20);
+        botShadow.addColorStop(0, 'rgba(0, 0, 0, 0.48)');
+        botShadow.addColorStop(0.35, 'rgba(0, 0, 0, 0.18)');
+        botShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        c.fillStyle = botShadow;
+        c.fillRect(FELT_LEFT, FELT_BOTTOM - 20, FELT_W, 20);
+
+        var leftShadow = c.createLinearGradient(FELT_LEFT, 0, FELT_LEFT + 22, 0);
+        leftShadow.addColorStop(0, 'rgba(0, 0, 0, 0.52)');
+        leftShadow.addColorStop(0.35, 'rgba(0, 0, 0, 0.2)');
+        leftShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        c.fillStyle = leftShadow;
+        c.fillRect(FELT_LEFT, FELT_TOP, 22, FELT_H);
+
+        var rightShadow = c.createLinearGradient(FELT_RIGHT, 0, FELT_RIGHT - 22, 0);
+        rightShadow.addColorStop(0, 'rgba(0, 0, 0, 0.52)');
+        rightShadow.addColorStop(0.35, 'rgba(0, 0, 0, 0.2)');
+        rightShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        c.fillStyle = rightShadow;
+        c.fillRect(FELT_RIGHT - 22, FELT_TOP, 22, FELT_H);
+
+        // 2) 고무 쿠션 코(Nose) 바로 아래 짙은 AO 접지 그림자 및 쿠션 경사면
+        c.strokeStyle = cRubber;
+        c.lineWidth = 7;
+        c.strokeRect(FELT_LEFT, FELT_TOP, FELT_W, FELT_H);
+
+        c.strokeStyle = 'rgba(255, 255, 255, 0.13)';
+        c.lineWidth = 1.2;
+        c.strokeRect(FELT_LEFT + 3.5, FELT_TOP + 3.5, FELT_W - 7, FELT_H - 7);
+      }
+
+      // 2) 실사 로즈우드/마호가니 원목 프레임, 자개 다이아몬드 사이트, 브러시드 황동 코너 & 스티치 가죽 포켓
+      function buildFrameCache() {
+        var f = frameCacheCanvas.getContext('2d');
+        f.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        var rand = seededRandom(99412);
+
+        f.save();
+        // 바깥쪽 둥근 사각형에서 안쪽 당구 매트 영역을 제외한 원목 프레임 경로 생성
+        roundRectPath(f, 0, 0, CANVAS_W, CANVAS_H, 22);
+        f.rect(FELT_RIGHT, FELT_TOP, -FELT_W, FELT_H); // 역방향 와인딩으로 내부 컷아웃
+        f.clip();
+
+        // 마호가니 / 로즈우드 베이스 그라데이션
+        var woodBase = f.createLinearGradient(0, 0, CANVAS_W, CANVAS_H);
+        woodBase.addColorStop(0, '#632914');
+        woodBase.addColorStop(0.35, '#4b1c0c');
+        woodBase.addColorStop(0.7, '#381307');
+        woodBase.addColorStop(1, '#260b03');
+        f.fillStyle = woodBase;
+        f.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // 유기적인 로즈우드 나뭇결 섬유 렌더링
+        for (var g = 0; g < 190; g++) {
+          var isHoriz = g < 120;
+          f.strokeStyle = g % 3 === 0
+            ? 'rgba(18, 4, 1, ' + (0.14 + rand() * 0.22) + ')'
+            : 'rgba(145, 65, 32, ' + (0.06 + rand() * 0.12) + ')';
+          f.lineWidth = 0.8 + rand() * 2.1;
+          f.beginPath();
+          if (isHoriz) {
+            var y0 = rand() * CANVAS_H;
+            f.moveTo(0, y0);
+            f.bezierCurveTo(
+              CANVAS_W * 0.33, y0 + (rand() - 0.5) * 14,
+              CANVAS_W * 0.66, y0 + (rand() - 0.5) * 14,
+              CANVAS_W, y0 + (rand() - 0.5) * 10
+            );
+          } else {
+            var x0 = rand() * CANVAS_W;
+            f.moveTo(x0, 0);
+            f.bezierCurveTo(
+              x0 + (rand() - 0.5) * 12, CANVAS_H * 0.33,
+              x0 + (rand() - 0.5) * 12, CANVAS_H * 0.66,
+              x0 + (rand() - 0.5) * 8, CANVAS_H
+            );
+          }
+          f.stroke();
+        }
+
+        // 새틴 클리어 코트 상단 광택 하이라이트 (우드 레일 입체감)
+        var topSheen = f.createLinearGradient(0, 2, 0, FELT_TOP - 2);
+        topSheen.addColorStop(0, 'rgba(255, 220, 185, 0.28)');
+        topSheen.addColorStop(0.28, 'rgba(255, 210, 170, 0.08)');
+        topSheen.addColorStop(0.75, 'rgba(0, 0, 0, 0.15)');
+        topSheen.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+        f.fillStyle = topSheen;
+        f.fillRect(0, 0, CANVAS_W, FELT_TOP);
+
+        var botSheen = f.createLinearGradient(0, FELT_BOTTOM, 0, CANVAS_H);
+        botSheen.addColorStop(0, 'rgba(255, 215, 175, 0.22)');
+        botSheen.addColorStop(0.35, 'rgba(255, 200, 160, 0.05)');
+        botSheen.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
+        f.fillStyle = botSheen;
+        f.fillRect(0, FELT_BOTTOM, CANVAS_W, CANVAS_H - FELT_BOTTOM);
+
+        // 외곽 모따기(Chamfer) 베젤 테두리
+        f.strokeStyle = 'rgba(255, 212, 168, 0.28)';
+        f.lineWidth = 2.5;
+        roundRectPath(f, 1.5, 1.5, CANVAS_W - 3, CANVAS_H - 3, 21);
+        f.stroke();
+
+        f.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+        f.lineWidth = 3;
+        roundRectPath(f, 5, 5, CANVAS_W - 10, CANVAS_H - 10, 18);
+        f.stroke();
+
+        f.restore();
+
+        // 황동 링이 결합된 자개(Mother-of-Pearl) 다이아몬드 사이트 인레이
+        for (var i = 1; i <= 7; i++) {
+          if (i === 4) continue;
+          var dx = FELT_LEFT + (FELT_W / 8) * i;
+          drawPearlDiamondInlay(f, dx, FELT_TOP * 0.5);
+          drawPearlDiamondInlay(f, dx, CANVAS_H - FELT_TOP * 0.5);
+        }
+        for (var j = 1; j <= 3; j++) {
+          var dy = FELT_TOP + (FELT_H / 4) * j;
+          drawPearlDiamondInlay(f, FELT_LEFT * 0.5, dy);
+          drawPearlDiamondInlay(f, CANVAS_W - FELT_LEFT * 0.5, dy);
+        }
+
+        // 6개 브러시드 황동 코너·사이드 캐스팅 & 스티치 가죽 포켓 웰 렌더링
+        for (var p = 0; p < POCKETS.length; p++) {
+          drawBrassAndLeatherPocket(f, POCKETS[p]);
+        }
+      }
+
+      function drawPearlDiamondInlay(c, cx, cy) {
+        c.save();
+        // 어두운 인레이 홈 그림자
+        c.fillStyle = 'rgba(10, 4, 2, 0.7)';
+        c.beginPath();
+        c.moveTo(cx, cy - 6.2);
+        c.lineTo(cx + 4.8, cy);
+        c.lineTo(cx, cy + 6.2);
+        c.lineTo(cx - 4.8, cy);
+        c.closePath();
+        c.fill();
+
+        // 자개(Mother-of-Pearl) 무지갯빛 그라데이션
+        var pearl = c.createLinearGradient(cx - 4, cy - 5, cx + 4, cy + 5);
+        pearl.addColorStop(0, '#ffffff');
+        pearl.addColorStop(0.45, '#e2e8f0');
+        pearl.addColorStop(0.75, '#cbd5e1');
+        pearl.addColorStop(1, '#fef3c7');
+        c.fillStyle = pearl;
+        c.beginPath();
+        c.moveTo(cx, cy - 4.8);
+        c.lineTo(cx + 3.6, cy);
+        c.lineTo(cx, cy + 4.8);
+        c.lineTo(cx - 3.6, cy);
+        c.closePath();
+        c.fill();
+
+        // 얇은 황동 테두리
+        c.strokeStyle = 'rgba(217, 119, 6, 0.75)';
+        c.lineWidth = 0.9;
+        c.stroke();
+        c.restore();
+      }
+
+      function drawBrassAndLeatherPocket(c, pk) {
+        c.save();
+
+        // 1) 브러시드 황동 코너 / 사이드 캐스팅 플레이트
+        if (pk.isCorner) {
+          var isLeft = pk.x < CANVAS_W * 0.5;
+          var isTop = pk.y < CANVAS_H * 0.5;
+          var cx = isLeft ? 0 : CANVAS_W;
+          var cy = isTop ? 0 : CANVAS_H;
+
+          // 외곽 둥근 모서리 클리핑
+          roundRectPath(c, 0, 0, CANVAS_W, CANVAS_H, 22);
+          c.clip();
+
+          var brassPlate = c.createRadialGradient(
+            pk.x - 8, pk.y - 8, 8,
+            pk.x, pk.y, 64
+          );
+          brassPlate.addColorStop(0, '#fef08a');
+          brassPlate.addColorStop(0.38, '#d97706');
+          brassPlate.addColorStop(0.72, '#92400e');
+          brassPlate.addColorStop(1, '#451a03');
+
+          c.fillStyle = brassPlate;
+          c.beginPath();
+          c.arc(cx, cy, 62, 0, Math.PI * 2);
+          c.fill();
+
+          c.strokeStyle = 'rgba(254, 243, 199, 0.45)';
+          c.lineWidth = 1.5;
+          c.stroke();
+
+          // 황동 리벳 2개
+          var rAng1 = isLeft ? (isTop ? 0.22 : -0.22) : (isTop ? Math.PI - 0.22 : Math.PI + 0.22);
+          var rAng2 = isLeft ? (isTop ? 1.35 : -1.35) : (isTop ? Math.PI - 1.35 : Math.PI + 1.35);
+          drawBrassRivet(c, cx + Math.cos(rAng1) * 52, cy + Math.sin(rAng1) * 52);
+          drawBrassRivet(c, cx + Math.cos(rAng2) * 52, cy + Math.sin(rAng2) * 52);
+        } else {
+          // 사이드 포켓 황동 플레이트
+          var isTopSide = pk.y < CANVAS_H * 0.5;
+          var plateY = isTopSide ? 0 : FELT_BOTTOM + 2;
+          var plateH = isTopSide ? FELT_TOP - 2 : CANVAS_H - FELT_BOTTOM - 2;
+
+          var sideGrad = c.createLinearGradient(pk.x - 42, plateY, pk.x + 42, plateY + plateH);
+          sideGrad.addColorStop(0, '#78350f');
+          sideGrad.addColorStop(0.25, '#f59e0b');
+          sideGrad.addColorStop(0.5, '#fef08a');
+          sideGrad.addColorStop(0.75, '#b45309');
+          sideGrad.addColorStop(1, '#451a03');
+
+          c.fillStyle = sideGrad;
+          roundRectPath(c, pk.x - 42, plateY, 84, plateH, 8);
+          c.fill();
+          c.strokeStyle = 'rgba(254, 243, 199, 0.4)';
+          c.lineWidth = 1.2;
+          c.stroke();
+
+          drawBrassRivet(c, pk.x - 33, plateY + plateH * 0.5);
+          drawBrassRivet(c, pk.x + 33, plateY + plateH * 0.5);
+        }
+
+        // 2) 두꺼운 천연 가죽 포켓 라이너 링
+        var leatherGrad = c.createRadialGradient(pk.x - 3, pk.y - 3, POCKET_RADIUS * 0.7, pk.x, pk.y, POCKET_RADIUS + 6);
+        leatherGrad.addColorStop(0, '#120a06');
+        leatherGrad.addColorStop(0.65, '#2b160c');
+        leatherGrad.addColorStop(1, '#140904');
+        c.fillStyle = leatherGrad;
+        c.beginPath();
+        c.arc(pk.x, pk.y, POCKET_RADIUS + 5.5, 0, Math.PI * 2);
+        c.fill();
+
+        // 가죽 바느질(Saddle-stitch) 디테일
+        c.save();
+        c.strokeStyle = 'rgba(217, 160, 102, 0.45)';
+        c.lineWidth = 1.1;
+        c.setLineDash([3, 3]);
+        c.beginPath();
+        c.arc(pk.x, pk.y, POCKET_RADIUS + 2.8, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+
+        // 3) 깊은 포켓 드롭 홀 & 내부 입체 그림자
+        var holeGrad = c.createRadialGradient(pk.x + 2, pk.y + 3, 2, pk.x, pk.y, POCKET_RADIUS);
+        holeGrad.addColorStop(0, '#010204');
+        holeGrad.addColorStop(0.78, '#070a10');
+        holeGrad.addColorStop(1, '#18100c');
+        c.fillStyle = holeGrad;
+        c.beginPath();
+        c.arc(pk.x, pk.y, POCKET_RADIUS, 0, Math.PI * 2);
+        c.fill();
+
+        c.restore();
+      }
+
+      function drawBrassRivet(c, x, y) {
+        c.fillStyle = '#fef3c7';
+        c.beginPath();
+        c.arc(x, y, 2.3, 0, Math.PI * 2);
+        c.fill();
+        c.strokeStyle = '#78350f';
+        c.lineWidth = 0.8;
+        c.stroke();
+      }
+
+      // =========================================================================
+      // 4. 3D 구면 회전 행렬 유틸리티
+      // =========================================================================
+      function createIdentityMatrix() {
+        return [
+          1, 0, 0,
+          0, 1, 0,
+          0, 0, 1
+        ];
+      }
+
+      function multiplyMatrices(a, b) {
+        return [
+          a[0]*b[0] + a[1]*b[3] + a[2]*b[6],
+          a[0]*b[1] + a[1]*b[4] + a[2]*b[7],
+          a[0]*b[2] + a[1]*b[5] + a[2]*b[8],
+          a[3]*b[0] + a[4]*b[3] + a[5]*b[6],
+          a[3]*b[1] + a[4]*b[4] + a[5]*b[7],
+          a[3]*b[2] + a[4]*b[5] + a[5]*b[8],
+          a[6]*b[0] + a[7]*b[3] + a[8]*b[6],
+          a[6]*b[1] + a[7]*b[4] + a[8]*b[7],
+          a[6]*b[2] + a[7]*b[5] + a[8]*b[8]
+        ];
+      }
+
+      function rotateMatrixAxis(mat, ux, uy, uz, angle) {
+        if (Math.abs(angle) < 1e-6) return mat;
+        var c = Math.cos(angle);
+        var s = Math.sin(angle);
+        var t = 1 - c;
+        var r = [
+          t*ux*ux + c,      t*ux*uy - s*uz,   t*ux*uz + s*uy,
+          t*ux*uy + s*uz,   t*uy*uy + c,      t*uy*uz - s*ux,
+          t*ux*uz - s*uy,   t*uy*uz + s*ux,   t*uz*uz + c
+        ];
+        return multiplyMatrices(r, mat);
+      }
+
+      // =========================================================================
+      // 5. 게임 상태 관리 객체
+      // =========================================================================
+      var canvas = document.getElementById('gameCanvas');
+      var ctx = canvas.getContext('2d');
+
+      var dom = {
+        startOverlay: document.getElementById('startOverlay'),
+        victoryModal: document.getElementById('victoryModal'),
+        p1Card: document.getElementById('p1Card'),
+        p2Card: document.getElementById('p2Card'),
+        p1TurnTag: document.getElementById('p1TurnTag'),
+        p2TurnTag: document.getElementById('p2TurnTag'),
+        p2NameText: document.getElementById('p2NameText'),
+        p1GroupBadge: document.getElementById('p1GroupBadge'),
+        p2GroupBadge: document.getElementById('p2GroupBadge'),
+        p1BallsRow: document.getElementById('p1BallsRow'),
+        p2BallsRow: document.getElementById('p2BallsRow'),
+        statusPill: document.getElementById('statusPill'),
+        statusText: document.getElementById('statusText'),
+        rollDistText: document.getElementById('rollDistText'),
+        btnClothToggle: document.getElementById('btnClothToggle'),
+        foulBanner: document.getElementById('foulBanner'),
+        foulBannerText: document.getElementById('foulBannerText'),
+        toastBanner: document.getElementById('toastBanner'),
+        pocketedCountBadge: document.getElementById('pocketedCountBadge'),
+        stackEmptyHint: document.getElementById('stackEmptyHint'),
+        pocketedStackList: document.getElementById('pocketedStackList'),
+        spinPad: document.getElementById('spinPad'),
+        spinDot: document.getElementById('spinDot'),
+        spinValueText: document.getElementById('spinValueText'),
+        powerSlider: document.getElementById('powerSlider'),
+        powerPctText: document.getElementById('powerPctText'),
+        lockBadge: document.getElementById('lockBadge'),
+        victoryEmoji: document.getElementById('victoryEmoji'),
+        victoryTitle: document.getElementById('victoryTitle'),
+        victoryDesc: document.getElementById('victoryDesc'),
+        statShots: document.getElementById('statShots'),
+        statTime: document.getElementById('statTime')
+      };
+
+      var game = {
+        gameStarted: false,
+        mode: 'AI',               // 'AI' | '2P' | 'SOLO'
+        state: 'AIMING',          // 'AIMING' | 'CHARGING' | 'SHOOTING' | 'BALL_IN_HAND' | 'AI_THINKING' | 'GAME_OVER'
+        currentPlayer: 1,         // 1 (나) or 2 (AI / 2P)
+        playerGroups: { 1: null, 2: null }, // null | 'SOLID' | 'STRIPE'
+        balls: [],
+        pocketedHistory: [],
+        aimAngle: 0,
+        lockedAimAngle: 0,
+        isLocked: false,
+        powerRatio: 0.45,
+        spinX: 0,                 // -1 ~ 1 (좌/우 회전)
+        spinY: 0,                 // -1 ~ 1 (상단 밀어치기 / 하단 끌어치기)
+        isPointerDown: false,
+        isDragging: false,
+        isCanceled: false,
+        activePointerId: null,
+        dragStartX: 0,
+        dragStartY: 0,
+        pointerX: FELT_LEFT + FELT_W * 0.75,
+        pointerY: FELT_TOP + FELT_H * 0.5,
+        isSpaceCharging: false,
+        spaceDir: 1,
+        isBreakShot: true,
+        shotCount: 0,
+        startTimeMs: Date.now(),
+        toastTimer: null,
+        // 샷 단위 룰 추적
+        shotFirstHitId: null,
+        shotPocketedIds: [],
+        shotCushionHit: false,
+        trackedObjectBallId: null,
+        trackedRollPx: 0,
+        // AI 연출 상태
+        aiTimer: 0,
+        aiPhase: 'AIM',
+        aiTargetAngle: 0,
+        aiTargetPower: 0.5
+      };
+
+      function getBallGroup(id) {
+        if (id >= 1 && id <= 7) return 'SOLID';
+        if (id >= 9 && id <= 15) return 'STRIPE';
+        if (id === 8) return '8BALL';
+        return 'CUE';
+      }
+
+      function getCueBall() {
+        for (var i = 0; i < game.balls.length; i++) {
+          if (game.balls[i].id === 0) return game.balls[i];
+        }
+        return null;
+      }
+
+      function getBallById(id) {
+        for (var i = 0; i < game.balls.length; i++) {
+          if (game.balls[i].id === id) return game.balls[i];
+        }
+        return null;
+      }
+
+      function isBallActiveOnTable(b) {
+        return b && !b.pocketed && !b.dropping;
+      }
+
+      function isHumanTurn() {
+        if (!game.gameStarted || game.state === 'GAME_OVER') return false;
+        if (game.mode === 'AI' && game.currentPlayer === 2) return false;
+        return true;
+      }
+
+      function showToast(msg, duration) {
+        dom.toastBanner.textContent = msg;
+        dom.toastBanner.style.display = 'block';
+        if (game.toastTimer) clearTimeout(game.toastTimer);
+        game.toastTimer = setTimeout(function () {
+          dom.toastBanner.style.display = 'none';
+        }, duration || 2500);
+      }
+
+      // =========================================================================
+      // 6. 16개 공 초기 랙(Rack) 세팅
+      // =========================================================================
+      function setupRack() {
+        game.balls = [];
+
+        // 0번 흰 공 (수구) - 헤드 스트링 위 배치
+        var cueX = FELT_LEFT + FELT_W * 0.25;
+        var cueY = FELT_TOP + FELT_H * 0.5;
+        var cueRot = createIdentityMatrix();
+        cueRot = rotateMatrixAxis(cueRot, 0, 1, 0, 0.35);
+
+        game.balls.push({
+          id: 0,
+          x: cueX,
+          y: cueY,
+          vx: 0,
+          vy: 0,
+          spinZ: 0,
+          pocketed: false,
+          dropping: false,
+          dropProgress: 0,
+          dropPocket: null,
+          dropStartX: 0,
+          dropStartY: 0,
+          rotMat: cueRot
+        });
+
+        // 15개 목적구 삼각형 배치 (8번 공 정중앙, 하단 코너 솔리드/스트라이프 각 1개)
+        var rackOrder = [
+          1,
+          9, 2,
+          3, 8, 10,
+          11, 4, 12, 5,
+          6, 13, 7, 14, 15
+        ];
+
+        var apexX = FELT_LEFT + FELT_W * 0.75;
+        var apexY = FELT_TOP + FELT_H * 0.5;
+        var rowSpacing = BALL_RADIUS * Math.sqrt(3) + 0.35;
+        var colSpacing = BALL_RADIUS * 2 + 0.35;
+
+        var idx = 0;
+        for (var row = 0; row < 5; row++) {
+          for (var col = 0; col <= row; col++) {
+            var id = rackOrder[idx++];
+            var bx = apexX + row * rowSpacing;
+            var by = apexY + (col - row / 2) * colSpacing;
+            var mat = createIdentityMatrix();
+            mat = rotateMatrixAxis(mat, 1, 0, 0, -0.25 + (row % 2) * 0.16);
+            mat = rotateMatrixAxis(mat, 0, 1, 0, ((id * 1.1) % 1.2) - 0.6);
+
+            game.balls.push({
+              id: id,
+              x: bx,
+              y: by,
+              vx: 0,
+              vy: 0,
+              spinZ: 0,
+              pocketed: false,
+              dropping: false,
+              dropProgress: 0,
+              dropPocket: null,
+              dropStartX: 0,
+              dropStartY: 0,
+              rotMat: mat
+            });
+          }
+        }
+      }
+
+      // =========================================================================
+      // 7. UI 동기화 (상단 HUD '내 공 / 상대 공' & 우측 '넣은 공 기록' 누적함)
+      // =========================================================================
+      function setPowerRatio(ratio, canceled) {
+        if (canceled) {
+          game.powerRatio = 0;
+          dom.powerSlider.value = 5;
+          dom.powerPctText.textContent = '취소';
+          dom.powerPctText.style.color = '#94a3b8';
+          return;
+        }
+        game.powerRatio = Math.max(0.05, Math.min(1.0, ratio));
+        var pct = Math.round(game.powerRatio * 100);
+        dom.powerSlider.value = pct;
+        dom.powerPctText.textContent = pct + '%';
+        if (pct >= 80) {
+          dom.powerPctText.style.color = '#f87171';
+        } else if (pct >= 45) {
+          dom.powerPctText.style.color = '#fbbf24';
+        } else {
+          dom.powerPctText.style.color = '#34d399';
+        }
+      }
+
+      function updateLockBadge(locked) {
+        game.isLocked = locked;
+        if (locked) {
+          dom.lockBadge.textContent = '🔒 방향 고정됨';
+          dom.lockBadge.classList.add('locked');
+        } else {
+          dom.lockBadge.textContent = '🔓 마우스 조준 중';
+          dom.lockBadge.classList.remove('locked');
+        }
+      }
+
+      function renderMiniBalls(container, groupType, isSoloAll) {
+        container.innerHTML = '';
+        var ids = [];
+        if (isSoloAll) {
+          ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        } else if (groupType === 'SOLID') {
+          ids = [1, 2, 3, 4, 5, 6, 7];
+        } else if (groupType === 'STRIPE') {
+          ids = [9, 10, 11, 12, 13, 14, 15];
+        } else if (groupType === '8BALL') {
+          ids = [8];
+        } else {
+          var hint = document.createElement('span');
+          hint.style.fontSize = '10.5px';
+          hint.style.color = '#64748b';
+          hint.textContent = '첫 공 포켓 시 그룹 자동 배정';
+          container.appendChild(hint);
+          return;
+        }
+
+        for (var i = 0; i < ids.length; i++) {
+          var id = ids[i];
+          var b = getBallById(id);
+          var isGone = b && (b.pocketed || b.dropping);
+          var style = BALL_COLORS[id];
+          var el = document.createElement('span');
+          el.className = 'mini-ball' + (isGone ? ' pocketed' : '');
+          el.textContent = String(id);
+          if (style.stripe) {
+            el.style.background = 'linear-gradient(180deg, #fbf8ee 22%, ' + style.main + ' 22%, ' + style.main + ' 78%, #fbf8ee 78%)';
+            el.style.color = '#0f172a';
+          } else {
+            el.style.background = style.main;
+            el.style.color = id === 1 ? '#0f172a' : '#ffffff';
+          }
+          container.appendChild(el);
+        }
+      }
+
+      function countRemainingGroupBalls(groupType) {
+        var count = 0;
+        for (var i = 0; i < game.balls.length; i++) {
+          var b = game.balls[i];
+          if (isBallActiveOnTable(b) && getBallGroup(b.id) === groupType) {
+            count++;
+          }
+        }
+        return count;
+      }
+
+      function updateHUD() {
+        var isP1Turn = game.currentPlayer === 1;
+
+        if (game.mode === 'AI') {
+          dom.p2NameText.textContent = '상대 (AI)';
+        } else if (game.mode === '2P') {
+          dom.p2NameText.textContent = '상대 (2P)';
+        } else {
+          dom.p2NameText.textContent = '솔로 연습';
+        }
+
+        if (game.mode === 'SOLO') {
+          dom.p1Card.className = 'player-card active-p1';
+          dom.p2Card.className = 'player-card active-p1';
+          dom.p1TurnTag.textContent = '연습 중';
+          dom.p1TurnTag.className = 'turn-tag';
+          dom.p2TurnTag.textContent = '자유 모드';
+          dom.p2TurnTag.className = 'turn-tag';
+        } else if (isP1Turn) {
+          dom.p1Card.className = 'player-card active-p1';
+          dom.p2Card.className = 'player-card inactive';
+          dom.p1TurnTag.textContent = '내 차례';
+          dom.p1TurnTag.className = 'turn-tag';
+          dom.p2TurnTag.textContent = '대기 중';
+          dom.p2TurnTag.className = 'turn-tag wait';
+        } else {
+          dom.p1Card.className = 'player-card inactive';
+          dom.p2Card.className = 'player-card active-p2';
+          dom.p1TurnTag.textContent = '대기 중';
+          dom.p1TurnTag.className = 'turn-tag wait';
+          dom.p2TurnTag.textContent = game.mode === 'AI' ? 'AI 차례' : '2P 차례';
+          dom.p2TurnTag.className = 'turn-tag opp';
+        }
+
+        if (game.mode === 'SOLO') {
+          dom.p1GroupBadge.textContent = '내 공: 전체 (1~15번)';
+          dom.p1GroupBadge.className = 'group-badge';
+          dom.p2GroupBadge.textContent = '목표: 모든 공 포켓';
+          dom.p2GroupBadge.className = 'group-badge';
+          renderMiniBalls(dom.p1BallsRow, null, true);
+          dom.p2BallsRow.innerHTML = '<span style="font-size:10.5px; color:#94a3b8;">남은 공: ' +
+            game.balls.filter(function (b) { return b.id !== 0 && isBallActiveOnTable(b); }).length + '개</span>';
+        } else {
+          var g1 = game.playerGroups[1];
+          var g2 = game.playerGroups[2];
+
+          var eff1 = g1;
+          if (g1 && countRemainingGroupBalls(g1) === 0) eff1 = '8BALL';
+          var eff2 = g2;
+          if (g2 && countRemainingGroupBalls(g2) === 0) eff2 = '8BALL';
+
+          if (!eff1) {
+            dom.p1GroupBadge.textContent = '내 공: 미배정';
+            dom.p1GroupBadge.className = 'group-badge unassigned';
+          } else if (eff1 === 'SOLID') {
+            dom.p1GroupBadge.textContent = '내 공: 솔리드 (1~7번)';
+            dom.p1GroupBadge.className = 'group-badge';
+          } else if (eff1 === 'STRIPE') {
+            dom.p1GroupBadge.textContent = '내 공: 스트라이프 (9~15번)';
+            dom.p1GroupBadge.className = 'group-badge';
+          } else {
+            dom.p1GroupBadge.textContent = '내 공: 🎱 8번 블랙볼';
+            dom.p1GroupBadge.className = 'group-badge eight-target';
+          }
+
+          if (!eff2) {
+            dom.p2GroupBadge.textContent = '상대 공: 미배정';
+            dom.p2GroupBadge.className = 'group-badge opp unassigned';
+          } else if (eff2 === 'SOLID') {
+            dom.p2GroupBadge.textContent = '상대 공: 솔리드 (1~7번)';
+            dom.p2GroupBadge.className = 'group-badge opp';
+          } else if (eff2 === 'STRIPE') {
+            dom.p2GroupBadge.textContent = '상대 공: 스트라이프 (9~15번)';
+            dom.p2GroupBadge.className = 'group-badge opp';
+          } else {
+            dom.p2GroupBadge.textContent = '상대 공: 🎱 8번 블랙볼';
+            dom.p2GroupBadge.className = 'group-badge eight-target';
+          }
+
+          renderMiniBalls(dom.p1BallsRow, eff1, false);
+          renderMiniBalls(dom.p2BallsRow, eff2, false);
+        }
+
+        if (game.state === 'BALL_IN_HAND') {
+          dom.statusPill.className = 'status-pill foul-turn';
+          dom.statusText.textContent = (isP1Turn ? '내 프리볼 (1P)' : '상대 프리볼 (2P)') + ' — 테이블 위를 클릭해 흰 공 배치';
+          dom.foulBanner.style.display = 'flex';
+        } else {
+          dom.foulBanner.style.display = 'none';
+          if (game.mode !== 'SOLO' && !isP1Turn) {
+            dom.statusPill.className = 'status-pill opp-turn';
+            dom.statusText.textContent = game.mode === 'AI'
+              ? '상대 (AI) 차례 — AI가 조준하고 있습니다...'
+              : '상대 (2P) 차례 — 조준 후 뒤로 당겨 샷';
+          } else {
+            dom.statusPill.className = 'status-pill';
+            dom.statusText.textContent = game.state === 'SHOOTING'
+              ? '공이 구르는 중...'
+              : '내 차례 (1P) — 마우스로 조준 후 뒤로 당겨 샷';
+          }
+        }
+      }
+
+      function addPocketedHistory(ballId, playerNum) {
+        var whoLabel = '나';
+        var isOpp = false;
+        if (playerNum === 2) {
+          whoLabel = game.mode === 'AI' ? 'AI' : '2P';
+          isOpp = true;
+        }
+
+        var entry = {
+          order: game.pocketedHistory.length + 1,
+          ballId: ballId,
+          who: whoLabel,
+          isOpp: isOpp
+        };
+        game.pocketedHistory.push(entry);
+
+        dom.pocketedCountBadge.textContent = game.pocketedHistory.length + '개';
+        dom.stackEmptyHint.style.display = 'none';
+
+        var style = BALL_COLORS[ballId];
+        var item = document.createElement('div');
+        item.className = 'stack-item new-drop' +
+          (ballId === 0 ? ' foul-item' : '') +
+          (ballId === 8 ? ' eight-item' : '');
+
+        var left = document.createElement('div');
+        left.className = 'stack-item-left';
+
+        var orderEl = document.createElement('span');
+        orderEl.className = 'stack-order';
+        orderEl.textContent = '#' + entry.order;
+
+        var ball3d = document.createElement('span');
+        ball3d.className = 'stack-ball-3d';
+        if (style.stripe) {
+          ball3d.style.background = 'linear-gradient(180deg, #fbf8ee 22%, ' + style.main + ' 22%, ' + style.main + ' 78%, #fbf8ee 78%)';
+        } else {
+          ball3d.style.background = style.main;
+        }
+
+        if (ballId > 0) {
+          var numCircle = document.createElement('span');
+          numCircle.className = 'stack-ball-num';
+          numCircle.textContent = String(ballId);
+          ball3d.appendChild(numCircle);
+        }
+
+        var meta = document.createElement('div');
+        meta.className = 'stack-meta';
+
+        var label = document.createElement('span');
+        label.className = 'stack-label';
+        label.textContent = style.name;
+
+        var typeEl = document.createElement('span');
+        typeEl.className = 'stack-type';
+        typeEl.textContent = style.typeLabel;
+
+        meta.appendChild(label);
+        meta.appendChild(typeEl);
+
+        left.appendChild(orderEl);
+        left.appendChild(ball3d);
+        left.appendChild(meta);
+
+        var whoBadge = document.createElement('span');
+        whoBadge.className = 'stack-who' + (isOpp ? ' opp' : '');
+        whoBadge.textContent = whoLabel;
+
+        item.appendChild(left);
+        item.appendChild(whoBadge);
+
+        dom.pocketedStackList.appendChild(item);
+      }
+
+      function clearPocketedHistory() {
+        game.pocketedHistory = [];
+        dom.pocketedCountBadge.textContent = '0개';
+        dom.pocketedStackList.innerHTML = '';
+        dom.stackEmptyHint.style.display = 'block';
+      }
+
+      // =========================================================================
+      // 8. 경기 초기화 & 시작 함수 (window.startGame 전역 보장)
+      // =========================================================================
+      function resetMatch() {
+        setupRack();
+        clearPocketedHistory();
+        game.state = 'AIMING';
+        game.currentPlayer = 1;
+        game.playerGroups = { 1: null, 2: null };
+        game.isBreakShot = true;
+        game.shotCount = 0;
+        game.startTimeMs = Date.now();
+        game.isPointerDown = false;
+        game.isDragging = false;
+        game.isCanceled = false;
+        game.isSpaceCharging = false;
+        game.trackedObjectBallId = null;
+        game.trackedRollPx = 0;
+        dom.rollDistText.textContent = '0 cm';
+
+        var cue = getCueBall();
+        if (cue) {
+          game.aimAngle = Math.atan2((FELT_TOP + FELT_H * 0.5) - cue.y, (FELT_LEFT + FELT_W * 0.75) - cue.x);
+          game.lockedAimAngle = game.aimAngle;
+        }
+        updateLockBadge(false);
+        setPowerRatio(0.45);
+        updateHUD();
+      }
+
+      window.startGame = function () {
+        if (dom.startOverlay) {
+          dom.startOverlay.style.display = 'none';
+          dom.startOverlay.style.pointerEvents = 'none';
+        }
+        if (dom.victoryModal) {
+          dom.victoryModal.style.display = 'none';
+          dom.victoryModal.style.pointerEvents = 'none';
+        }
+
+        sound.unlock();
+
+        game.gameStarted = true;
+        resetMatch();
+        showToast('게임이 시작되었습니다! 마우스로 조준 후 클릭해 뒤로 당겨 샷하세요.', 3200);
+      };
+
+      // =========================================================================
+      // 9. 조준선 예측 (고스트 볼, 목적구 예상 경로, 수구 탄젠트 반사각)
+      // =========================================================================
+      function computeAimPrediction() {
+        var cue = getCueBall();
+        if (!isBallActiveOnTable(cue)) return null;
+
+        var dx = Math.cos(game.aimAngle);
+        var dy = Math.sin(game.aimAngle);
+
+        var minX = FELT_LEFT + BALL_RADIUS;
+        var maxX = FELT_RIGHT - BALL_RADIUS;
+        var minY = FELT_TOP + BALL_RADIUS;
+        var maxY = FELT_BOTTOM - BALL_RADIUS;
+
+        var tWall = 99999;
+        if (dx > 1e-6) tWall = Math.min(tWall, (maxX - cue.x) / dx);
+        else if (dx < -1e-6) tWall = Math.min(tWall, (minX - cue.x) / dx);
+
+        if (dy > 1e-6) tWall = Math.min(tWall, (maxY - cue.y) / dy);
+        else if (dy < -1e-6) tWall = Math.min(tWall, (minY - cue.y) / dy);
+
+        var tBall = 99999;
+        var hitBall = null;
+        var minDistSum = BALL_RADIUS * 2;
+
+        for (var i = 0; i < game.balls.length; i++) {
+          var b = game.balls[i];
+          if (b.id === 0 || !isBallActiveOnTable(b)) continue;
+
+          var ocX = b.x - cue.x;
+          var ocY = b.y - cue.y;
+          var proj = ocX * dx + ocY * dy;
+          if (proj <= 0) continue;
+
+          var perpSq = (ocX * ocX + ocY * ocY) - proj * proj;
+          var radSq = minDistSum * minDistSum;
+          if (perpSq < radSq) {
+            var thc = Math.sqrt(radSq - perpSq);
+            var tHit = proj - thc;
+            if (tHit >= 0 && tHit < tBall) {
+              tBall = tHit;
+              hitBall = b;
+            }
+          }
+        }
+
+        if (hitBall && tBall < tWall) {
+          var ghostX = cue.x + dx * tBall;
+          var ghostY = cue.y + dy * tBall;
+
+          var nx = (hitBall.x - ghostX) / minDistSum;
+          var ny = (hitBall.y - ghostY) / minDistSum;
+
+          var tx = -ny;
+          var ty = nx;
+          if (tx * dx + ty * dy < 0) {
+            tx = -tx;
+            ty = -ty;
+          }
+
+          return {
+            endX: ghostX,
+            endY: ghostY,
+            hitBall: hitBall,
+            nx: nx,
+            ny: ny,
+            tx: tx,
+            ty: ty
+          };
+        }
+
+        return {
+          endX: cue.x + dx * Math.max(0, tWall),
+          endY: cue.y + dy * Math.max(0, tWall),
+          hitBall: null
+        };
+      }
+
+      // =========================================================================
+      // 10. 샷 발사 & 16-Substep 고반발 + 30cm+ 완만 감속 물리 엔진
+      // =========================================================================
+      function shootCueBall(ratio) {
+        var cue = getCueBall();
+        if (!isBallActiveOnTable(cue)) return;
+
+        var p = Math.max(0.05, Math.min(1.0, ratio));
+        var speed = 320 + Math.pow(p, 1.05) * (MAX_SHOT_SPEED - 320);
+
+        cue.vx = Math.cos(game.aimAngle) * speed;
+        cue.vy = Math.sin(game.aimAngle) * speed;
+        cue.spinZ = game.spinX * p * 16;
+
+        game.state = 'SHOOTING';
+        game.shotCount++;
+        game.shotFirstHitId = null;
+        game.shotPocketedIds = [];
+        game.shotCushionHit = false;
+        game.trackedObjectBallId = null;
+        game.trackedRollPx = 0;
+        dom.rollDistText.textContent = '0 cm';
+
+        sound.playCueHit(p);
+        updateHUD();
+      }
+
+      function stepPhysics(dt) {
+        var subDt = dt / SUBSTEPS;
+        var anyMoving = false;
+        var ballRestitution = 0.96;
+        var railRestitution = 0.86;
+        var minX = FELT_LEFT + BALL_RADIUS;
+        var maxX = FELT_RIGHT - BALL_RADIUS;
+        var minY = FELT_TOP + BALL_RADIUS;
+        var maxY = FELT_BOTTOM - BALL_RADIUS;
+
+        // 포켓 드롭 나선 애니메이션 갱신
+        for (var d = 0; d < game.balls.length; d++) {
+          var db = game.balls[d];
+          if (db.dropping && !db.pocketed) {
+            db.dropProgress += dt * 4.2;
+            if (db.dropProgress >= 1) {
+              db.dropProgress = 1;
+              db.dropping = false;
+              db.pocketed = true;
+            } else {
+              var t = db.dropProgress;
+              var pk = db.dropPocket;
+              var spiralAng = t * Math.PI * 1.4;
+              var lerpX = db.dropStartX + (pk.x - db.dropStartX) * t;
+              var lerpY = db.dropStartY + (pk.y - db.dropStartY) * t;
+              var swirlR = (1 - t) * 4.5;
+              db.x = lerpX + Math.cos(spiralAng) * swirlR;
+              db.y = lerpY + Math.sin(spiralAng) * swirlR;
+              db.rotMat = rotateMatrixAxis(db.rotMat, 0.4, 0.8, 0.2, dt * 14);
+              anyMoving = true;
+            }
+          }
+        }
+
+        for (var step = 0; step < SUBSTEPS; step++) {
+          // 1) 이동, 구름 마찰 저항 & 3D 회전 행렬 갱신
+          for (var i = 0; i < game.balls.length; i++) {
+            var b = game.balls[i];
+            if (!isBallActiveOnTable(b)) continue;
+
+            var spd = Math.hypot(b.vx, b.vy);
+            if (spd > 0) {
+              var moveX = b.vx * subDt;
+              var moveY = b.vy * subDt;
+              b.x += moveX;
+              b.y += moveY;
+
+              if (b.id === game.trackedObjectBallId) {
+                game.trackedRollPx += Math.hypot(moveX, moveY);
+              }
+
+              var stepDist = Math.hypot(moveX, moveY);
+              if (stepDist > 0.0001) {
+                var ux = -moveY / stepDist;
+                var uy = moveX / stepDist;
+                b.rotMat = rotateMatrixAxis(b.rotMat, ux, uy, 0, stepDist / BALL_RADIUS);
+              }
+              if (Math.abs(b.spinZ) > 0.01) {
+                b.rotMat = rotateMatrixAxis(b.rotMat, 0, 0, 1, b.spinZ * subDt);
+                b.spinZ *= Math.pow(0.985, subDt * 60);
+              }
+
+              // 2단계 저마찰 구름 감속 (목적구 충돌 후 30cm ~ 80cm+ 활주 후 완만 정지)
+              var expFactor = Math.pow(0.9945, subDt * 60);
+              var newSpd = spd * expFactor - 88 * subDt;
+              if (newSpd <= 2.5) {
+                b.vx = 0;
+                b.vy = 0;
+                b.spinZ = 0;
+              } else {
+                var scale = newSpd / spd;
+                b.vx *= scale;
+                b.vy *= scale;
+                anyMoving = true;
+              }
+            }
+          }
+
+          // 2) 공 대 공 완전 탄성 충돌
+          for (var i = 0; i < game.balls.length; i++) {
+            var b1 = game.balls[i];
+            if (!isBallActiveOnTable(b1)) continue;
+
+            for (var j = i + 1; j < game.balls.length; j++) {
+              var b2 = game.balls[j];
+              if (!isBallActiveOnTable(b2)) continue;
+
+              var dx = b2.x - b1.x;
+              var dy = b2.y - b1.y;
+              var dist = Math.hypot(dx, dy);
+              var minDist = BALL_RADIUS * 2;
+
+              if (dist < minDist && dist > 0.0001) {
+                var nx = dx / dist;
+                var ny = dy / dist;
+
+                var overlap = (minDist - dist) * 0.5;
+                b1.x -= nx * overlap;
+                b1.y -= ny * overlap;
+                b2.x += nx * overlap;
+                b2.y += ny * overlap;
+
+                var rvx = b2.vx - b1.vx;
+                var rvy = b2.vy - b1.vy;
+                var velAlongNormal = rvx * nx + rvy * ny;
+
+                if (velAlongNormal < 0) {
+                  var impulse = -(1 + ballRestitution) * velAlongNormal * 0.5;
+                  b1.vx -= impulse * nx;
+                  b1.vy -= impulse * ny;
+                  b2.vx += impulse * nx;
+                  b2.vy += impulse * ny;
+
+                  if (b1.id === 0 || b2.id === 0) {
+                    var cue = b1.id === 0 ? b1 : b2;
+                    var obj = b1.id === 0 ? b2 : b1;
+                    var toObjX = b1.id === 0 ? nx : -nx;
+                    var toObjY = b1.id === 0 ? ny : -ny;
+
+                    if (game.shotFirstHitId === null) {
+                      game.shotFirstHitId = obj.id;
+                      game.trackedObjectBallId = obj.id;
+                      game.trackedRollPx = 0;
+
+                      var impactMag = Math.abs(velAlongNormal);
+                      if (Math.abs(game.spinY) > 0.05) {
+                        cue.vx += toObjX * game.spinY * impactMag * 0.42;
+                        cue.vy += toObjY * game.spinY * impactMag * 0.42;
+                      }
+                    }
+                  }
+
+                  if (step === 0) {
+                    sound.playBallClack(Math.abs(velAlongNormal));
+                  }
+                }
+              }
+            }
+          }
+
+          // 3) 6개 포켓 입수 판정 + 포켓 드롭 나선 연출 시작
+          for (var i = 0; i < game.balls.length; i++) {
+            var b = game.balls[i];
+            if (!isBallActiveOnTable(b)) continue;
+
+            for (var p = 0; p < POCKETS.length; p++) {
+              var pk = POCKETS[p];
+              var pdx = pk.x - b.x;
+              var pdy = pk.y - b.y;
+              var pdist = Math.hypot(pdx, pdy);
+
+              if (pdist < POCKET_RADIUS * 0.94) {
+                b.dropping = true;
+                b.dropProgress = 0;
+                b.dropPocket = pk;
+                b.dropStartX = b.x;
+                b.dropStartY = b.y;
+                b.vx = 0;
+                b.vy = 0;
+                anyMoving = true;
+                game.shotPocketedIds.push(b.id);
+                addPocketedHistory(b.id, game.currentPlayer);
+                sound.playPocketSink();
+                updateHUD();
+                break;
+              } else if (pdist < POCKET_RADIUS * 1.25) {
+                b.vx += (pdx / pdist) * 380 * subDt;
+                b.vy += (pdy / pdist) * 380 * subDt;
+              }
+            }
+          }
+
+          // 4) 쿠션 벽 반사 판정
+          for (var i = 0; i < game.balls.length; i++) {
+            var b = game.balls[i];
+            if (!isBallActiveOnTable(b)) continue;
+
+            var nearCornerX = (b.x < FELT_LEFT + 34) || (b.x > FELT_RIGHT - 34);
+            var nearSideX = Math.abs(b.x - (FELT_LEFT + FELT_W / 2)) < 26;
+            var nearCornerY = (b.y < FELT_TOP + 34) || (b.y > FELT_BOTTOM - 34);
+
+            var bounced = false;
+            var preSpeed = Math.hypot(b.vx, b.vy);
+
+            if (!nearCornerY) {
+              if (b.x < minX) {
+                b.x = minX;
+                b.vx = Math.abs(b.vx) * railRestitution;
+                b.vy += b.spinZ * 6;
+                bounced = true;
+              } else if (b.x > maxX) {
+                b.x = maxX;
+                b.vx = -Math.abs(b.vx) * railRestitution;
+                b.vy -= b.spinZ * 6;
+                bounced = true;
+              }
+            }
+
+            if (!nearCornerX && !nearSideX) {
+              if (b.y < minY) {
+                b.y = minY;
+                b.vy = Math.abs(b.vy) * railRestitution;
+                b.vx -= b.spinZ * 6;
+                bounced = true;
+              } else if (b.y > maxY) {
+                b.y = maxY;
+                b.vy = -Math.abs(b.vy) * railRestitution;
+                b.vx += b.spinZ * 6;
+                bounced = true;
+              }
+            }
+
+            if (bounced) {
+              game.shotCushionHit = true;
+              if (step === 0) {
+                sound.playRailBounce(preSpeed);
+              }
+            }
+          }
+        }
+
+        if (game.trackedObjectBallId !== null) {
+          var cm = Math.round(game.trackedRollPx / PX_PER_CM);
+          dom.rollDistText.textContent = cm + ' cm';
+        }
+
+        if (!anyMoving && game.state === 'SHOOTING') {
+          evaluateShotOutcome();
+        }
+      }
+
+      // =========================================================================
+      // 11. 8-BALL 공식 규칙 판정 & 턴 전환
+      // =========================================================================
+      function finishMatch(winnerPlayer, reasonText) {
+        game.state = 'GAME_OVER';
+        var elapsedSec = Math.floor((Date.now() - game.startTimeMs) / 1000);
+        var mins = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+        var secs = String(elapsedSec % 60).padStart(2, '0');
+
+        dom.statShots.textContent = game.shotCount + '회';
+        dom.statTime.textContent = mins + ':' + secs;
+
+        if (game.mode === 'SOLO') {
+          dom.victoryEmoji.textContent = '🎉';
+          dom.victoryTitle.textContent = '연습 클리어!';
+          dom.victoryDesc.textContent = reasonText;
+          sound.playWin();
+        } else if (winnerPlayer === 1) {
+          dom.victoryEmoji.textContent = '🏆';
+          dom.victoryTitle.textContent = '승리했습니다! (1P 승)';
+          dom.victoryDesc.textContent = reasonText;
+          sound.playWin();
+        } else {
+          dom.victoryEmoji.textContent = '🎱';
+          dom.victoryTitle.textContent = (game.mode === 'AI' ? 'AI 승리!' : '2P 승리!');
+          dom.victoryDesc.textContent = reasonText;
+          sound.playFoul();
+        }
+
+        dom.victoryModal.style.display = 'flex';
+        dom.victoryModal.style.pointerEvents = 'auto';
+        updateHUD();
+      }
+
+      function evaluateShotOutcome() {
+        var cue = getCueBall();
+        var scratched = game.shotPocketedIds.indexOf(0) !== -1 || (cue && (cue.pocketed || cue.dropping));
+        var eightPocketed = game.shotPocketedIds.indexOf(8) !== -1;
+
+        if (game.mode === 'SOLO') {
+          var rem = game.balls.filter(function (b) { return b.id !== 0 && isBallActiveOnTable(b); }).length;
+          if (rem === 0) {
+            finishMatch(1, '15개의 모든 공을 포켓에 넣었습니다!');
+            return;
+          }
+          if (scratched && cue) {
+            cue.pocketed = false;
+            cue.dropping = false;
+            cue.dropProgress = 0;
+            cue.vx = 0;
+            cue.vy = 0;
+            game.state = 'BALL_IN_HAND';
+            sound.playFoul();
+            showToast('흰 공이 빠졌습니다! 원하는 위치에 클릭하여 놓으세요.');
+          } else {
+            game.state = 'AIMING';
+          }
+          game.isBreakShot = false;
+          updateHUD();
+          return;
+        }
+
+        var p = game.currentPlayer;
+        var opp = p === 1 ? 2 : 1;
+        var myGroup = game.playerGroups[p];
+
+        if (eightPocketed) {
+          if (game.isBreakShot) {
+            var b8 = getBallById(8);
+            if (b8) {
+              b8.pocketed = false;
+              b8.dropping = false;
+              b8.dropProgress = 0;
+              b8.x = FELT_LEFT + FELT_W * 0.75;
+              b8.y = FELT_TOP + FELT_H * 0.5;
+            }
+          } else {
+            var myRemaining = myGroup ? countRemainingGroupBalls(myGroup) : 7;
+            if (myGroup && myRemaining === 0 && !scratched && game.shotFirstHitId === 8) {
+              finishMatch(p, (p === 1 ? '나 (1P)' : (game.mode === 'AI' ? 'AI' : '2P')) + '님이 8번 블랙볼을 정확히 포켓했습니다!');
+            } else {
+              var loseReason = scratched
+                ? '8번 블랙볼 포켓 중 흰 공이 빠지는 파울이 발생했습니다!'
+                : '자신의 그룹 공을 모두 넣기 전에 8번 블랙볼이 들어갔습니다!';
+              finishMatch(opp, loseReason);
+            }
+            return;
+          }
+        }
+
+        var foul = false;
+        var foulMsg = '';
+
+        if (scratched) {
+          foul = true;
+          foulMsg = '파울! 흰 공이 포켓에 빠졌습니다.';
+        } else if (game.shotFirstHitId === null) {
+          foul = true;
+          foulMsg = '파울! 흰 공이 어떤 목적구도 맞히지 못했습니다.';
+        } else if (myGroup !== null) {
+          var remCount = countRemainingGroupBalls(myGroup);
+          var firstGroup = getBallGroup(game.shotFirstHitId);
+          if (remCount > 0 && firstGroup !== myGroup) {
+            foul = true;
+            foulMsg = '파울! 상대 그룹 공(또는 8번)을 먼저 맞혔습니다.';
+          } else if (remCount === 0 && game.shotFirstHitId !== 8) {
+            foul = true;
+            foulMsg = '파울! 8번 블랙볼을 먼저 맞혀야 합니다.';
+          }
+        }
+
+        var pocketedMyBall = false;
+        if (!foul && !game.isBreakShot && myGroup === null) {
+          for (var i = 0; i < game.shotPocketedIds.length; i++) {
+            var pid = game.shotPocketedIds[i];
+            var grp = getBallGroup(pid);
+            if (grp === 'SOLID' || grp === 'STRIPE') {
+              game.playerGroups[p] = grp;
+              game.playerGroups[opp] = (grp === 'SOLID') ? 'STRIPE' : 'SOLID';
+              myGroup = grp;
+              pocketedMyBall = true;
+              showToast('그룹 배정 완료! ' + (p === 1 ? '나(1P)' : '상대') + ': ' + (grp === 'SOLID' ? '솔리드(1~7번)' : '스트라이프(9~15번)'), 3000);
+              break;
+            }
+          }
+        } else if (!foul && myGroup !== null) {
+          for (var i = 0; i < game.shotPocketedIds.length; i++) {
+            if (getBallGroup(game.shotPocketedIds[i]) === myGroup) {
+              pocketedMyBall = true;
+              break;
+            }
+          }
+        } else if (!foul && game.isBreakShot) {
+          for (var i = 0; i < game.shotPocketedIds.length; i++) {
+            var g = getBallGroup(game.shotPocketedIds[i]);
+            if (g === 'SOLID' || g === 'STRIPE') {
+              pocketedMyBall = true;
+              break;
+            }
+          }
+        }
+
+        game.isBreakShot = false;
+
+        if (foul) {
+          sound.playFoul();
+          game.currentPlayer = opp;
+          if (cue) {
+            cue.pocketed = false;
+            cue.dropping = false;
+            cue.dropProgress = 0;
+            cue.vx = 0;
+            cue.vy = 0;
+          }
+          dom.foulBannerText.textContent = foulMsg + ' 흰 공을 원하는 위치에 놓으세요.';
+          game.state = 'BALL_IN_HAND';
+          updateHUD();
+
+          if (game.mode === 'AI' && game.currentPlayer === 2) {
+            placeCueBallForAI();
+            startAITurn();
+          }
+          return;
+        }
+
+        if (pocketedMyBall) {
+          showToast('나이스 샷! 연속으로 한 번 더 칩니다.');
+          game.state = 'AIMING';
+          updateHUD();
+          if (game.mode === 'AI' && game.currentPlayer === 2) {
+            startAITurn();
+          }
+        } else {
+          game.currentPlayer = opp;
+          game.state = 'AIMING';
+          updateHUD();
+          if (game.mode === 'AI' && game.currentPlayer === 2) {
+            startAITurn();
+          }
+        }
+      }
+
+      // =========================================================================
+      // 12. 스마트 AI 플레이어 로직
+      // =========================================================================
+      function isValidBallPlacement(x, y) {
+        var margin = BALL_RADIUS + 2;
+        if (x < FELT_LEFT + margin || x > FELT_RIGHT - margin || y < FELT_TOP + margin || y > FELT_BOTTOM - margin) {
+          return false;
+        }
+        for (var i = 0; i < game.balls.length; i++) {
+          var b = game.balls[i];
+          if (b.id === 0 || !isBallActiveOnTable(b)) continue;
+          if (Math.hypot(b.x - x, b.y - y) < BALL_RADIUS * 2.15) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function placeCueBallForAI() {
+        var cue = getCueBall();
+        if (!cue) return;
+        var candidates = [
+          { x: FELT_LEFT + FELT_W * 0.25, y: FELT_TOP + FELT_H * 0.5 },
+          { x: FELT_LEFT + FELT_W * 0.25, y: FELT_TOP + FELT_H * 0.3 },
+          { x: FELT_LEFT + FELT_W * 0.25, y: FELT_TOP + FELT_H * 0.7 },
+          { x: FELT_LEFT + FELT_W * 0.45, y: FELT_TOP + FELT_H * 0.5 }
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+          if (isValidBallPlacement(candidates[i].x, candidates[i].y)) {
+            cue.x = candidates[i].x;
+            cue.y = candidates[i].y;
+            cue.pocketed = false;
+            cue.dropping = false;
+            cue.dropProgress = 0;
+            return;
+          }
+        }
+        for (var gx = FELT_LEFT + 60; gx < FELT_RIGHT - 60; gx += 35) {
+          for (var gy = FELT_TOP + 60; gy < FELT_BOTTOM - 60; gy += 35) {
+            if (isValidBallPlacement(gx, gy)) {
+              cue.x = gx;
+              cue.y = gy;
+              cue.pocketed = false;
+              cue.dropping = false;
+              cue.dropProgress = 0;
+              return;
+            }
+          }
+        }
+      }
+
+      function startAITurn() {
+        var cue = getCueBall();
+        if (!isBallActiveOnTable(cue)) return;
+
+        var aiGroup = game.playerGroups[2];
+        var targets = [];
+        for (var i = 0; i < game.balls.length; i++) {
+          var b = game.balls[i];
+          if (b.id === 0 || !isBallActiveOnTable(b)) continue;
+          var g = getBallGroup(b.id);
+          if (!aiGroup) {
+            if (b.id !== 8) targets.push(b);
+          } else {
+            var rem = countRemainingGroupBalls(aiGroup);
+            if (rem > 0 && g === aiGroup) targets.push(b);
+            else if (rem === 0 && b.id === 8) targets.push(b);
+          }
+        }
+
+        var bestScore = -999999;
+        var bestAngle = 0;
+        var bestPower = 0.55;
+
+        for (var t = 0; t < targets.length; t++) {
+          var obj = targets[t];
+          for (var p = 0; p < POCKETS.length; p++) {
+            var pk = POCKETS[p];
+            var toPkX = pk.x - obj.x;
+            var toPkY = pk.y - obj.y;
+            var distToPk = Math.hypot(toPkX, toPkY);
+            if (distToPk < 1) continue;
+
+            var dirX = toPkX / distToPk;
+            var dirY = toPkY / distToPk;
+
+            var ghostX = obj.x - dirX * (BALL_RADIUS * 2);
+            var ghostY = obj.y - dirY * (BALL_RADIUS * 2);
+
+            var toGhostX = ghostX - cue.x;
+            var toGhostY = ghostY - cue.y;
+            var distCueToGhost = Math.hypot(toGhostX, toGhostY);
+            if (distCueToGhost < 1) continue;
+
+            var cueDirX = toGhostX / distCueToGhost;
+            var cueDirY = toGhostY / distCueToGhost;
+
+            var alignment = cueDirX * dirX + cueDirY * dirY;
+            if (alignment < 0.25) continue;
+
+            var blocked = false;
+            for (var k = 0; k < game.balls.length; k++) {
+              var other = game.balls[k];
+              if (other.id === 0 || other.id === obj.id || !isBallActiveOnTable(other)) continue;
+              var ox = other.x - cue.x;
+              var oy = other.y - cue.y;
+              var proj = ox * cueDirX + oy * cueDirY;
+              if (proj > 0 && proj < distCueToGhost) {
+                var perp = Math.hypot(ox - proj * cueDirX, oy - proj * cueDirY);
+                if (perp < BALL_RADIUS * 2.05) {
+                  blocked = true;
+                  break;
+                }
+              }
+            }
+
+            var score = alignment * 160 - (distToPk + distCueToGhost) * 0.1 - (blocked ? 220 : 0);
+            if (score > bestScore) {
+              bestScore = score;
+              bestAngle = Math.atan2(toGhostY, toGhostX);
+              bestPower = game.isBreakShot
+                ? 0.90
+                : Math.max(0.28, Math.min(0.68, 0.24 + (distToPk + distCueToGhost) / 2000));
+            }
+          }
+        }
+
+        if (bestScore === -999999 && targets.length > 0) {
+          var fb = targets[0];
+          bestAngle = Math.atan2(fb.y - cue.y, fb.x - cue.x);
+          bestPower = game.isBreakShot ? 0.90 : 0.44;
+        }
+
+        bestAngle += (Math.random() - 0.5) * 0.048;
+
+        game.state = 'AI_THINKING';
+        game.aiPhase = 'AIM';
+        game.aiTimer = 0;
+        game.aiTargetAngle = bestAngle;
+        game.aiTargetPower = bestPower;
+        setPowerRatio(0.15);
+        updateHUD();
+      }
+
+      // =========================================================================
+      // 13. 입력 이벤트 바인딩
+      // =========================================================================
+      function screenToCanvasCoords(clientX, clientY) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = CANVAS_W / rect.width;
+        var scaleY = CANVAS_H / rect.height;
+        return {
+          x: (clientX - rect.left) * scaleX,
+          y: (clientY - rect.top) * scaleY
+        };
+      }
+
+      // 토너먼트 그린 / 프로 블루 매트 색상 전환 버튼
+      dom.btnClothToggle.addEventListener('click', function () {
+        if (currentClothTheme === 'GREEN') {
+          currentClothTheme = 'BLUE';
+          this.textContent = '🎨 프로 블루';
+          this.classList.add('cloth-blue');
+        } else {
+          currentClothTheme = 'GREEN';
+          this.textContent = '🎨 토너먼트 그린';
+          this.classList.remove('cloth-blue');
+        }
+        buildClothCache(currentClothTheme);
+      });
+
+      // 모드 선택 버튼
+      var modeButtons = document.querySelectorAll('.mode-btn');
+      for (var i = 0; i < modeButtons.length; i++) {
+        (function (btn) {
+          btn.addEventListener('click', function () {
+            for (var j = 0; j < modeButtons.length; j++) {
+              modeButtons[j].classList.remove('selected');
+            }
+            btn.classList.add('selected');
+            game.mode = btn.getAttribute('data-mode') || 'AI';
+          });
+        })(modeButtons[i]);
+      }
+
+      var btnStartGame = document.getElementById('btnStartGame');
+      if (btnStartGame) {
+        btnStartGame.addEventListener('click', function (e) {
+          e.preventDefault();
+          window.startGame();
+        });
+      }
+
+      document.getElementById('btnNewGame').addEventListener('click', function () {
+        sound.unlock();
+        if (!game.gameStarted) {
+          window.startGame();
+        } else {
+          resetMatch();
+          showToast('새 게임을 시작했습니다!');
+        }
+      });
+
+      document.getElementById('btnRematch').addEventListener('click', function () {
+        window.startGame();
+      });
+
+      function openModeOverlay() {
+        dom.victoryModal.style.display = 'none';
+        dom.startOverlay.style.display = 'flex';
+        dom.startOverlay.style.pointerEvents = 'auto';
+      }
+
+      document.getElementById('btnOpenMode').addEventListener('click', openModeOverlay);
+      document.getElementById('btnModalMode').addEventListener('click', openModeOverlay);
+
+      document.getElementById('btnSoundToggle').addEventListener('click', function () {
+        var muted = sound.toggleMute();
+        this.textContent = muted ? '🔇 음소거' : '🔊 소리';
+      });
+
+      dom.powerSlider.addEventListener('input', function () {
+        var val = parseInt(this.value, 10) || 45;
+        setPowerRatio(val / 100);
+      });
+
+      document.getElementById('btnShoot').addEventListener('click', function () {
+        if (!game.gameStarted) {
+          window.startGame();
+          return;
+        }
+        if (isHumanTurn() && (game.state === 'AIMING' || game.state === 'CHARGING')) {
+          sound.unlock();
+          var p = (parseInt(dom.powerSlider.value, 10) || 45) / 100;
+          shootCueBall(p);
+        }
+      });
+
+      // 당점(스핀) 패드 조작
+      function updateSpinFromEvent(e) {
+        var rect = dom.spinPad.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        var nx = (e.clientX - cx) / (rect.width * 0.42);
+        var ny = (e.clientY - cy) / (rect.height * 0.42);
+        var mag = Math.hypot(nx, ny);
+        if (mag > 1) {
+          nx /= mag;
+          ny /= mag;
+        }
+        game.spinX = Math.round(nx * 100) / 100;
+        game.spinY = Math.round(-ny * 100) / 100;
+
+        dom.spinDot.style.left = (50 + game.spinX * 36) + '%';
+        dom.spinDot.style.top = (50 - game.spinY * 36) + '%';
+
+        var labels = [];
+        if (game.spinY > 0.25) labels.push('밀어치기');
+        else if (game.spinY < -0.25) labels.push('끌어치기');
+        if (game.spinX < -0.25) labels.push('좌회전');
+        else if (game.spinX > 0.25) labels.push('우회전');
+        dom.spinValueText.textContent = labels.length > 0 ? labels.join('+') : '정중앙';
+      }
+
+      var spinDragging = false;
+      dom.spinPad.addEventListener('pointerdown', function (e) {
+        spinDragging = true;
+        updateSpinFromEvent(e);
+      });
+      window.addEventListener('pointermove', function (e) {
+        if (spinDragging) updateSpinFromEvent(e);
+      });
+      window.addEventListener('pointerup', function () {
+        spinDragging = false;
+      });
+
+      document.getElementById('btnResetSpin').addEventListener('click', function () {
+        game.spinX = 0;
+        game.spinY = 0;
+        dom.spinDot.style.left = '50%';
+        dom.spinDot.style.top = '50%';
+        dom.spinValueText.textContent = '정중앙';
+      });
+
+      canvas.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        if (game.isPointerDown && game.state === 'CHARGING') {
+          game.isPointerDown = false;
+          game.isDragging = false;
+          game.isCanceled = false;
+          game.state = 'AIMING';
+          updateLockBadge(false);
+          setPowerRatio(0.45);
+          showToast('샷이 취소되었습니다.');
+        }
+      });
+
+      canvas.addEventListener('pointerdown', function (e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (!game.gameStarted) return;
+        sound.unlock();
+
+        var pt = screenToCanvasCoords(e.clientX, e.clientY);
+        game.pointerX = pt.x;
+        game.pointerY = pt.y;
+
+        if (!isHumanTurn()) return;
+
+        if (game.state === 'BALL_IN_HAND') {
+          var cx = Math.max(FELT_LEFT + BALL_RADIUS + 2, Math.min(FELT_RIGHT - BALL_RADIUS - 2, pt.x));
+          var cy = Math.max(FELT_TOP + BALL_RADIUS + 2, Math.min(FELT_BOTTOM - BALL_RADIUS - 2, pt.y));
+          if (isValidBallPlacement(cx, cy)) {
+            var cue = getCueBall();
+            if (cue) {
+              cue.x = cx;
+              cue.y = cy;
+              cue.pocketed = false;
+              cue.dropping = false;
+              cue.dropProgress = 0;
+            }
+            game.state = 'AIMING';
+            updateHUD();
+            showToast('흰 공 배치 완료! 조준 후 샷하세요.');
+          } else {
+            showToast('다른 공과 겹치지 않는 빈 자리에 놓아주세요.');
+          }
+          return;
+        }
+
+        if (game.state === 'AIMING') {
+          var cue = getCueBall();
+          if (!isBallActiveOnTable(cue)) return;
+
+          if (Math.hypot(pt.x - cue.x, pt.y - cue.y) > 4) {
+            game.aimAngle = Math.atan2(pt.y - cue.y, pt.x - cue.x);
+          }
+          game.lockedAimAngle = game.aimAngle;
+          game.isPointerDown = true;
+          game.isDragging = false;
+          game.isCanceled = false;
+          game.activePointerId = e.pointerId !== undefined ? e.pointerId : null;
+          game.dragStartX = pt.x;
+          game.dragStartY = pt.y;
+          game.state = 'CHARGING';
+          updateLockBadge(true);
+        }
+      });
+
+      window.addEventListener('pointermove', function (e) {
+        var pt = screenToCanvasCoords(e.clientX, e.clientY);
+        game.pointerX = pt.x;
+        game.pointerY = pt.y;
+
+        if (!game.gameStarted || !isHumanTurn()) return;
+
+        if (game.state === 'AIMING' && !game.isPointerDown) {
+          var cue = getCueBall();
+          if (isBallActiveOnTable(cue)) {
+            game.aimAngle = Math.atan2(pt.y - cue.y, pt.x - cue.x);
+          }
+          return;
+        }
+
+        if (game.isPointerDown && game.state === 'CHARGING') {
+          game.aimAngle = game.lockedAimAngle;
+          var dx = pt.x - game.dragStartX;
+          var dy = pt.y - game.dragStartY;
+          var backX = -Math.cos(game.lockedAimAngle);
+          var backY = -Math.sin(game.lockedAimAngle);
+          var pullBack = dx * backX + dy * backY;
+
+          if (!game.isDragging && Math.hypot(dx, dy) > 6) {
+            game.isDragging = true;
+          }
+
+          if (game.isDragging) {
+            if (pullBack <= 0) {
+              game.isCanceled = true;
+              setPowerRatio(0, true);
+            } else {
+              game.isCanceled = false;
+              var ratio = 0.05 + Math.min(1, pullBack / MAX_PULL_PX) * 0.95;
+              setPowerRatio(ratio);
+            }
+          }
+        }
+      });
+
+      function releasePointerShot(e) {
+        if (!game.isPointerDown) return;
+        if (game.activePointerId !== null && e.pointerId !== undefined && e.pointerId !== game.activePointerId) return;
+
+        var wasDragging = game.isDragging;
+        var wasCanceled = game.isCanceled;
+        var currentSliderRatio = (parseInt(dom.powerSlider.value, 10) || 45) / 100;
+
+        game.isPointerDown = false;
+        game.isDragging = false;
+        game.isCanceled = false;
+        game.activePointerId = null;
+        updateLockBadge(false);
+
+        if (game.gameStarted && isHumanTurn() && game.state === 'CHARGING') {
+          if (wasDragging && (wasCanceled || game.powerRatio < 0.05)) {
+            game.state = 'AIMING';
+            setPowerRatio(0.45);
+            showToast('샷이 취소되었습니다.');
+            return;
+          }
+
+          game.aimAngle = game.lockedAimAngle;
+          var shotPower = wasDragging ? game.powerRatio : currentSliderRatio;
+          shootCueBall(shotPower);
+        }
+      }
+
+      window.addEventListener('pointerup', releasePointerShot);
+      window.addEventListener('pointercancel', releasePointerShot);
+
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && dom.startOverlay.style.display !== 'none') {
+          e.preventDefault();
+          window.startGame();
+          return;
+        }
+
+        if (e.key === 'Escape') {
+          if (game.isPointerDown || game.state === 'CHARGING') {
+            game.isPointerDown = false;
+            game.isDragging = false;
+            game.isCanceled = false;
+            game.isSpaceCharging = false;
+            game.state = 'AIMING';
+            updateLockBadge(false);
+            setPowerRatio(0.45);
+            showToast('샷이 취소되었습니다.');
+          }
+          return;
+        }
+
+        if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON') {
+          e.preventDefault();
+          if (!game.gameStarted) {
+            window.startGame();
+            return;
+          }
+          if (!e.repeat && isHumanTurn() && game.state === 'AIMING') {
+            sound.unlock();
+            game.isSpaceCharging = true;
+            game.spaceDir = 1;
+            game.state = 'CHARGING';
+            game.lockedAimAngle = game.aimAngle;
+            updateLockBadge(true);
+          }
+        }
+      });
+
+      window.addEventListener('keyup', function (e) {
+        if (e.code === 'Space' && game.isSpaceCharging) {
+          e.preventDefault();
+          game.isSpaceCharging = false;
+          updateLockBadge(false);
+          if (game.gameStarted && isHumanTurn() && game.state === 'CHARGING') {
+            game.aimAngle = game.lockedAimAngle;
+            shootCueBall(game.powerRatio);
+          }
+        }
+      });
+
+      // =========================================================================
+      // 14. 실사 2D/3D 렌더링 (아라미스 공, 이중 그림자, 구면 띠 & 번호 원근 투영, 2피스 큐대)
+      // =========================================================================
+      function drawPhotorealisticTable() {
+        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        // 사전 렌더링된 소모모직 당구 매트 + 조명 + 쿠션 그림자 복사
+        ctx.drawImage(clothCacheCanvas, 0, 0);
+        // 사전 렌더링된 로즈우드 프레임 + 자개 사이트 + 브러시드 황동 & 스티치 가죽 포켓 복사
+        ctx.drawImage(frameCacheCanvas, 0, 0);
+      }
+
+      // 공의 이중 그림자 (오버헤드 스튜디오 조명 방사형 투사 그림자 + 밀착 접촉 AO 그림자)
+      function drawBallShadows(b) {
+        if (b.pocketed) return;
+        var dropScale = b.dropping ? (1 - b.dropProgress * 0.52) : 1;
+        var dropAlpha = b.dropping ? (1 - b.dropProgress * 0.85) : 1;
+        var r = BALL_RADIUS * dropScale;
+
+        ctx.save();
+        ctx.globalAlpha = dropAlpha;
+
+        // 1) 상단 중앙 조명 기준 바깥쪽으로 살짝 퍼지는 부드러운 방향성 그림자
+        var lightOffsetX = (b.x - CANVAS_W * 0.5) * 0.02 + 2.4;
+        var lightOffsetY = (b.y - CANVAS_H * 0.5) * 0.022 + 3.8;
+        var softGrad = ctx.createRadialGradient(
+          b.x + lightOffsetX, b.y + lightOffsetY, r * 0.35,
+          b.x + lightOffsetX, b.y + lightOffsetY, r * 1.24
+        );
+        softGrad.addColorStop(0, 'rgba(0, 0, 0, 0.42)');
+        softGrad.addColorStop(0.65, 'rgba(0, 0, 0, 0.2)');
+        softGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = softGrad;
+        ctx.beginPath();
+        ctx.arc(b.x + lightOffsetX, b.y + lightOffsetY, r * 1.24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2) 공 바로 아래 밀착 앰비언트 오클루전(AO) 접지 그림자
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(b.x + 1.0, b.y + 1.8, r * 0.9, r * 0.82, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // 3D 구면 스트라이프 밴드 렌더링 (위도 ±h 두 원의 정사영 타원 결합)
+      function draw3DSphericalStripe(bx, by, r, poleX, poleY, poleZ, colorMain) {
+        var h = 0.52; // 적도 띠 반폭 (sin latitude)
+        var eqRadius = r * Math.sqrt(1 - h * h);
+        var tiltAngle = Math.atan2(poleY, poleX);
+        var absZ = Math.abs(poleZ);
+        var minorAxis = eqRadius * Math.max(0.02, absZ);
+
+        // 두 경계 원의 중심 좌표 (+h*P, -h*P)
+        var c1x = bx + poleX * h * r;
+        var c1y = by + poleY * h * r;
+        var c2x = bx - poleX * h * r;
+        var c2y = by - poleY * h * r;
+
+        ctx.save();
+        ctx.fillStyle = colorMain;
+
+        // 앞면(z >= 0)에 보이는 띠 영역을 부드럽게 채우기 위해 두 경계 타원 사이 띠와 측면 커버링 결합
+        // 적도 축에 수직인 접선 방향으로 충분히 넓은 띠를 먼저 그린 뒤 뒤쪽 반구 타원을 아이보리색으로 마스킹
+        ctx.translate(bx, by);
+        ctx.rotate(tiltAngle + Math.PI / 2);
+
+        // 앞쪽 반구 위에서 보이는 띠의 투영 폭 계산
+        var bandHalfSpan = h * r * Math.sqrt(poleX * poleX + poleY * poleY) + minorAxis;
+        ctx.fillRect(-r * 1.2, -bandHalfSpan, r * 2.4, bandHalfSpan * 2);
+        ctx.restore();
+
+        // 극점(+P 및 -P) 방향의 아이보리 캡(Cap)을 다시 그려 정확한 구면 3D 띠 완성
+        var poles = [
+          { px: poleX, py: poleY, pz: poleZ, cx: c1x, cy: c1y },
+          { px: -poleX, py: -poleY, pz: -poleZ, cx: c2x, cy: c2y }
+        ];
+
+        for (var k = 0; k < 2; k++) {
+          var pl = poles[k];
+          var pAng = Math.atan2(pl.py, pl.px);
+          ctx.save();
+          ctx.fillStyle = '#fbf8ee';
+          ctx.beginPath();
+          // 경계 타원의 앞쪽 반원 + 극점 쪽 바깥 호를 이어 아이보리 캡 영역 구성
+          ctx.ellipse(pl.cx, pl.cy, minorAxis, eqRadius, pAng, -Math.PI / 2, Math.PI / 2, pl.pz < 0);
+          ctx.arc(bx, by, r * 1.05, pAng + Math.PI / 2, pAng - Math.PI / 2, true);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // 아라미스 페놀릭 수지 공 3D 렌더링
+      function drawPhotorealisticBall(b) {
+        if (b.pocketed) return;
+        var style = BALL_COLORS[b.id];
+        var dropScale = b.dropping ? (1 - b.dropProgress * 0.52) : 1;
+        var dropDarken = b.dropping ? (b.dropProgress * 0.72) : 0;
+        var r = BALL_RADIUS * dropScale;
+        var m = b.rotMat;
+
+        ctx.save();
+
+        // 구면 클리핑
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+        ctx.clip();
+
+        // 1) 기본 재질 바탕색
+        if (b.id === 0) {
+          // 아이보리 톤 수구 바탕
+          ctx.fillStyle = '#fbf8ee';
+          ctx.fillRect(b.x - r, b.y - r, r * 2, r * 2);
+
+          // 아라미스 프로컵 스타일 6방위 빨간 스핀 인디케이터 점
+          var axes = [
+            [ m[0],  m[3],  m[6]],
+            [-m[0], -m[3], -m[6]],
+            [ m[1],  m[4],  m[7]],
+            [-m[1], -m[4], -m[7]],
+            [ m[2],  m[5],  m[8]],
+            [-m[2], -m[5], -m[8]]
+          ];
+          for (var a = 0; a < axes.length; a++) {
+            var ax = axes[a][0];
+            var ay = axes[a][1];
+            var az = axes[a][2];
+            if (az > 0.15) {
+              var dotX = b.x + ax * r * 0.88;
+              var dotY = b.y + ay * r * 0.88;
+              var radAng = Math.atan2(ay, ax);
+              ctx.save();
+              ctx.translate(dotX, dotY);
+              ctx.rotate(radAng);
+              ctx.scale(Math.max(0.25, az), 1);
+              ctx.fillStyle = 'rgba(217, 35, 35, ' + Math.min(0.88, az * 1.1) + ')';
+              ctx.beginPath();
+              ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+        } else if (!style.stripe) {
+          // 솔리드 공 (단색 페놀릭)
+          ctx.fillStyle = style.main;
+          ctx.fillRect(b.x - r, b.y - r, r * 2, r * 2);
+        } else {
+          // 스트라이프 공 (아이보리 바탕 + 3D 구면 적도 띠)
+          ctx.fillStyle = '#fbf8ee';
+          ctx.fillRect(b.x - r, b.y - r, r * 2, r * 2);
+          draw3DSphericalStripe(b.x, b.y, r, m[1], m[4], m[7], style.main);
+        }
+
+        // 2) 양면 3D 원근 투영 번호 원 & 숫자 (m[2], m[5], m[8] 및 반대편)
+        if (b.id > 0) {
+          var numFaces = [
+            [ m[2],  m[5],  m[8]],
+            [-m[2], -m[5], -m[8]]
+          ];
+          for (var nf = 0; nf < 2; nf++) {
+            var nx = numFaces[nf][0];
+            var ny = numFaces[nf][1];
+            var nz = numFaces[nf][2];
+            if (nz > 0.1) {
+              var numX = b.x + nx * r * 0.84;
+              var numY = b.y + ny * r * 0.84;
+              var radialAng = Math.atan2(ny, nx);
+              var foreshorten = Math.max(0.22, nz);
+
+              ctx.save();
+              ctx.translate(numX, numY);
+              ctx.rotate(radialAng);
+              ctx.scale(foreshorten, 1);
+
+              // 아이보리 번호 원
+              ctx.fillStyle = '#fbf8ee';
+              ctx.beginPath();
+              ctx.arc(0, 0, r * 0.46, 0, Math.PI * 2);
+              ctx.fill();
+
+              // 얇은 번호 원 테두리 명암
+              ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+              ctx.lineWidth = 0.6;
+              ctx.stroke();
+
+              // 숫자 렌더링 (회전 역보정으로 직립 유지)
+              if (nz > 0.28) {
+                ctx.rotate(-radialAng);
+                ctx.fillStyle = '#0b0f19';
+                ctx.font = '900 ' + Math.round(9.4 * dropScale) + 'px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(String(b.id), 0, 0.5);
+              }
+              ctx.restore();
+            }
+          }
+        }
+
+        // 3) 구면 난반사 음영 (Diffuse 3D Spherical Shading)
+        var diffGrad = ctx.createRadialGradient(
+          b.x - r * 0.34, b.y - r * 0.36, r * 0.08,
+          b.x + r * 0.08, b.y + r * 0.08, r * 1.05
+        );
+        diffGrad.addColorStop(0, 'rgba(255, 255, 255, 0.24)');
+        diffGrad.addColorStop(0.48, 'rgba(255, 255, 255, 0)');
+        diffGrad.addColorStop(0.82, 'rgba(0, 0, 0, 0.26)');
+        diffGrad.addColorStop(1, 'rgba(0, 0, 0, 0.54)');
+        ctx.fillStyle = diffGrad;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4) 당구 천 반사광 (Global Illumination Rim Bounce)
+        var bounceGrad = ctx.createRadialGradient(
+          b.x, b.y + r * 0.72, r * 0.1,
+          b.x, b.y + r * 0.5, r * 0.85
+        );
+        bounceGrad.addColorStop(0, currentClothTheme === 'BLUE'
+          ? 'rgba(56, 152, 255, 0.25)'
+          : 'rgba(34, 197, 94, 0.24)');
+        bounceGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = bounceGrad;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5) 상단 스튜디오 소프트박스 반사 하이라이트 (Glossy Phenolic Specular)
+        ctx.save();
+        ctx.translate(b.x - r * 0.34, b.y - r * 0.36);
+        ctx.rotate(-Math.PI / 4);
+
+        // 부드러운 외곽 글로우
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        roundRectPath(ctx, -r * 0.28, -r * 0.18, r * 0.56, r * 0.36, r * 0.14);
+        ctx.fill();
+
+        // 선명한 소프트박스 코어 반사
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+        roundRectPath(ctx, -r * 0.19, -r * 0.11, r * 0.38, r * 0.22, r * 0.09);
+        ctx.fill();
+        ctx.restore();
+
+        // 포켓 드롭 시 어두워지는 깊이 음영
+        if (dropDarken > 0) {
+          ctx.fillStyle = 'rgba(2, 4, 8, ' + dropDarken + ')';
+          ctx.fillRect(b.x - r, b.y - r, r * 2, r * 2);
+        }
+
+        ctx.restore();
+      }
+
+      // 조준 가이드라인 & 실사 2피스 메이플/에보니 큐대 렌더링
+      function drawAimingAndCue() {
+        var cue = getCueBall();
+        if (!cue || cue.pocketed) return;
+
+        // 프리볼 배치 모드 미리보기
+        if (game.state === 'BALL_IN_HAND' && isHumanTurn()) {
+          var px = Math.max(FELT_LEFT + BALL_RADIUS + 2, Math.min(FELT_RIGHT - BALL_RADIUS - 2, game.pointerX));
+          var py = Math.max(FELT_TOP + BALL_RADIUS + 2, Math.min(FELT_BOTTOM - BALL_RADIUS - 2, game.pointerY));
+          var valid = isValidBallPlacement(px, py);
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(px, py, BALL_RADIUS + 3, 0, Math.PI * 2);
+          ctx.fillStyle = valid ? 'rgba(52, 211, 153, 0.32)' : 'rgba(244, 63, 94, 0.38)';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = valid ? '#34d399' : '#fb7185';
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        if (!isBallActiveOnTable(cue)) return;
+        if (game.state !== 'AIMING' && game.state !== 'CHARGING' && game.state !== 'AI_THINKING') {
+          return;
+        }
+
+        var pred = computeAimPrediction();
+        ctx.save();
+
+        // 1) 방향 고정(🔒) 시 수구 주위 에메랄드 잠금 링 표시
+        if (game.isLocked && game.state === 'CHARGING') {
+          ctx.beginPath();
+          ctx.arc(cue.x, cue.y, BALL_RADIUS + 7, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(52, 211, 153, 0.88)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 2) 조준선, 고스트 볼, 목적구 예상 경로 & 수구 탄젠트 반사각
+        if (pred) {
+          ctx.beginPath();
+          ctx.setLineDash([6, 6]);
+          ctx.moveTo(cue.x, cue.y);
+          ctx.lineTo(pred.endX, pred.endY);
+          ctx.strokeStyle = game.isLocked ? 'rgba(52, 211, 153, 0.9)' : 'rgba(255, 255, 255, 0.72)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 고스트 볼 (충돌 예상 위치)
+          ctx.beginPath();
+          ctx.arc(pred.endX, pred.endY, BALL_RADIUS, 0, Math.PI * 2);
+          ctx.strokeStyle = pred.hitBall ? 'rgba(251, 191, 36, 0.92)' : 'rgba(255, 255, 255, 0.45)';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+
+          if (pred.hitBall) {
+            var objLen = 96;
+            var ox2 = pred.hitBall.x + pred.nx * objLen;
+            var oy2 = pred.hitBall.y + pred.ny * objLen;
+            ctx.beginPath();
+            ctx.moveTo(pred.hitBall.x, pred.hitBall.y);
+            ctx.lineTo(ox2, oy2);
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            var aAngle = Math.atan2(pred.ny, pred.nx);
+            ctx.beginPath();
+            ctx.moveTo(ox2, oy2);
+            ctx.lineTo(ox2 - Math.cos(aAngle - 0.45) * 9, oy2 - Math.sin(aAngle - 0.45) * 9);
+            ctx.lineTo(ox2 - Math.cos(aAngle + 0.45) * 9, oy2 - Math.sin(aAngle + 0.45) * 9);
+            ctx.closePath();
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+
+            var cueLen = 58;
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.moveTo(pred.endX, pred.endY);
+            ctx.lineTo(pred.endX + pred.tx * cueLen, pred.endY + pred.ty * cueLen);
+            ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+        }
+
+        // 3) 실사 2피스 캐나디언 메이플 & 4포인트 에보니 큐대 렌더링
+        var pullOffset = (game.state === 'CHARGING' || game.state === 'AI_THINKING')
+          ? (game.powerRatio * 98)
+          : 0;
+        var tipDist = BALL_RADIUS + 8 + pullOffset;
+        var cueLen = 305;
+        var cueBackAngle = game.aimAngle + Math.PI;
+
+        // 3-A) 당구 천 & 레일 위로 떨어지는 큐대 투사 그림자
+        ctx.save();
+        ctx.translate(cue.x + 5, cue.y + 10);
+        ctx.rotate(cueBackAngle);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.36)';
+        ctx.beginPath();
+        ctx.moveTo(tipDist, -2.5);
+        ctx.lineTo(tipDist + cueLen, -6.5);
+        ctx.lineTo(tipDist + cueLen, 6.5);
+        ctx.lineTo(tipDist, 2.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // 3-B) 큐대 본체 렌더링
+        ctx.translate(cue.x, cue.y);
+        ctx.rotate(cueBackAngle);
+
+        // 파란 초크가 묻은 천연 가죽 팁 (Rounded Dome Tip)
+        ctx.fillStyle = '#1d4ed8';
+        ctx.beginPath();
+        ctx.arc(tipDist + 2.2, 0, 2.2, Math.PI / 2, Math.PI * 1.5);
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(tipDist + 1.5, -2.2, 2.8, 4.4);
+
+        // 화이트 파이버 페룰 (White Fiber Ferrule)
+        var ferruleGrad = ctx.createLinearGradient(0, -2.4, 0, 2.4);
+        ferruleGrad.addColorStop(0, '#cbd5e1');
+        ferruleGrad.addColorStop(0.35, '#ffffff');
+        ferruleGrad.addColorStop(1, '#94a3b8');
+        ctx.fillStyle = ferruleGrad;
+        ctx.fillRect(tipDist + 4.3, -2.3, 9.5, 4.6);
+
+        // 테이퍼형 캐나디언 메이플 상단 샤프트 (Canadian Maple Shaft)
+        var jointPos = tipDist + 152;
+        var shaftGrad = ctx.createLinearGradient(0, -3.8, 0, 3.8);
+        shaftGrad.addColorStop(0, '#b45309');
+        shaftGrad.addColorStop(0.32, '#fef3c7');
+        shaftGrad.addColorStop(0.65, '#f59e0b');
+        shaftGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = shaftGrad;
+        ctx.beginPath();
+        ctx.moveTo(tipDist + 13.8, -2.3);
+        ctx.lineTo(jointPos, -4.1);
+        ctx.lineTo(jointPos, 4.1);
+        ctx.lineTo(tipDist + 13.8, 2.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // 황동 조인트 칼라 & 장식 링 (Brass Joint Collar)
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(jointPos - 2, -4.15, 2.5, 8.3);
+        var brassCollar = ctx.createLinearGradient(0, -4.2, 0, 4.2);
+        brassCollar.addColorStop(0, '#92400e');
+        brassCollar.addColorStop(0.4, '#fef08a');
+        brassCollar.addColorStop(1, '#78350f');
+        ctx.fillStyle = brassCollar;
+        ctx.fillRect(jointPos + 0.5, -4.2, 5.5, 8.4);
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(jointPos + 6, -4.25, 2.5, 8.5);
+
+        // 4포인트 에보니 스플라이스 포어암 (4-Point Ebony Forearm)
+        var wrapStart = jointPos + 62;
+        var ebonyGrad = ctx.createLinearGradient(0, -5, 0, 5);
+        ebonyGrad.addColorStop(0, '#090707');
+        ebonyGrad.addColorStop(0.35, '#291d18');
+        ebonyGrad.addColorStop(1, '#050404');
+        ctx.fillStyle = ebonyGrad;
+        ctx.beginPath();
+        ctx.moveTo(jointPos + 8.5, -4.25);
+        ctx.lineTo(wrapStart, -5.0);
+        ctx.lineTo(wrapStart, 5.0);
+        ctx.lineTo(jointPos + 8.5, 4.25);
+        ctx.closePath();
+        ctx.fill();
+
+        // 포어암 위 메이플 베니어 포인트 인레이
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.moveTo(jointPos + 18, 0);
+        ctx.lineTo(wrapStart - 2, -2.8);
+        ctx.lineTo(wrapStart - 2, 2.8);
+        ctx.closePath();
+        ctx.fill();
+
+        // 아이리시 리넨 그립 랩 (Textured Irish Linen Wrap)
+        var buttStart = wrapStart + 68;
+        ctx.fillStyle = '#18181b';
+        ctx.beginPath();
+        ctx.moveTo(wrapStart, -5.0);
+        ctx.lineTo(buttStart, -5.8);
+        ctx.lineTo(buttStart, 5.8);
+        ctx.lineTo(wrapStart, 5.0);
+        ctx.closePath();
+        ctx.fill();
+
+        // 리넨 그립 미세 실선 질감
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 0.8;
+        for (var lx = wrapStart + 3; lx < buttStart; lx += 3) {
+          ctx.beginPath();
+          ctx.moveTo(lx, -5.1);
+          ctx.lineTo(lx, 5.1);
+          ctx.stroke();
+        }
+
+        // 하단 버트 슬리브, 아이보리 버트 캡 & 블랙 고무 범퍼
+        var bumperStart = tipDist + cueLen - 6;
+        ctx.fillStyle = ebonyGrad;
+        ctx.beginPath();
+        ctx.moveTo(buttStart, -5.8);
+        ctx.lineTo(bumperStart - 6, -6.3);
+        ctx.lineTo(bumperStart - 6, 6.3);
+        ctx.lineTo(buttStart, 5.8);
+        ctx.closePath();
+        ctx.fill();
+
+        // 아이보리 버트 캡
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(bumperStart - 6, -6.35, 6, 12.7);
+
+        // 블랙 고무 범퍼
+        ctx.fillStyle = '#090d16';
+        roundRectPath(ctx, bumperStart, -5.2, 6, 10.4, 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // =========================================================================
+      // 15. 메인 애니메이션 루프 (60FPS)
+      // =========================================================================
+      var lastFrameTime = performance.now();
+
+      function updateAndRender(now) {
+        var dt = Math.min(0.033, Math.max(0.001, (now - lastFrameTime) / 1000));
+        lastFrameTime = now;
+
+        if (game.isSpaceCharging && game.state === 'CHARGING') {
+          var nextP = game.powerRatio + game.spaceDir * dt * 1.15;
+          if (nextP >= 1.0) {
+            nextP = 1.0;
+            game.spaceDir = -1;
+          } else if (nextP <= 0.05) {
+            nextP = 0.05;
+            game.spaceDir = 1;
+          }
+          setPowerRatio(nextP);
+        }
+
+        if (game.state === 'AI_THINKING') {
+          game.aiTimer += dt;
+          if (game.aiPhase === 'AIM') {
+            var diff = game.aiTargetAngle - game.aimAngle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            game.aimAngle += diff * Math.min(1, dt * 7);
+            if (game.aiTimer >= 0.75) {
+              game.aimAngle = game.aiTargetAngle;
+              game.aiPhase = 'PULL';
+              game.aiTimer = 0;
+            }
+          } else if (game.aiPhase === 'PULL') {
+            var prog = Math.min(1, game.aiTimer / 0.55);
+            setPowerRatio(0.12 + prog * (game.aiTargetPower - 0.12));
+            if (prog >= 1) {
+              shootCueBall(game.aiTargetPower);
+            }
+          }
+        }
+
+        if (game.state === 'SHOOTING') {
+          stepPhysics(dt);
+        }
+
+        // 1) 실사 당구대 & 로즈우드 프레임 렌더링
+        drawPhotorealisticTable();
+
+        // 2) 모든 공의 이중 그림자 먼저 일괄 렌더링 (그림자가 다른 공 위로 올라오지 않도록 분리)
+        for (var s = 0; s < game.balls.length; s++) {
+          drawBallShadows(game.balls[s]);
+        }
+
+        // 3) 아라미스 3D 페놀릭 공 렌더링
+        for (var i = 0; i < game.balls.length; i++) {
+          drawPhotorealisticBall(game.balls[i]);
+        }
+
+        // 4) 조준 가이드라인 & 실사 2피스 큐대 렌더링
+        drawAimingAndCue();
+
+        requestAnimationFrame(updateAndRender);
+      }
+
+      // 초기화: 오프스크린 실사 텍스처 캐시 빌드 -> 랙 세팅 -> 즉시 루프 가동
+      buildClothCache(currentClothTheme);
+      buildFrameCache();
+      setupRack();
+      setPowerRatio(0.45);
+      updateHUD();
+      requestAnimationFrame(updateAndRender);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// 규칙의 근거: docs/01_핵심로직_규칙명세서.md 3.4
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSchoolAccount() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('^[^@]+@dongshin[.]ms[.]kr$');
+    }
+
+    match /likes/{likeId} {
+      allow read: if true;
+
+      allow create: if isSchoolAccount()
+        && request.resource.data.keys().hasOnly(['gameId', 'uid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['gameId', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.gameId is string
+        && request.resource.data.gameId.matches('^[0-9]{4}(-[0-9]{1,2})?$')
+        && likeId == request.resource.data.gameId + '_' + request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

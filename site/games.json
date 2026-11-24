@@ -1,0 +1,144 @@
+{
+  "updatedAt": "2026-11-24T01:19:09.149Z",
+  "games": [
+    {
+      "id": "2105",
+      "studentNo": "2105",
+      "name": "박도윤",
+      "title": "지수원 피하기",
+      "file": "2105.html",
+      "driveId": "1R01-866U10tPbG_ub1ARoHLXWzAKCQ7q",
+      "sourceName": "code_artifact (1) - 2105박도윤.html",
+      "hash": "25bf86e54c2f3cdd",
+      "size": 120813,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3102",
+      "studentNo": "3102",
+      "name": "김민재",
+      "title": "피카츄와 함께하는 8급 한자 대모험",
+      "file": "3102.html",
+      "driveId": "1fUvvXUnqF8RBFvSiDDxn-Pna-PwzmHvF",
+      "sourceName": "피카츄_8급한자_게임3102김민재.html",
+      "hash": "37901df1ddbe9f14",
+      "size": 85686,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3105",
+      "studentNo": "3105",
+      "name": "민상원",
+      "title": "무궁화 꽃이 피었습니다",
+      "file": "3105.html",
+      "driveId": "1WJL9orarDAZB1au-gea99Ek4o7WImlVA",
+      "sourceName": "code_artifact - 3105민상원.html",
+      "hash": "8de46b870ea2e29c",
+      "size": 69928,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3107",
+      "studentNo": "3107",
+      "name": "배동현",
+      "title": "똥피하기 아케이드 - Poop Dodge",
+      "file": "3107.html",
+      "driveId": "1_nVwLD65Wfvy1z6pHiWANZzZt-JE7W36",
+      "sourceName": "code_artifact - 3107배동현.html",
+      "hash": "6bb51a3ae8d8f784",
+      "size": 58741,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3108",
+      "studentNo": "3108",
+      "name": "염성빈",
+      "title": "네온 캣: 스카이 캣타워 (Neon Cat: Sky Tower)",
+      "file": "3108.html",
+      "driveId": "1nEa2sRDpK6Iqo1xYlr5LcqC_R3-CFIRk",
+      "sourceName": "code_artifact - 3108염성빈.html",
+      "hash": "6c370167f9e4d657",
+      "size": 47948,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3110",
+      "studentNo": "3110",
+      "name": "이세훈",
+      "title": "IRON FIST: NEON ARENA 2.0 - 2.5D Arcade Fighter",
+      "file": "3110.html",
+      "driveId": "1bxie52o0yQGn79MJLNZGwt-cr1VFAYT1",
+      "sourceName": "iron_fist_2_0 - 3110이세훈.html",
+      "hash": "b4d7369183885ed4",
+      "size": 94472,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3111",
+      "studentNo": "3111",
+      "name": "이승현",
+      "title": "선생님 몰래 춤추기!",
+      "file": "3111.html",
+      "driveId": "1Ep9jy0JzbV4KHFc-nDMsq5CDCgzKUuE8",
+      "sourceName": "code_artifact (1) - 3111이승현.html",
+      "hash": "0604ae4be26d7490",
+      "size": 119495,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3113",
+      "studentNo": "3113",
+      "name": "이은혁",
+      "title": "NEON SQUARE BREAKER // 100% DROP EDITION",
+      "file": "3113.html",
+      "driveId": "1d5NK6j90uQWTMHf3NPMMTZml6Z_rYVz6",
+      "sourceName": "index - 3113이은혁.html",
+      "hash": "f8bae6029d056b0c",
+      "size": 42221,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    },
+    {
+      "id": "3115",
+      "studentNo": "3115",
+      "name": "전예찬",
+      "title": "🎱 클래식 8-BALL 포켓볼 — PRO TOURNAMENT",
+      "file": "3115.html",
+      "driveId": "1bEUJn1mFSnXKaHq4s3TLKrwCRNHOfxHw",
+      "sourceName": "8_ball - 3115전예찬.html",
+      "hash": "675601fb67528033",
+      "size": 136663,
+      "addedAt": "2026-11-24T01:19:09.149Z",
+      "updatedAt": "2026-11-24T01:19:09.149Z"
+    }
+  ],
+  "skipped": [
+    {
+      "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
+      "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)"
+    },
+    {
+      "sourceName": "주술회전 철권 스타일 대전 게임 제작 - Google Gemini - 3109오예준.html",
+      "driveId": "1wZTLcVTa_euSvOI2m_wn4h4OyoawnJBo",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)"
+    },
+    {
+      "sourceName": "철권 스타일 격투 게임 제작 - Google Gemini - 3103김재훈.html",
+      "driveId": "140hd6hYYp1eH16gmnvfI2gQiHKBYmP-K",
+      "reason": "AI 대화 화면 저장본 (게임 파일 아님)"
+    },
+    {
+      "sourceName": "fc_27_web_edition - 학생서민영.html",
+      "driveId": "15hrNcTAJYzkOr5OpuNNn-KIuYgwew3mv",
+      "reason": "파일명에서 학번·이름을 찾지 못함"
+    }
+  ]
+}

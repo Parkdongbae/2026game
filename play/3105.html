@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>무궁화 꽃이 피었습니다</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #1a1a1d;
+        }
+        .title-font {
+            font-family: 'Black Han Sans', sans-serif;
+        }
+        /* 운동장 바닥 질감 */
+        .playground-sand {
+            background-color: #e6c280;
+            background-image: 
+                radial-gradient(#d4ad6a 15%, transparent 16%),
+                radial-gradient(#c99e57 15%, transparent 16%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+        }
+        /* 스캔 레이저 펄스 애니메이션 */
+        @keyframes scanPulse {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 0.45; }
+        }
+        .scan-cone {
+            animation: scanPulse 0.4s infinite ease-in-out;
+        }
+        /* 흔들림 효과 (적발 시) */
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-8px, 4px) rotate(-2deg); }
+            40% { transform: translate(8px, -4px) rotate(2deg); }
+            60% { transform: translate(-6px, -2px) rotate(-1deg); }
+            80% { transform: translate(6px, 2px) rotate(1deg); }
+        }
+        .shake-screen {
+            animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        /* 버튼 누름 효과 */
+        .hold-btn:active, .hold-btn.is-pressed {
+            transform: translateY(4px) scale(0.98);
+            box-shadow: 0 2px 0 #991b1b, 0 4px 12px rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-between text-white">
+
+    <!-- 상단 HUD 영역 -->
+    <header class="w-full max-w-4xl px-4 pt-3 pb-2 z-20 flex flex-col gap-2">
+        <div class="flex items-center justify-between bg-zinc-900/90 border border-zinc-700 rounded-2xl px-4 py-2.5 shadow-lg backdrop-blur-sm">
+            <!-- 타이머 -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs sm:text-sm text-zinc-400 font-bold">남은 시간</span>
+                <div id="timer-display" class="text-2xl sm:text-3xl font-black text-emerald-400 tabular-nums">
+                    45.0<span class="text-sm font-normal text-zinc-400 ml-0.5">초</span>
+                </div>
+            </div>
+
+            <!-- 중앙 상태 배지 -->
+            <div id="player-state-badge" class="px-4 py-1.5 rounded-full font-black text-sm sm:text-base tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 transition-all duration-100">
+                🏃 달리는 중!
+            </div>
+
+            <!-- 우측 스테이지(1~10) & 얼음 스킬 & 음소거 -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button id="menu-btn" class="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs sm:text-sm font-black transition cursor-pointer" title="단계 선택 메뉴로 이동">
+                    📋 메뉴
+                </button>
+                <span id="stage-badge" class="text-xs sm:text-sm font-black px-2.5 py-1 rounded-xl bg-pink-500/20 text-pink-300 border border-pink-500/40">
+                    STAGE 1 / 10
+                </span>
+                <div id="shield-badge" class="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-sky-950/80 border border-sky-500/40 text-sky-300 text-xs sm:text-sm font-black" title="E키 또는 버튼으로 얼음 스킬 발동">
+                    <span>🧊</span>
+                    <span id="shield-count">x1</span>
+                </div>
+                <button id="mute-btn" class="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 transition cursor-pointer" title="소리 켜기/끄기">
+                    🔊
+                </button>
+            </div>
+        </div>
+
+        <!-- 진행도 바 & 얼음 스킬 충전 게이지 -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <!-- 트랙 진행도 -->
+            <div class="sm:col-span-2 bg-zinc-900/90 border border-zinc-700 rounded-xl p-2 flex items-center gap-3 shadow-md">
+                <span class="text-xs font-bold text-zinc-400 whitespace-nowrap">출발</span>
+                <div class="relative flex-1 h-4 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                    <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-75" style="width: 0%;"></div>
+                </div>
+                <span id="distance-text" class="text-xs font-black text-amber-400 whitespace-nowrap w-10 text-right">0%</span>
+            </div>
+
+            <!-- 얼음 실드 충전 바 -->
+            <div class="bg-zinc-900/90 border border-sky-900/70 rounded-xl p-2 flex items-center gap-2 shadow-md">
+                <span class="text-xs font-bold text-sky-400 whitespace-nowrap">🧊 [E] 스킬</span>
+                <div class="relative flex-1 h-4 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                    <div id="skill-charge-bar" class="h-full bg-gradient-to-r from-sky-500 to-cyan-300 rounded-full transition-all duration-75" style="width: 0%;"></div>
+                </div>
+                <span id="skill-charge-text" class="text-xs font-black text-sky-300 whitespace-nowrap w-9 text-right">0%</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 게임 스테이지 -->
+    <main id="game-stage" class="relative flex-1 w-full max-w-4xl mx-auto my-1 px-4 flex flex-col justify-center overflow-hidden">
+        <!-- 사운드 파형 / 술래 시선 경고 표시 (글자 구호 제거) -->
+        <div class="w-full flex flex-col items-center mb-2 z-20">
+            <div id="chant-box" class="bg-zinc-900/95 border-2 border-zinc-700 rounded-2xl px-6 py-2.5 shadow-2xl text-center min-w-[280px] sm:min-w-[380px] transition-colors duration-150">
+                <div id="doll-status-label" class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1">
+                    🎧 소리에 집중하세요! 구호가 끝나면 뒤를 돌아봅니다!
+                </div>
+                <div id="sound-wave-box" class="h-[34px] flex items-center justify-center gap-1.5">
+                    <span class="sound-bar w-2 h-3 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span class="sound-bar w-2 h-5 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span class="sound-bar w-2 h-4 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span class="sound-bar w-2 h-6 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span class="sound-bar w-2 h-3 bg-emerald-400 rounded-full transition-all duration-75"></span>
+                    <span id="sound-status-text" class="ml-2 text-sm sm:text-base font-black text-zinc-200 tracking-wide">
+                        🎵 구호 소리 청취 중...
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 운동장 캔버스 컨테이너 -->
+        <div id="canvas-wrapper" class="relative w-full h-[270px] sm:h-[350px] rounded-3xl overflow-hidden border-4 border-zinc-800 shadow-2xl playground-sand">
+            <canvas id="game-canvas" class="w-full h-full block"></canvas>
+            
+            <!-- 화면 상단 조작 힌트 오버레이 -->
+            <div id="top-control-hint" class="absolute top-3 left-3 bg-black/65 backdrop-blur-xs text-white/90 text-xs px-3 py-1.5 rounded-lg border border-white/10 pointer-events-none">
+                🛑 <span class="font-bold text-rose-300">화면/버튼 홀드</span>: 멈춤 | ⬆️ <span class="font-bold text-amber-300">Space/↑</span>: 점프 | 🧊 <span class="font-bold text-sky-300">E키</span>: 얼음변신
+            </div>
+        </div>
+    </main>
+
+    <!-- 하단 컨트롤 영역 (멈춤 홀드 + 점프 + E 얼음 스킬) -->
+    <footer class="w-full max-w-4xl px-4 pb-4 pt-2 z-20 flex flex-col items-center gap-2">
+        <div class="w-full max-w-2xl grid grid-cols-12 gap-2">
+            <!-- 멈춤 버튼 (홀드) -->
+            <button id="hold-stop-btn" 
+                class="hold-btn col-span-6 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-b from-rose-500 to-red-600 border-b-4 border-red-900 text-white font-black text-base sm:text-xl shadow-[0_5px_0_#991b1b] transition-all flex items-center justify-center gap-2 cursor-pointer">
+                <span class="text-xl sm:text-2xl">🛑</span>
+                <span>누르면 멈춤</span>
+            </button>
+
+            <!-- 점프 버튼 (Space) -->
+            <button id="jump-btn" 
+                class="col-span-3 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-b from-amber-500 to-orange-600 border-b-4 border-orange-900 text-white font-black text-base sm:text-xl shadow-[0_5px_0_#7c2d12] active:translate-y-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>⬆️</span>
+                <span>점프</span>
+            </button>
+
+            <!-- 얼음 변신 스킬 버튼 (E) -->
+            <button id="ice-skill-btn" 
+                class="col-span-3 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-b from-sky-500 to-blue-600 border-b-4 border-blue-900 text-white font-black text-base sm:text-xl shadow-[0_5px_0_#1e3a8a] active:translate-y-1 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>🧊</span>
+                <span>얼음[E]</span>
+            </button>
+        </div>
+        <p id="footer-guide-text" class="text-xs text-zinc-400 text-center">
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-600 rounded text-zinc-200 font-mono">Shift / ↓</kbd> 또는 빨간 버튼 홀드: 멈춤 · 
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-600 rounded text-zinc-200 font-mono">Space / ↑</kbd>: 점프 · 
+            <kbd class="px-1.5 py-0.5 bg-zinc-800 border border-zinc-600 rounded text-zinc-200 font-mono">E</kbd>: 1.5초 얼음 변신
+        </p>
+    </footer>
+
+    <!-- 시작 모달 오버레이 -->
+    <div id="start-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border-2 border-pink-500/50 rounded-3xl max-w-lg w-full p-6 sm:p-7 text-center shadow-[0_0_50px_rgba(236,72,153,0.25)] max-h-[95vh] overflow-y-auto">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold mb-2 border border-pink-500/30">
+                <span>○ △ □</span> 사운드 & 점프맵 10단계 챌린지
+            </div>
+            <h1 class="title-font text-3xl sm:text-5xl text-white mb-2 tracking-wide">
+                무궁화 꽃이<br><span class="text-pink-500">피었습니다</span>
+            </h1>
+            <p class="text-zinc-400 text-xs sm:text-sm mb-4">
+                글자 안내 없이 오직 <span class="text-amber-300 font-bold">소리</span>로만 타이밍을 듣고 장애물을 뛰어넘어 10단계를 정복하세요!
+            </p>
+
+            <!-- 조작법 안내 카드 -->
+            <div class="bg-zinc-800/80 border border-zinc-700 rounded-2xl p-3.5 mb-4 text-left space-y-2 text-xs sm:text-sm">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">🔊</span>
+                    <div>
+                        <span class="font-bold text-emerald-400">청각 타이밍:</span> 구호 글자가 보이지 않습니다! 음성/멜로디 속도를 듣고 <span class="text-white font-bold">빨간 버튼 / Shift / ↓</span>를 눌러 멈추세요.
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold shrink-0">⬆️</span>
+                    <div>
+                        <span class="font-bold text-amber-400">점프맵 장애물:</span> <span class="text-white font-bold">Space / ↑</span> 키로 용암 구덩이와 가시 장애물을 점프해 통과하세요.
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold shrink-0">🧊</span>
+                    <div>
+                        <span class="font-bold text-sky-400">[E] 얼음 변신 스킬:</span> 정지해서 게이지를 모은 뒤 <span class="text-white font-bold">E키</span>를 누르면 1.65초간 얼음 조각상으로 변신해 술래가 봐도 통과합니다!
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1~10단계 선택 -->
+            <div class="mb-4 text-left">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-bold text-zinc-400">도전 단계 선택 (1 ~ 10단계)</span>
+                    <span id="selected-stage-desc" class="text-xs font-bold text-pink-400">1단계: 입문 평지</span>
+                </div>
+                <div id="stage-selector" class="grid grid-cols-5 gap-1.5"></div>
+            </div>
+
+            <button id="start-game-btn" class="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-black text-xl shadow-lg shadow-pink-600/30 transition transform hover:scale-[1.02] active:scale-[0.99] cursor-pointer">
+                게임 시작하기 ▶
+            </button>
+        </div>
+    </div>
+
+    <!-- 결과 모달 오버레이 (승리 / 탈락) -->
+    <div id="result-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div id="result-card" class="bg-zinc-900 border-2 border-zinc-700 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl">
+            <div id="result-icon" class="text-6xl mb-3">🏆</div>
+            <h2 id="result-title" class="title-font text-4xl sm:text-5xl text-white mb-2">통과!</h2>
+            <p id="result-desc" class="text-zinc-300 text-sm sm:text-base mb-6">무사히 결승선을 통과했습니다!</p>
+            
+            <div class="bg-zinc-800/90 rounded-2xl p-4 mb-6 flex justify-around border border-zinc-700">
+                <div>
+                    <div class="text-xs text-zinc-400">남은 시간</div>
+                    <div id="result-time" class="text-xl font-black text-emerald-400">0.0초</div>
+                </div>
+                <div class="w-px bg-zinc-700"></div>
+                <div>
+                    <div class="text-xs text-zinc-400">도달 거리</div>
+                    <div id="result-dist" class="text-xl font-black text-amber-400">100%</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+                <button id="next-stage-btn" class="hidden w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-black text-lg transition transform hover:scale-[1.02] cursor-pointer">
+                    다음 단계 도전하기 ➡️
+                </button>
+                <button id="restart-btn" class="w-full py-3.5 rounded-2xl bg-white hover:bg-zinc-200 text-zinc-900 font-black text-lg transition transform hover:scale-[1.02] cursor-pointer">
+                    현재 단계 다시하기 🔄
+                </button>
+                <button id="result-menu-btn" class="w-full py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 font-black text-base transition cursor-pointer">
+                    📋 단계 선택 메뉴로 돌아가기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Web Audio API + 음성 합성 기반 사운드 매니저
+         * 외부 음원 URL 없이 구호 멜로디, 포먼트 보이스, 경고음, 효과음 생성
+         */
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.15, volume = 0.2, slideTo = null) {
+                if (this.muted || !this.ctx) return;
+                const safeFreq = Number(freq);
+                const safeDur = Math.max(0.02, Number(duration) || 0.15);
+                const safeVol = Math.max(0.001, Math.min(1, Number(volume) || 0.2));
+                if (!Number.isFinite(safeFreq) || safeFreq <= 0) return;
+
+                try {
+                    const now = this.ctx.currentTime;
+                    if (!Number.isFinite(now)) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(safeFreq, now);
+                    if (slideTo && Number.isFinite(Number(slideTo)) && Number(slideTo) > 0) {
+                        osc.frequency.exponentialRampToValueAtTime(Number(slideTo), now + safeDur);
+                    }
+
+                    gain.gain.setValueAtTime(safeVol, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + safeDur);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + safeDur);
+                } catch (e) {
+                    // 오디오 컨텍스트 예외 무시
+                }
+            }
+
+            // 모음 포먼트(Formant) 필터 합성으로 사람 목소리 느낌 생성
+            playVoiceSyllable(f1, f2, duration = 0.16, pitch = 235) {
+                if (this.muted || !this.ctx) return;
+                const safeDur = Math.max(0.06, Math.min(0.38, Number(duration) || 0.16));
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(pitch, now);
+                    osc.frequency.linearRampToValueAtTime(pitch * 0.94, now + safeDur);
+
+                    const filter1 = this.ctx.createBiquadFilter();
+                    filter1.type = 'bandpass';
+                    filter1.frequency.setValueAtTime(f1, now);
+                    filter1.Q.value = 5.5;
+
+                    const filter2 = this.ctx.createBiquadFilter();
+                    filter2.type = 'bandpass';
+                    filter2.frequency.setValueAtTime(f2, now);
+                    filter2.Q.value = 6.5;
+
+                    const masterGain = this.ctx.createGain();
+                    masterGain.gain.setValueAtTime(0.001, now);
+                    masterGain.gain.linearRampToValueAtTime(0.28, now + 0.02);
+                    masterGain.gain.exponentialRampToValueAtTime(0.001, now + safeDur);
+
+                    osc.connect(filter1);
+                    osc.connect(filter2);
+                    filter1.connect(masterGain);
+                    filter2.connect(masterGain);
+                    masterGain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + safeDur);
+                } catch (e) {
+                    // 무시
+                }
+            }
+
+            // 구호 음절별 멜로디 + 포먼트 보이스 합성 ("무-궁-화-꽃-이-피-었-습-니-다")
+            playChantSyllable(index, speedMultiplier = 1.0) {
+                const notes = [392.00, 440.00, 392.00, 329.63, 392.00, 440.00, 523.25, 493.88, 440.00, 392.00];
+                const vowelFormants = [
+                    [320, 800],  // 무 (우)
+                    [320, 800],  // 궁 (우)
+                    [750, 1250], // 화 (아)
+                    [450, 850],  // 꽃 (오)
+                    [280, 2250], // 이 (이)
+                    [280, 2250], // 피 (이)
+                    [520, 1150], // 었 (어)
+                    [360, 1450], // 습 (으)
+                    [280, 2250], // 니 (이)
+                    [750, 1250]  // 다 (아)
+                ];
+                const safeIndex = Math.max(0, Math.floor(Number(index) || 0));
+                const freq = notes[safeIndex % notes.length];
+                const [f1, f2] = vowelFormants[safeIndex % vowelFormants.length];
+                const dur = Math.max(0.06, Math.min(0.32, 0.21 / Math.max(0.3, speedMultiplier)));
+
+                this.playTone(freq, 'triangle', dur, 0.16);
+                this.playVoiceSyllable(f1, f2, dur * 1.05, 240 + (freq - 392) * 0.25);
+            }
+
+            playTurnAround() {
+                this.playTone(880, 'sawtooth', 0.16, 0.24, 220);
+            }
+
+            playStep() {
+                this.playTone(130 + Math.random() * 25, 'sine', 0.045, 0.08, 75);
+            }
+
+            playJump() {
+                this.playTone(260, 'sine', 0.16, 0.18, 560);
+            }
+
+            playFreeze() {
+                this.playTone(580, 'sine', 0.08, 0.15, 780);
+            }
+
+            playIceSkillUse() {
+                this.playTone(720, 'triangle', 0.12, 0.22, 1180);
+                setTimeout(() => this.playTone(1050, 'sine', 0.22, 0.2, 1380), 80);
+            }
+
+            playShieldGain() {
+                this.playTone(660, 'sine', 0.12, 0.2, 990);
+            }
+
+            playTrapShatter() {
+                this.playTone(980, 'triangle', 0.08, 0.25, 1480);
+                setTimeout(() => this.playTone(620, 'sawtooth', 0.14, 0.22, 240), 50);
+            }
+
+            playHellBeat(stepIndex) {
+                const bassNotes = [110, 110, 146.83, 130.81, 110, 110, 164.81, 146.83];
+                const freq = bassNotes[stepIndex % bassNotes.length];
+                this.playTone(freq, 'sawtooth', 0.12, 0.16, freq * 0.85);
+                if (stepIndex % 2 === 1) {
+                    this.playTone(520 + (stepIndex % 4) * 90, 'square', 0.06, 0.09);
+                }
+            }
+
+            playWin() {
+                const melody = [523.25, 659.25, 783.99, 1046.50];
+                melody.forEach((f, idx) => {
+                    setTimeout(() => this.playTone(f, 'triangle', 0.22, 0.24), idx * 110);
+                });
+            }
+
+            playLose() {
+                this.playTone(280, 'sawtooth', 0.45, 0.28, 70);
+                setTimeout(() => this.playTone(190, 'square', 0.5, 0.22, 55), 140);
+            }
+
+            // 한국어 음성 합성(TTS) 보조 재생 (구절별 불규칙 속도)
+            speakChantPhrase(text, rate = 1.0) {
+                if (this.muted || !('speechSynthesis' in window) || !text) return;
+                try {
+                    const utter = new SpeechSynthesisUtterance(text);
+                    utter.lang = 'ko-KR';
+                    utter.rate = Math.max(0.55, Math.min(2.6, rate));
+                    utter.pitch = 1.2 + Math.random() * 0.35;
+                    utter.volume = 1.0;
+                    window.speechSynthesis.speak(utter);
+                } catch (e) {
+                    // 무시
+                }
+            }
+
+            // "무궁화 / 꽃이 / 피었습니다" 3구절을 각각 다른 불규칙 속도로 연속 예약
+            speakIrregularChant(minSpeed, maxSpeed) {
+                if (this.muted || !('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const chunks = ["무궁화", "꽃이", "피었습니다"];
+                chunks.forEach((chunk) => {
+                    const r = minSpeed + Math.random() * (maxSpeed - minSpeed);
+                    this.speakChantPhrase(chunk, r * 1.15);
+                });
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.muted && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                return this.muted;
+            }
+        }
+
+        const sound = new SoundManager();
+
+        // DOM 요소 참조
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const gameStage = document.getElementById('game-stage');
+        const timerDisplay = document.getElementById('timer-display');
+        const playerStateBadge = document.getElementById('player-state-badge');
+        const stageBadge = document.getElementById('stage-badge');
+        const shieldCountEl = document.getElementById('shield-count');
+        const progressBar = document.getElementById('progress-bar');
+        const distanceText = document.getElementById('distance-text');
+        const skillChargeBar = document.getElementById('skill-charge-bar');
+        const skillChargeText = document.getElementById('skill-charge-text');
+        const chantBox = document.getElementById('chant-box');
+        const dollStatusLabel = document.getElementById('doll-status-label');
+        const soundStatusText = document.getElementById('sound-status-text');
+        const soundBars = document.querySelectorAll('.sound-bar');
+        const holdStopBtn = document.getElementById('hold-stop-btn');
+        const jumpBtn = document.getElementById('jump-btn');
+        const iceSkillBtn = document.getElementById('ice-skill-btn');
+
+        const startModal = document.getElementById('start-modal');
+        const resultModal = document.getElementById('result-modal');
+        const stageSelector = document.getElementById('stage-selector');
+        const selectedStageDesc = document.getElementById('selected-stage-desc');
+
+        // 1~10단계 난이도 및 점프맵 구성 (단계별 난이도 상승 + 10단계 극악 점프맵 & 술래 감시)
+        const STAGES = [
+            { stage: 1, name: "1단계: 입문 평지 (가시 1개)", time: 45, chantMin: 0.75, chantMax: 1.25, lookMin: 1.4, lookMax: 2.0, runSpeed: 125, pits: [], spikes: [500] },
+            { stage: 2, name: "2단계: 첫 용암 구덩이", time: 45, chantMin: 0.80, chantMax: 1.40, lookMin: 1.3, lookMax: 2.0, runSpeed: 132, pits: [[330, 390]], spikes: [690] },
+            { stage: 3, name: "3단계: 가시와 용암의 조화", time: 46, chantMin: 0.85, chantMax: 1.55, lookMin: 1.3, lookMax: 2.1, runSpeed: 138, pits: [[260, 325], [640, 705]], spikes: [485, 840] },
+            { stage: 4, name: "4단계: 연속 도약 구간", time: 46, chantMin: 0.75, chantMax: 1.75, lookMin: 1.2, lookMax: 2.2, runSpeed: 144, pits: [[210, 275], [470, 540], [740, 810]], spikes: [370, 640] },
+            { stage: 5, name: "5단계: 좁아지는 발판", time: 48, chantMin: 0.75, chantMax: 1.85, lookMin: 1.2, lookMax: 2.2, runSpeed: 150, pits: [[185, 255], [390, 465], [610, 685], [810, 880]], spikes: [320, 535, 745] },
+            { stage: 6, name: "6단계: 급가속 & 이중 함정", time: 48, chantMin: 0.70, chantMax: 2.00, lookMin: 1.1, lookMax: 2.3, runSpeed: 156, pits: [[175, 250], [410, 490], [660, 740]], spikes: [320, 345, 570, 825, 850] },
+            { stage: 7, name: "7단계: 엇박자 용암 지대", time: 50, chantMin: 0.65, chantMax: 2.15, lookMin: 1.1, lookMax: 2.4, runSpeed: 162, pits: [[165, 245], [350, 430], [540, 620], [740, 820]], spikes: [295, 485, 680, 885] },
+            { stage: 8, name: "8단계: 숨돌릴 틈 없는 코스", time: 52, chantMin: 0.65, chantMax: 2.25, lookMin: 1.0, lookMax: 2.4, runSpeed: 168, pits: [[155, 235], [330, 415], [520, 605], [710, 795]], spikes: [280, 302, 465, 655, 678, 865] },
+            { stage: 9, name: "9단계: 악마의 청각 & 점프", time: 54, chantMin: 0.60, chantMax: 2.35, lookMin: 1.0, lookMax: 2.5, runSpeed: 175, pits: [[145, 230], [315, 400], [490, 575], [670, 755], [840, 920]], spikes: [270, 442, 620, 642, 795] },
+            { stage: 10, name: "10단계: 💀 극악 지옥 점프맵 + 술래 감시", time: 58, chantMin: 0.55, chantMax: 2.55, lookMin: 1.0, lookMax: 2.5, runSpeed: 215, isHellStage: true, pits: [[125, 215], [295, 385], [475, 565], [665, 755], [845, 935]], spikes: [252, 272, 428, 448, 610, 632, 798, 818, 962] }
+        ];
+
+        const CHANT_CHARS = "무궁화 꽃이 피었습니다".split("");
+        const SYLLABLE_INDEX_MAP = [0, 1, 2, -1, 3, 4, -1, 5, 6, 7, 8, 9];
+        const TRACK_LENGTH = 1000;
+
+        // 게임 상태 변수
+        let gameState = 'MENU'; // MENU, PLAYING, WIN, LOSE
+        let currentStageIndex = 0; // 0 ~ 9 (1 ~ 10단계)
+        let timeLeft = 45.0;
+        let playerX = 0;
+        let playerY = 0;
+        let playerVy = 0;
+        const GRAVITY = 1280;
+        const JUMP_VELOCITY = 475;
+
+        let isHoldingStop = false;
+        let playerAnimFrame = 0;
+        let stepSoundTimer = 0;
+
+        // 얼음 변신 스킬 & 충전 시스템
+        let iceShields = 1;
+        const MAX_ICE_SHIELDS = 3;
+        let skillCharge = 0;
+        let iceFormTimer = 0; // E키 발동 시 남은 무적 얼음 변신 시간
+        let iceTrapPassCharges = 0; // 얼음 변신 중 함정 1회 통과 보호막
+        let hellBeatTimer = 0;
+        let hellBeatStep = 0;
+        let activePits = [];
+        let activeSpikes = [];
+        let floatingNotice = { text: '', color: '#38bdf8', timer: 0 };
+
+        // 술래 상태 변수
+        let dollState = 'CHANTING'; // CHANTING, LOOKING, CELEBRATING
+        let chantProgress = 0;
+        let currentChantSpeed = 1.0;
+        let lastSpokenIndex = -1;
+        let stateTimer = 0;
+        let headAngle = 0;
+        let scanLaserAngle = 0;
+
+        // 1~10단계 선택 버튼 렌더링
+        function renderStageSelector() {
+            stageSelector.innerHTML = '';
+            STAGES.forEach((st, idx) => {
+                const btn = document.createElement('button');
+                const isSelected = idx === currentStageIndex;
+                btn.type = 'button';
+                btn.className = `py-2 rounded-xl text-xs sm:text-sm font-black border transition cursor-pointer ${
+                    isSelected
+                        ? 'bg-pink-600 border-pink-400 text-white shadow-md shadow-pink-600/30'
+                        : st.isHellStage
+                            ? 'bg-amber-950/60 border-amber-500/40 text-amber-300 hover:bg-amber-900/60'
+                            : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
+                }`;
+                btn.textContent = st.isHellStage ? '10💀' : `${st.stage}단계`;
+                btn.addEventListener('click', () => {
+                    currentStageIndex = idx;
+                    selectedStageDesc.textContent = st.name;
+                    renderStageSelector();
+                });
+                stageSelector.appendChild(btn);
+            });
+            selectedStageDesc.textContent = STAGES[currentStageIndex].name;
+        }
+        renderStageSelector();
+
+        // 캔버스 해상도 반응형 맞춤
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = wrapper.clientWidth * dpr;
+            canvas.height = wrapper.clientHeight * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // 홀드(멈춤), 점프(Space/↑), 얼음 변신 스킬(E) 입력 처리
+        const stopKeys = new Set();
+        let isPointerHolding = false;
+
+        function updateHoldState() {
+            const nextHold = (stopKeys.size > 0 || isPointerHolding);
+            if (nextHold && !isHoldingStop && gameState === 'PLAYING') {
+                sound.playFreeze();
+            }
+            isHoldingStop = nextHold;
+
+            if (isHoldingStop) {
+                holdStopBtn.classList.add('is-pressed');
+            } else {
+                holdStopBtn.classList.remove('is-pressed');
+            }
+            updatePlayerBadge();
+        }
+
+        function triggerJump() {
+            if (gameState !== 'PLAYING') return;
+            sound.init();
+            if (playerY <= 0.5) {
+                playerVy = JUMP_VELOCITY;
+                sound.playJump();
+            }
+        }
+
+        function activateIceSkill() {
+            if (gameState !== 'PLAYING') return;
+            sound.init();
+            if (iceFormTimer > 0) return;
+
+            if (iceShields > 0) {
+                iceShields--;
+                iceFormTimer = 1.65;
+                iceTrapPassCharges = 1;
+                updateShieldUI();
+                sound.playIceSkillUse();
+                triggerNotice('🧊 얼음 변신! 술래 무적 + 함정 1회 돌파 가능!', '#38bdf8', 1.7);
+                updatePlayerBadge();
+            } else {
+                triggerNotice('⚠️ 얼음 스킬 부족! 멈춰서 게이지를 모으세요', '#f87171', 1.2);
+            }
+        }
+
+        function updatePlayerBadge() {
+            if (iceFormTimer > 0) {
+                playerStateBadge.textContent = `🧊 얼음 변신 중 (${iceFormTimer.toFixed(1)}s)`;
+                playerStateBadge.className = 'px-4 py-1.5 rounded-full font-black text-sm sm:text-base tracking-wide bg-sky-500/30 text-sky-200 border border-sky-400 shadow-[0_0_15px_rgba(56,189,248,0.5)]';
+            } else if (playerY > 1) {
+                playerStateBadge.textContent = '⬆️ 점프 중!';
+                playerStateBadge.className = 'px-4 py-1.5 rounded-full font-black text-sm sm:text-base tracking-wide bg-amber-500/25 text-amber-300 border border-amber-400';
+            } else if (isHoldingStop) {
+                playerStateBadge.textContent = '🧊 얼음! (정지 중)';
+                playerStateBadge.className = 'px-4 py-1.5 rounded-full font-black text-sm sm:text-base tracking-wide bg-sky-500/25 text-sky-300 border border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.4)]';
+            } else {
+                playerStateBadge.textContent = '🏃 달리는 중!';
+                playerStateBadge.className = 'px-4 py-1.5 rounded-full font-black text-sm sm:text-base tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/50';
+            }
+        }
+
+        function updateShieldUI() {
+            shieldCountEl.textContent = `x${iceShields}`;
+            const pct = Math.min(100, Math.floor(skillCharge));
+            skillChargeBar.style.width = `${pct}%`;
+            skillChargeText.textContent = iceShields >= MAX_ICE_SHIELDS ? 'MAX' : `${pct}%`;
+        }
+
+        // 키보드 이벤트 (Space/ArrowUp: 점프, E: 얼음 변신, Shift/ArrowDown/S/Z: 멈춤 홀드)
+        window.addEventListener('keydown', (e) => {
+            if (gameState !== 'PLAYING') return;
+            sound.init();
+
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                e.preventDefault();
+                triggerJump();
+                return;
+            }
+            if (e.code === 'KeyE') {
+                e.preventDefault();
+                activateIceSkill();
+                return;
+            }
+            if (['ShiftLeft', 'ShiftRight', 'ArrowDown', 'KeyS', 'KeyZ', 'ControlLeft'].includes(e.code)) {
+                e.preventDefault();
+                stopKeys.add(e.code);
+                updateHoldState();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (stopKeys.has(e.code)) {
+                stopKeys.delete(e.code);
+                updateHoldState();
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            stopKeys.clear();
+            isPointerHolding = false;
+            updateHoldState();
+        });
+
+        // 버튼 & 캔버스 마우스/터치 이벤트
+        function bindHoldEvents(element) {
+            const onStart = (e) => {
+                if (gameState !== 'PLAYING') return;
+                if (e.cancelable) e.preventDefault();
+                sound.init();
+                isPointerHolding = true;
+                updateHoldState();
+            };
+            const onEnd = (e) => {
+                if (e && e.cancelable) e.preventDefault();
+                isPointerHolding = false;
+                updateHoldState();
+            };
+
+            element.addEventListener('mousedown', onStart);
+            element.addEventListener('touchstart', onStart, { passive: false });
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchend', onEnd);
+            window.addEventListener('touchcancel', onEnd);
+        }
+
+        bindHoldEvents(holdStopBtn);
+        bindHoldEvents(canvas);
+
+        jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); triggerJump(); });
+        jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); }, { passive: false });
+
+        iceSkillBtn.addEventListener('mousedown', (e) => { e.preventDefault(); activateIceSkill(); });
+        iceSkillBtn.addEventListener('touchstart', (e) => { e.preventDefault(); activateIceSkill(); }, { passive: false });
+
+        // 음소거 버튼 & 단계 선택 메뉴 버튼
+        const muteBtn = document.getElementById('mute-btn');
+        muteBtn.addEventListener('click', () => {
+            sound.init();
+            const isMuted = sound.toggleMute();
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        function openStageMenu() {
+            gameState = 'MENU';
+            stopKeys.clear();
+            isPointerHolding = false;
+            isHoldingStop = false;
+            holdStopBtn.classList.remove('is-pressed');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            renderStageSelector();
+            resultModal.classList.add('hidden');
+            startModal.classList.remove('hidden');
+        }
+
+        document.getElementById('menu-btn').addEventListener('click', openStageMenu);
+        document.getElementById('result-menu-btn').addEventListener('click', openStageMenu);
+
+        // 새 구호 라운드 시작 (글자 없이 소리로만 타이밍 전달!)
+        function startChantRound() {
+            const cfg = STAGES[currentStageIndex];
+
+            dollState = 'CHANTING';
+            chantProgress = 0;
+            lastSpokenIndex = -1;
+            currentChantSpeed = cfg.chantMin + Math.random() * (cfg.chantMax - cfg.chantMin);
+
+            if (cfg.isHellStage) {
+                chantBox.className = 'bg-rose-950/95 border-2 border-amber-500 rounded-2xl px-6 py-2.5 shadow-[0_0_25px_rgba(245,158,11,0.4)] text-center min-w-[280px] sm:min-w-[380px] transition-colors duration-150';
+                dollStatusLabel.textContent = '💀 최종 10단계: 지옥 점프맵 + 불규칙 술래 감시!';
+                dollStatusLabel.className = 'text-xs font-black uppercase tracking-wider text-amber-400 mb-1';
+                soundStatusText.textContent = '🎵 무궁화 꽃이 피었습니다... (함정 & 소리 집중!)';
+                soundStatusText.className = 'ml-2 text-sm sm:text-base font-black text-amber-300 tracking-wide';
+            } else {
+                chantBox.className = 'bg-zinc-900/95 border-2 border-emerald-500/60 rounded-2xl px-6 py-2.5 shadow-2xl text-center min-w-[280px] sm:min-w-[380px] transition-colors duration-150';
+                dollStatusLabel.textContent = '🎧 소리를 들으세요! 말 속도가 불규칙하게 변합니다!';
+                dollStatusLabel.className = 'text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1';
+                soundStatusText.textContent = '🎵 무궁화 꽃이 피었습니다...';
+                soundStatusText.className = 'ml-2 text-sm sm:text-base font-black text-emerald-300 tracking-wide';
+            }
+
+            // "무궁화 / 꽃이 / 피었습니다" 구절마다 불규칙 속도 적용
+            sound.speakIrregularChant(cfg.chantMin, cfg.chantMax);
+        }
+
+        function triggerNotice(text, color = '#38bdf8', duration = 1.6) {
+            floatingNotice = { text, color, timer: duration };
+        }
+
+        // 게임 시작 초기화
+        function startGame() {
+            sound.init();
+            const cfg = STAGES[currentStageIndex];
+
+            gameState = 'PLAYING';
+            timeLeft = cfg.time;
+            playerX = 0;
+            playerY = 0;
+            playerVy = 0;
+            stopKeys.clear();
+            iceShields = cfg.isHellStage ? 2 : 1;
+            skillCharge = 0;
+            iceFormTimer = 0;
+            iceTrapPassCharges = 0;
+            hellBeatTimer = 0;
+            hellBeatStep = 0;
+            activePits = cfg.pits.map(p => [...p]);
+            activeSpikes = [...cfg.spikes];
+            floatingNotice = { text: '', color: '#38bdf8', timer: 0 };
+
+            stageBadge.textContent = `STAGE ${cfg.stage} / 10`;
+            updateShieldUI();
+            updateHoldState();
+            gameStage.classList.remove('shake-screen');
+            startModal.classList.add('hidden');
+            resultModal.classList.add('hidden');
+
+            resizeCanvas();
+            startChantRound();
+        }
+
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+        document.getElementById('next-stage-btn').addEventListener('click', () => {
+            if (currentStageIndex < STAGES.length - 1) {
+                currentStageIndex++;
+            }
+            startGame();
+        });
+
+        // 게임 종료 처리
+        function endGame(isWin, reasonText) {
+            gameState = isWin ? 'WIN' : 'LOSE';
+            stopKeys.clear();
+            isPointerHolding = false;
+            isHoldingStop = false;
+            holdStopBtn.classList.remove('is-pressed');
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            const resultIcon = document.getElementById('result-icon');
+            const resultTitle = document.getElementById('result-title');
+            const resultDesc = document.getElementById('result-desc');
+            const resultTime = document.getElementById('result-time');
+            const resultDist = document.getElementById('result-dist');
+            const resultCard = document.getElementById('result-card');
+            const nextStageBtn = document.getElementById('next-stage-btn');
+
+            const pct = Math.min(100, Math.floor((playerX / TRACK_LENGTH) * 100));
+            resultTime.textContent = `${Math.max(0, timeLeft).toFixed(1)}초`;
+            resultDist.textContent = `${pct}%`;
+
+            if (isWin) {
+                sound.playWin();
+                const isFinal = currentStageIndex === STAGES.length - 1;
+                resultIcon.textContent = isFinal ? '👑' : '🏆';
+                resultTitle.textContent = isFinal ? '전 스테이지 정복!' : `${currentStageIndex + 1}단계 통과!`;
+                resultTitle.className = 'title-font text-3xl sm:text-4xl text-emerald-400 mb-2';
+                resultDesc.textContent = reasonText;
+                resultCard.className = 'bg-zinc-900 border-2 border-emerald-500/60 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(16,185,129,0.3)]';
+                if (!isFinal) {
+                    nextStageBtn.classList.remove('hidden');
+                } else {
+                    nextStageBtn.classList.add('hidden');
+                }
+            } else {
+                sound.playLose();
+                gameStage.classList.add('shake-screen');
+                resultIcon.textContent = '💥';
+                resultTitle.textContent = '탈락했습니다!';
+                resultTitle.className = 'title-font text-4xl sm:text-5xl text-rose-500 mb-2';
+                resultDesc.textContent = reasonText;
+                resultCard.className = 'bg-zinc-900 border-2 border-rose-500/60 rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-[0_0_50px_rgba(244,63,94,0.3)]';
+                nextStageBtn.classList.add('hidden');
+            }
+
+            setTimeout(() => {
+                resultModal.classList.remove('hidden');
+            }, isWin ? 250 : 500);
+        }
+
+        // 매 프레임 업데이트 로직
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            const cfg = STAGES[currentStageIndex];
+
+            // 1. 타이머 감소
+            timeLeft -= dt;
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                timerDisplay.innerHTML = `0.0<span class="text-sm font-normal text-zinc-400 ml-0.5">초</span>`;
+                endGame(false, '제한 시간이 모두 지났습니다!');
+                return;
+            }
+            timerDisplay.innerHTML = `${timeLeft.toFixed(1)}<span class="text-sm font-normal text-zinc-400 ml-0.5">초</span>`;
+            timerDisplay.className = timeLeft <= 8.0
+                ? 'text-2xl sm:text-3xl font-black text-rose-500 tabular-nums animate-pulse'
+                : 'text-2xl sm:text-3xl font-black text-emerald-400 tabular-nums';
+
+            // 2. 얼음 변신 스킬 타이머 & 플로팅 알림 갱신
+            if (iceFormTimer > 0) {
+                iceFormTimer = Math.max(0, iceFormTimer - dt);
+                if (iceFormTimer === 0) {
+                    iceTrapPassCharges = 0;
+                }
+                updatePlayerBadge();
+            }
+            if (floatingNotice.timer > 0) {
+                floatingNotice.timer = Math.max(0, floatingNotice.timer - dt);
+            }
+
+            // 10단계 전용 배경 긴장감 베이스 비트 재생
+            if (cfg.isHellStage) {
+                hellBeatTimer += dt;
+                if (hellBeatTimer >= 0.32) {
+                    hellBeatTimer = 0;
+                    sound.playHellBeat(hellBeatStep);
+                    hellBeatStep++;
+                }
+            }
+
+            // 3. 점프 물리 업데이트 (중력 및 착지 처리)
+            if (playerY > 0 || playerVy > 0) {
+                playerY += playerVy * dt;
+                playerVy -= GRAVITY * dt;
+                if (playerY <= 0) {
+                    playerY = 0;
+                    playerVy = 0;
+                }
+                updatePlayerBadge();
+            }
+
+            // 4. 플레이어 전진 또는 얼음 스킬 충전
+            if (!isHoldingStop) {
+                playerX += cfg.runSpeed * dt;
+                playerAnimFrame += dt * 14;
+                stepSoundTimer += dt;
+                if (playerY <= 0.5 && stepSoundTimer >= 0.22) {
+                    sound.playStep();
+                    stepSoundTimer = 0;
+                }
+            } else if (iceShields < MAX_ICE_SHIELDS) {
+                skillCharge += dt * 36;
+                if (skillCharge >= 100) {
+                    skillCharge = 0;
+                    iceShields++;
+                    sound.playShieldGain();
+                    triggerNotice(`🧊 [E] 얼음 스킬 충전 완료! (보유 ${iceShields}개)`, '#38bdf8', 1.4);
+                }
+                updateShieldUI();
+            }
+
+            // 5. 점프맵 장애물(용암 구덩이 & 가시) 충돌 판정 (지면 근처일 때)
+            if (playerY < 16) {
+                for (let i = 0; i < activePits.length; i++) {
+                    const [pitStart, pitEnd] = activePits[i];
+                    if (playerX > pitStart + 8 && playerX < pitEnd - 8) {
+                        if (iceFormTimer > 0 && iceTrapPassCharges > 0) {
+                            iceTrapPassCharges--;
+                            activePits.splice(i, 1);
+                            sound.playTrapShatter();
+                            triggerNotice('❄️ 얼음 빙결로 용암 구덩이 1개 돌파!', '#7dd3fc', 1.4);
+                            break;
+                        }
+                        endGame(false, '용암 구덩이에 빠졌습니다! Space 점프 또는 [E] 얼음으로 건너세요!');
+                        return;
+                    }
+                }
+                for (let i = 0; i < activeSpikes.length; i++) {
+                    const spikePos = activeSpikes[i];
+                    if (Math.abs(playerX - spikePos) < 11) {
+                        if (iceFormTimer > 0 && iceTrapPassCharges > 0) {
+                            iceTrapPassCharges--;
+                            activeSpikes.splice(i, 1);
+                            sound.playTrapShatter();
+                            triggerNotice('❄️ 얼음 빙결로 가시 함정 1개 파괴 돌파!', '#7dd3fc', 1.4);
+                            break;
+                        }
+                        endGame(false, '가시 함정에 찔렸습니다! Space 점프 또는 [E] 얼음으로 넘으세요!');
+                        return;
+                    }
+                }
+            }
+
+            // 진행도 UI 갱신
+            const progressPct = Math.min(100, (playerX / TRACK_LENGTH) * 100);
+            progressBar.style.width = `${progressPct}%`;
+            distanceText.textContent = `${Math.floor(progressPct)}%`;
+
+            // 결승선 통과 확인
+            if (playerX >= TRACK_LENGTH) {
+                playerX = TRACK_LENGTH;
+                endGame(true, cfg.isHellStage
+                    ? '최종 10단계 극악 점프맵과 술래 감시까지 모든 스테이지를 클리어했습니다!'
+                    : `${cfg.name} 구간을 무사히 통과했습니다!`);
+                return;
+            }
+
+            // 6. 술래 AI 상태 머신 (1~10단계 전체 적용)
+            if (dollState === 'CHANTING') {
+                headAngle = Math.max(0, headAngle - dt * 10);
+                chantProgress += dt * (4.3 * currentChantSpeed);
+                const currentIndex = Math.floor(chantProgress);
+
+                // 사운드 파형 막대 애니메이션
+                soundBars.forEach((b, i) => {
+                    const h = 8 + Math.abs(Math.sin(chantProgress * 4 + i * 1.3)) * 18;
+                    b.style.height = `${h}px`;
+                    b.className = 'sound-bar w-2 bg-emerald-400 rounded-full transition-all duration-75';
+                });
+
+                if (currentIndex > lastSpokenIndex && currentIndex <= CHANT_CHARS.length) {
+                    const charIdx = currentIndex - 1;
+                    const syllableIdx = SYLLABLE_INDEX_MAP[charIdx];
+                    if (syllableIdx !== undefined && syllableIdx >= 0) {
+                        // 매 음절마다 극단적인 불규칙 속도(급가속/급감속/정지 직전 페이크) 재설정
+                        const roll = Math.random();
+                        if (roll < 0.38) {
+                            // 기습 급가속 (순식간에 다음 글자로 넘어감)
+                            currentChantSpeed = cfg.chantMax * (1.25 + Math.random() * 0.65);
+                        } else if (roll < 0.72) {
+                            // 느릿느릿 끌기 (방심 유도)
+                            currentChantSpeed = cfg.chantMin * (0.55 + Math.random() * 0.35);
+                        } else {
+                            currentChantSpeed = cfg.chantMin + Math.random() * (cfg.chantMax - cfg.chantMin);
+                        }
+                        sound.playChantSyllable(syllableIdx, currentChantSpeed);
+                    }
+                    lastSpokenIndex = currentIndex;
+                }
+
+                // 구호 종료 직후 즉시 돌아봄 (글자 힌트 없음!)
+                if (chantProgress >= CHANT_CHARS.length) {
+                    dollState = 'LOOKING';
+                    stateTimer = cfg.lookMin + Math.random() * (cfg.lookMax - cfg.lookMin);
+                    sound.playTurnAround();
+
+                    chantBox.className = 'bg-rose-950/95 border-2 border-rose-500 rounded-2xl px-6 py-2.5 shadow-[0_0_30px_rgba(244,63,94,0.45)] text-center min-w-[280px] sm:min-w-[380px]';
+                    dollStatusLabel.textContent = '🚨 감시 중! 움직이거나 점프하면 탈락! ([E] 얼음 변신 가능)';
+                    dollStatusLabel.className = 'text-xs font-black uppercase tracking-wider text-rose-400 mb-1';
+                    soundStatusText.textContent = '👁️ 술래가 쳐다보고 있습니다!';
+                    soundStatusText.className = 'ml-2 text-sm sm:text-base font-black text-rose-400 tracking-wide';
+                    soundBars.forEach(b => {
+                        b.style.height = '6px';
+                        b.className = 'sound-bar w-2 bg-rose-500 rounded-full transition-all duration-75';
+                    });
+                }
+            } 
+            else if (dollState === 'LOOKING') {
+                headAngle = Math.min(1, headAngle + dt * 11);
+                scanLaserAngle += dt * 4.5;
+
+                // 고개가 돌아간 상태에서 움직이거나(점프 포함) 정지하지 않았을 때 판정
+                // 단, [E] 얼음 변신(iceFormTimer > 0) 상태라면 움직이거나 점프해도 완벽 생존!
+                const isPlayerActing = (!isHoldingStop || playerY > 1);
+                if (headAngle > 0.65 && isPlayerActing && iceFormTimer <= 0) {
+                    endGame(false, '술래가 뒤돌아봤을 때 움직였습니다! (미리 [E] 얼음 변신을 쓰세요!)');
+                    return;
+                }
+
+                stateTimer -= dt;
+                if (stateTimer <= 0) {
+                    startChantRound();
+                }
+            }
+        }
+
+        // 캔버스 그리기 함수 (점프맵 용암 구덩이 & 가시 장애물 포함)
+        function draw() {
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+
+            const cfg = STAGES[currentStageIndex];
+            const startX = 65;
+            const finishX = width - 95;
+            const trackSpan = Math.max(100, finishX - startX);
+            const groundY = height * 0.72;
+            const toScreenX = (trackPos) => startX + (trackPos / TRACK_LENGTH) * trackSpan;
+            // 1. 배경 하늘/벽면 그라데이션 (10단계는 붉은 지옥불 결승 분위기)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY - 35);
+            if (cfg.isHellStage) {
+                skyGrad.addColorStop(0, '#450a0a');
+                skyGrad.addColorStop(0.55, '#991b1b');
+                skyGrad.addColorStop(1, '#f97316');
+            } else {
+                skyGrad.addColorStop(0, '#bae6fd');
+                skyGrad.addColorStop(1, '#e0f2fe');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, groundY - 35);
+
+            // 담장 벽
+            ctx.fillStyle = '#d6ccc2';
+            ctx.fillRect(0, groundY - 55, width, 25);
+            ctx.fillStyle = '#a8a29e';
+            ctx.fillRect(0, groundY - 32, width, 4);
+
+            // 2. 점프맵 장애물(용암 구덩이 & 가시) 렌더링
+            // 용암 구덩이
+            for (const [pitStart, pitEnd] of activePits) {
+                const sx = toScreenX(pitStart);
+                const ex = toScreenX(pitEnd);
+                const pw = Math.max(14, ex - sx);
+
+                // 구덩이 어두운 틈 + 붉은 용암
+                ctx.fillStyle = '#27272a';
+                ctx.fillRect(sx, groundY - 4, pw, height - groundY + 10);
+
+                const lavaGrad = ctx.createLinearGradient(0, groundY + 6, 0, height);
+                lavaGrad.addColorStop(0, '#f97316');
+                lavaGrad.addColorStop(0.5, '#ef4444');
+                lavaGrad.addColorStop(1, '#991b1b');
+                ctx.fillStyle = lavaGrad;
+                ctx.fillRect(sx + 2, groundY + 8, pw - 4, height - groundY);
+            }
+
+            // 가시 장애물
+            for (const spikePos of activeSpikes) {
+                const sx = toScreenX(spikePos);
+                ctx.fillStyle = '#52525b';
+                ctx.strokeStyle = '#18181b';
+                ctx.lineWidth = 1.5;
+                for (let offset = -8; offset <= 8; offset += 8) {
+                    ctx.beginPath();
+                    ctx.moveTo(sx + offset - 4, groundY + 12);
+                    ctx.lineTo(sx + offset, groundY - 10);
+                    ctx.lineTo(sx + offset + 4, groundY + 12);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+
+            // 3. 출발선 & 결승선
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(startX, groundY - 25);
+            ctx.lineTo(startX, height - 10);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(finishX, groundY - 25);
+            ctx.lineTo(finishX, height - 10);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(185, 28, 28, 0.85)';
+            ctx.font = 'bold 12px "Noto Sans KR"';
+            ctx.textAlign = 'center';
+            ctx.fillText(cfg.isHellStage ? '최종 결승' : '결승선', finishX, groundY - 32);
+
+            // 4. 나무 및 술래(영희 인형) 그리기
+            const dollX = finishX + 42;
+            const dollY = groundY + 5;
+
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(dollX + 12, groundY - 120, 22, 125);
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.arc(dollX + 23, groundY - 135, 45, 0, Math.PI * 2);
+            ctx.arc(dollX - 5, groundY - 115, 32, 0, Math.PI * 2);
+            ctx.arc(dollX + 48, groundY - 115, 32, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (dollState === 'LOOKING' && headAngle > 0.5) {
+                const eyeX = dollX - 14;
+                const eyeY = dollY - 62;
+                const sweepOffset = Math.sin(scanLaserAngle) * 25;
+
+                const laserGrad = ctx.createLinearGradient(eyeX, eyeY, startX - 40, eyeY);
+                laserGrad.addColorStop(0, 'rgba(239, 68, 68, 0.55)');
+                laserGrad.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
+
+                ctx.fillStyle = laserGrad;
+                ctx.beginPath();
+                ctx.moveTo(eyeX, eyeY);
+                ctx.lineTo(startX - 40, groundY - 70 + sweepOffset);
+                ctx.lineTo(startX - 40, height);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            drawDoll(dollX, dollY, headAngle, dollState === 'LOOKING');
+
+            // 5. 플레이어 캐릭터 그리기 (점프 높이 playerY 반영)
+            const currentScreenX = toScreenX(playerX);
+            drawPlayer(currentScreenX, groundY + 12 - playerY, isHoldingStop, playerAnimFrame, iceFormTimer > 0, playerY);
+
+            // 6. 플로팅 알림 렌더링
+            if (floatingNotice.timer > 0) {
+                ctx.save();
+                const alpha = Math.min(1, floatingNotice.timer * 1.5);
+                ctx.globalAlpha = alpha;
+                ctx.font = '900 16px "Noto Sans KR"';
+                ctx.textAlign = 'center';
+                const noticeY = groundY - 96 - (1.5 - Math.min(1.5, floatingNotice.timer)) * 10;
+                
+                const textWidth = ctx.measureText(floatingNotice.text).width;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                ctx.beginPath();
+                ctx.roundRect(width / 2 - textWidth / 2 - 14, noticeY - 18, textWidth + 28, 28, 14);
+                ctx.fill();
+                ctx.strokeStyle = floatingNotice.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = floatingNotice.color;
+                ctx.fillText(floatingNotice.text, width / 2, noticeY);
+                ctx.restore();
+            }
+        }
+
+        // 술래 인형 렌더링
+        function drawDoll(x, y, turnProgress, isRedEyes) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 그림자
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.beginPath();
+            ctx.ellipse(0, 4, 22, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 다리 & 흰 양말 & 구두
+            ctx.fillStyle = '#fed7aa';
+            ctx.fillRect(-10, -24, 7, 24);
+            ctx.fillRect(3, -24, 7, 24);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-10, -10, 7, 7);
+            ctx.fillRect(3, -10, 7, 7);
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(-12, -4, 9, 5);
+            ctx.fillRect(2, -4, 9, 5);
+
+            // 노란 반팔 티셔츠
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.roundRect(-14, -54, 28, 22, 6);
+            ctx.fill();
+
+            // 주황색 멜빵 원피스
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.moveTo(-13, -44);
+            ctx.lineTo(13, -44);
+            ctx.lineTo(18, -20);
+            ctx.lineTo(-18, -20);
+            ctx.closePath();
+            ctx.fill();
+
+            // 머리 (turnProgress: 0 = 뒷모습, 1 = 왼쪽 플레이어를 바라보는 앞모습)
+            const headY = -66;
+            // 뒷머리
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath();
+            ctx.arc(0, headY, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 양갈래 머리 방울
+            ctx.fillStyle = '#a855f7';
+            ctx.beginPath();
+            ctx.arc(14, headY - 4, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath();
+            ctx.arc(19, headY + 2, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 고개를 돌렸을 때 얼굴(왼쪽 방향) 표시
+            if (turnProgress > 0.35) {
+                const faceAlpha = Math.min(1, (turnProgress - 0.35) * 1.6);
+                ctx.save();
+                ctx.globalAlpha = faceAlpha;
+
+                // 얼굴 피부
+                ctx.fillStyle = '#fed7aa';
+                ctx.beginPath();
+                ctx.arc(-4, headY + 1, 13, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 앞머리
+                ctx.fillStyle = '#1c1917';
+                ctx.beginPath();
+                ctx.arc(-2, headY - 3, 14, Math.PI * 0.9, Math.PI * 2.05);
+                ctx.fill();
+
+                // 눈 (감시 중일 때 붉은 레이저 눈!)
+                ctx.fillStyle = isRedEyes ? '#ef4444' : '#18181b';
+                ctx.beginPath();
+                ctx.arc(-11, headY + 1, isRedEyes ? 3.2 : 2.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (isRedEyes) {
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 10;
+                    ctx.fillStyle = '#fca5a5';
+                    ctx.beginPath();
+                    ctx.arc(-11, headY + 1, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+        // 플레이어 캐릭터 렌더링 (초록색 체육복 참가자 + E 얼음 조각상 변신 효과)
+        function drawPlayer(x, y, isFrozen, animTime, isIceTransformed = false, jumpHeight = 0) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // 달릴 때 위아래 바운스
+            const bounce = (isFrozen || jumpHeight > 0) ? 0 : Math.abs(Math.sin(animTime)) * -5;
+            const legSwing = isFrozen ? 0 : (jumpHeight > 0 ? 8 : Math.sin(animTime) * 10);
+            const armSwing = isFrozen ? 0 : (jumpHeight > 0 ? -12 : -Math.sin(animTime) * 10);
+
+            // 바닥 그림자 (점프 높이에 따라 지면에 고정 및 크기 축소)
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.beginPath();
+            const shadowScale = Math.max(0.4, 1 - jumpHeight / 140);
+            ctx.ellipse(0, 4 + jumpHeight, 18 * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.translate(0, bounce);
+
+            // [E] 얼음 변신 스킬 발동 중: 캐릭터 전체가 푸른 얼음 조각상으로 변신!
+            if (isIceTransformed) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.48)';
+                ctx.strokeStyle = '#e0f2fe';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(-22, -78, 44, 82, 14);
+                ctx.fill();
+                ctx.stroke();
+            } else if (isFrozen || iceShields > 0) {
+                ctx.strokeStyle = isFrozen ? 'rgba(56, 189, 248, 0.9)' : 'rgba(125, 211, 252, 0.45)';
+                ctx.lineWidth = isFrozen ? 3.5 : 2;
+                ctx.beginPath();
+                ctx.roundRect(-20, -76, 40, 78, 16);
+                ctx.stroke();
+            }
+
+            // 머리 위 보유 얼음 스킬 개수 표시 (최대 3개)
+            for (let i = 0; i < iceShields; i++) {
+                const offsetX = (i - (iceShields - 1) / 2) * 12;
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(offsetX, -84, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // 뒷팔
+            ctx.strokeStyle = isIceTransformed ? '#0284c7' : '#047857';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, -44);
+            ctx.lineTo(-armSwing, -28);
+            ctx.stroke();
+
+            // 다리 (초록 체육복 바지 + 흰 운동화)
+            ctx.strokeStyle = isIceTransformed ? '#0369a1' : '#065f46';
+            ctx.lineWidth = 7;
+            ctx.beginPath();
+            ctx.moveTo(-3, -24);
+            ctx.lineTo(-3 - legSwing, -3);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(3, -24);
+            ctx.lineTo(3 + legSwing, -3);
+            ctx.stroke();
+
+            // 운동화
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-3 - legSwing, -2, 4.5, 0, Math.PI * 2);
+            ctx.arc(3 + legSwing, -2, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 몸통
+            ctx.fillStyle = isIceTransformed ? '#38bdf8' : '#059669';
+            ctx.beginPath();
+            ctx.roundRect(-12, -50, 24, 28, 7);
+            ctx.fill();
+
+            // 번호표(456)
+            ctx.fillStyle = '#ecfdf5';
+            ctx.fillRect(-2, -46, 11, 7);
+            ctx.fillStyle = '#064e3b';
+            ctx.font = 'bold 6px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('456', 3.5, -40.5);
+
+            // 앞팔
+            ctx.strokeStyle = isIceTransformed ? '#7dd3fc' : '#10b981';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(0, -44);
+            ctx.lineTo(armSwing, -28);
+            ctx.stroke();
+
+            // 머리
+            ctx.fillStyle = isIceTransformed ? '#bae6fd' : '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(0, -61, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 머리카락
+            ctx.fillStyle = isIceTransformed ? '#0284c7' : '#1c1917';
+            ctx.beginPath();
+            ctx.arc(-1, -63, 12.5, Math.PI * 0.85, Math.PI * 2.15);
+            ctx.fill();
+
+            // 눈
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            ctx.arc(6, -61, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (isFrozen || isIceTransformed) {
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(-7, -64, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // 애니메이션 루프
+        let lastTimestamp = 0;
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+            lastTimestamp = timestamp;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 초기 로드 시 캔버스 세팅 및 루프 시작
+        window.onload = function() {
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

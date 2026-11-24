@@ -1,0 +1,2659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IRON FIST: NEON ARENA 2.0 - 2.5D Arcade Fighter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Noto+Sans+KR:wght@700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --p1-color: #38bdf8;
+            --p2-color: #f43f5e;
+            --gold: #fbbf24;
+            --rage: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background-color: #050811;
+            color: #fff;
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        canvas#arena {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        /* 상단 아케이드 HUD */
+        .hud-top {
+            position: relative;
+            z-index: 10;
+            padding: 12px 20px 0 20px;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .health-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .fighter-hud {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .fighter-hud.p2 {
+            align-items: flex-end;
+        }
+
+        .name-rounds {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .fighter-hud.p2 .name-rounds {
+            flex-direction: row-reverse;
+        }
+
+        .fighter-name {
+            font-family: 'Orbitron', 'Noto Sans KR', sans-serif;
+            font-weight: 900;
+            font-size: clamp(0.95rem, 2vw, 1.35rem);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+        }
+
+        .p1 .fighter-name { color: var(--p1-color); }
+        .p2 .fighter-name { color: var(--p2-color); }
+
+        .round-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .round-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #94a3b8;
+            background: rgba(15, 23, 42, 0.8);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .round-dot.won {
+            background: var(--gold);
+            border-color: #fef08a;
+            box-shadow: 0 0 12px var(--gold);
+            transform: scale(1.15);
+        }
+
+        /* 철권 스타일 기울어진 체력바 */
+        .hp-bar-outer {
+            width: 100%;
+            height: clamp(18px, 2.8vh, 26px);
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+        }
+
+        .p1 .hp-bar-outer { transform: skewX(-18deg); border-left: 4px solid var(--p1-color); }
+        .p2 .hp-bar-outer { transform: skewX(18deg); border-right: 4px solid var(--p2-color); }
+
+        .hp-bar-damage {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            background: #ef4444;
+            transition: width 0.35s ease-out;
+        }
+
+        .hp-bar-fill {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            transition: width 0.08s linear;
+        }
+
+        .p1 .hp-bar-damage, .p1 .hp-bar-fill { right: 0; }
+        .p2 .hp-bar-damage, .p2 .hp-bar-fill { left: 0; }
+
+        .p1 .hp-bar-fill {
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #bae6fd);
+        }
+        .p2 .hp-bar-fill {
+            background: linear-gradient(270deg, #be123c, #f43f5e, #fecdd3);
+        }
+
+        .hp-bar-outer.rage-active {
+            border-color: #ef4444;
+            animation: ragePulse 0.4s infinite alternate;
+        }
+
+        .hp-bar-outer.rage-active .hp-bar-fill {
+            background: linear-gradient(90deg, #7f1d1d, #ef4444, #fca5a5) !important;
+        }
+
+        @keyframes ragePulse {
+            from { box-shadow: 0 0 8px #ef4444; }
+            to { box-shadow: 0 0 22px #ef4444, inset 0 0 10px #fca5a5; }
+        }
+
+        .rage-badge {
+            font-family: 'Black Ops One', cursive;
+            font-size: 0.75rem;
+            color: #fca5a5;
+            background: rgba(185, 28, 28, 0.85);
+            padding: 1px 8px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        .rage-badge.show { opacity: 1; }
+
+        /* 중앙 타이머 */
+        .timer-box {
+            background: linear-gradient(180deg, #1e293b, #0f172a);
+            border: 2px solid var(--gold);
+            border-radius: 10px;
+            min-width: clamp(54px, 7vw, 76px);
+            height: clamp(46px, 6.5vh, 62px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.35);
+        }
+
+        .timer-label {
+            font-size: 0.55rem;
+            color: var(--gold);
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        .timer-val {
+            font-family: 'Black Ops One', cursive;
+            font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+            color: #fff;
+            line-height: 1;
+        }
+
+        .timer-val.urgent {
+            color: #ef4444;
+            animation: pulseText 0.5s infinite alternate;
+        }
+
+        /* 상단 미니 컨트롤 버튼 */
+        .top-actions {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            z-index: 30;
+            display: flex;
+            gap: 6px;
+            pointer-events: auto;
+        }
+
+        .mini-btn {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        .mini-btn:hover { background: rgba(51, 65, 85, 0.9); }
+
+        /* 콤보 카운터 UI */
+        .combo-display {
+            position: absolute;
+            top: 120px;
+            z-index: 12;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.2s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .combo-display.p1 { left: 28px; text-align: left; }
+        .combo-display.p2 { right: 28px; text-align: right; }
+        .combo-display.active { opacity: 1; transform: scale(1); }
+
+        .combo-num {
+            font-family: 'Black Ops One', cursive;
+            font-size: clamp(2.2rem, 5vw, 3.6rem);
+            line-height: 0.95;
+            background: linear-gradient(180deg, #fef08a 0%, #f59e0b 55%, #dc2626 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.9));
+        }
+
+        .combo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: #fff;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px #000;
+        }
+
+        .combo-dmg {
+            font-size: 0.85rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 2px 4px #000;
+        }
+
+        /* 중앙 아케이드 배너 */
+        .banner-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .banner-main {
+            font-family: 'Black Ops One', 'Noto Sans KR', sans-serif;
+            font-size: clamp(2.8rem, 8vw, 6rem);
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #ffffff 0%, #fbbf24 50%, #ea580c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.95));
+            transform: scale(0);
+            opacity: 0;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s;
+            text-align: center;
+            padding: 0 16px;
+        }
+
+        .banner-main.show {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .banner-sub {
+            font-family: 'Orbitron', 'Noto Sans KR', sans-serif;
+            font-size: clamp(1rem, 2.5vw, 1.6rem);
+            font-weight: 900;
+            color: #38bdf8;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+            margin-top: 6px;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .banner-sub.show { opacity: 1; }
+
+        /* 레이지 아츠 컷인 연출 */
+        .rage-cutin {
+            position: absolute;
+            inset: 0;
+            z-index: 25;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.35) 0%, rgba(0, 0, 0, 0.85) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .rage-cutin.active { opacity: 1; }
+
+        .cutin-stripe {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(90deg, transparent, #991b1b, #ef4444, #991b1b, transparent);
+            border-top: 3px solid #fef08a;
+            border-bottom: 3px solid #fef08a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: skewY(-4deg) scaleY(0);
+            transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 0 40px #ef4444;
+        }
+
+        .rage-cutin.active .cutin-stripe {
+            transform: skewY(-4deg) scaleY(1);
+        }
+
+        .cutin-title {
+            font-family: 'Black Ops One', cursive;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            color: #fef08a;
+            text-shadow: 0 4px 12px #000;
+            letter-spacing: 3px;
+        }
+
+        .cutin-sub {
+            font-size: 1rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+
+        /* 하단 키 가이드 & 터치 컨트롤러 */
+        .hud-bottom {
+            position: relative;
+            z-index: 15;
+            width: 100%;
+            padding: 8px 14px 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .key-guide-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 6px 14px;
+            max-width: 1040px;
+            margin: 0 auto;
+            font-size: 0.72rem;
+            color: #cbd5e1;
+        }
+
+        .key-item span.k {
+            display: inline-block;
+            background: #334155;
+            color: #fbbf24;
+            border: 1px solid #64748b;
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.68rem;
+            margin-right: 3px;
+        }
+
+        /* 모바일/마우스 가상 컨트롤러 */
+        .virtual-pad {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            max-width: 920px;
+            margin: 0 auto;
+            pointer-events: none;
+        }
+
+        .dpad-cluster, .action-cluster {
+            pointer-events: auto;
+            display: grid;
+            gap: 6px;
+        }
+
+        .dpad-cluster {
+            grid-template-columns: repeat(3, 46px);
+            grid-template-rows: repeat(2, 46px);
+        }
+
+        .action-cluster {
+            grid-template-columns: repeat(3, 56px);
+            grid-template-rows: repeat(2, 46px);
+        }
+
+        .v-btn {
+            background: rgba(30, 41, 59, 0.72);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Orbitron', 'Noto Sans KR', sans-serif;
+            font-weight: 800;
+            font-size: 0.74rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            transition: transform 0.05s, background 0.1s;
+        }
+
+        .v-btn:active, .v-btn.pressed {
+            transform: scale(0.92);
+            background: rgba(56, 189, 248, 0.55);
+            border-color: #38bdf8;
+        }
+
+        .v-btn.atk-lp { border-color: #38bdf8; color: #bae6fd; }
+        .v-btn.atk-rp { border-color: #f59e0b; color: #fde68a; }
+        .v-btn.atk-lk { border-color: #10b981; color: #a7f3d0; }
+        .v-btn.atk-rk { border-color: #f43f5e; color: #fecdd3; }
+        .v-btn.atk-sp { border-color: #a855f7; color: #e9d5ff; }
+        .v-btn.atk-rage {
+            border-color: #ef4444;
+            background: rgba(153, 27, 27, 0.75);
+            color: #fef08a;
+        }
+
+        .v-btn small {
+            font-size: 0.55rem;
+            opacity: 0.85;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        /* 타이틀 & 모드 선택 모달 */
+        .menu-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            background: radial-gradient(circle at 50% 40%, rgba(15, 23, 42, 0.84) 0%, rgba(3, 7, 18, 0.96) 100%);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .menu-overlay.hidden { display: none; }
+
+        .title-logo {
+            font-family: 'Black Ops One', cursive;
+            font-size: clamp(2.6rem, 7vw, 4.8rem);
+            line-height: 1;
+            background: linear-gradient(180deg, #ffffff 0%, #38bdf8 45%, #ef4444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 6px 20px rgba(56, 189, 248, 0.4));
+            margin-bottom: 6px;
+        }
+
+        .title-sub {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(0.85rem, 2vw, 1.1rem);
+            color: var(--gold);
+            letter-spacing: 3px;
+            margin-bottom: 24px;
+        }
+
+        .menu-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 22px;
+            width: 100%;
+            max-width: 470px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            text-align: left;
+        }
+
+        .option-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+        }
+
+        .select-btn {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1.5px solid #334155;
+            color: #cbd5e1;
+            padding: 10px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .select-btn.active {
+            background: rgba(56, 189, 248, 0.22);
+            border-color: #38bdf8;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+        }
+
+        .start-fight-btn {
+            margin-top: 6px;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ef4444, #dc2626, #b91c1c);
+            color: #fff;
+            font-family: 'Black Ops One', 'Noto Sans KR', sans-serif;
+            font-size: 1.35rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+            transition: transform 0.15s, filter 0.15s;
+        }
+
+        .start-fight-btn:hover { filter: brightness(1.12); transform: translateY(-2px); }
+        .start-fight-btn:active { transform: scale(0.97); }
+
+        .controls-hint {
+            margin-top: 14px;
+            font-size: 0.76rem;
+            color: #cbd5e1;
+            line-height: 1.65;
+            max-width: 560px;
+            background: rgba(15, 23, 42, 0.65);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes pulseText {
+            from { transform: scale(1); }
+            to { transform: scale(1.12); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 2.5D/3D 원근 렌더링 캔버스 -->
+    <canvas id="arena"></canvas>
+
+    <!-- 상단 미니 옵션 -->
+    <div class="top-actions">
+        <button id="btn-stage" class="mini-btn" title="스테이지 전환">🌃 헬리패드</button>
+        <button id="btn-sound" class="mini-btn" title="사운드 켜기/끄기">🔊 BGM/SFX</button>
+        <button id="btn-menu" class="mini-btn" title="메인 메뉴">⚙️ 메뉴</button>
+    </div>
+
+    <!-- 상단 HUD -->
+    <header class="hud-top">
+        <div class="health-row">
+            <!-- Player 1 HUD -->
+            <div class="fighter-hud p1">
+                <div class="name-rounds">
+                    <span class="fighter-name">JIN KAZAMA</span>
+                    <div class="round-dots" id="p1-rounds">
+                        <div class="round-dot"></div>
+                        <div class="round-dot"></div>
+                    </div>
+                    <span class="rage-badge" id="p1-rage-badge">RAGE!</span>
+                </div>
+                <div class="hp-bar-outer" id="p1-hp-outer">
+                    <div class="hp-bar-damage" id="p1-hp-dmg"></div>
+                    <div class="hp-bar-fill" id="p1-hp-fill"></div>
+                </div>
+            </div>
+
+            <!-- 중앙 타이머 -->
+            <div class="timer-box">
+                <span class="timer-label">TIME</span>
+                <span class="timer-val" id="timer-val">60</span>
+            </div>
+
+            <!-- Player 2 HUD -->
+            <div class="fighter-hud p2">
+                <div class="name-rounds">
+                    <span class="fighter-name" id="p2-name-label">DEVIL RIVAL (CPU)</span>
+                    <div class="round-dots" id="p2-rounds">
+                        <div class="round-dot"></div>
+                        <div class="round-dot"></div>
+                    </div>
+                    <span class="rage-badge" id="p2-rage-badge">RAGE!</span>
+                </div>
+                <div class="hp-bar-outer" id="p2-hp-outer">
+                    <div class="hp-bar-damage" id="p2-hp-dmg"></div>
+                    <div class="hp-bar-fill" id="p2-hp-fill"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 좌/우 콤보 카운터 -->
+    <div class="combo-display p1" id="p1-combo">
+        <div class="combo-num" id="p1-combo-num">2</div>
+        <div class="combo-text">HITS COMBO!</div>
+        <div class="combo-dmg" id="p1-combo-dmg">45 DMG</div>
+    </div>
+
+    <div class="combo-display p2" id="p2-combo">
+        <div class="combo-num" id="p2-combo-num">2</div>
+        <div class="combo-text">HITS COMBO!</div>
+        <div class="combo-dmg" id="p2-combo-dmg">45 DMG</div>
+    </div>
+
+    <!-- 중앙 라운드/KO 배너 -->
+    <div class="banner-overlay">
+        <div class="banner-main" id="banner-main">ROUND 1</div>
+        <div class="banner-sub" id="banner-sub">GET READY FOR THE NEXT BATTLE</div>
+    </div>
+
+    <!-- 레이지 아츠 컷인 연출 -->
+    <div class="rage-cutin" id="rage-cutin">
+        <div class="cutin-stripe">
+            <div class="cutin-title" id="cutin-title">RAGE ART</div>
+            <div class="cutin-sub" id="cutin-sub">천멸 뇌신권 (ARMORED REVERSAL)</div>
+        </div>
+    </div>
+
+    <!-- 하단 조작 가이드 및 가상 패드 -->
+    <footer class="hud-bottom">
+        <div class="virtual-pad" id="virtual-pad">
+            <!-- 좌측 이동 패드 -->
+            <div class="dpad-cluster">
+                <div></div>
+                <button class="v-btn" data-key="KeyW">▲<small>점프</small></button>
+                <div></div>
+                <button class="v-btn" data-key="KeyA">◀<small>가드/패리</small></button>
+                <button class="v-btn" data-key="KeyS">▼<small>앉기/하단</small></button>
+                <button class="v-btn" data-key="KeyD">▶<small>전진/대시</small></button>
+            </div>
+
+            <!-- 우측 철권 4버튼 + 초풍신권 + 레이지 아츠 -->
+            <div class="action-cluster">
+                <button class="v-btn atk-lp" data-key="KeyU">LP<small>왼손 (상)</small></button>
+                <button class="v-btn atk-rp" data-key="KeyI">RP<small>오른손 (중)</small></button>
+                <button class="v-btn atk-sp" data-key="KeyO">EWGF<small>초풍신권</small></button>
+                <button class="v-btn atk-lk" data-key="KeyJ">LK<small>왼발 (하)</small></button>
+                <button class="v-btn atk-rk" data-key="KeyK">RK<small>오른발 (중)</small></button>
+                <button class="v-btn atk-rage" data-key="Space">RAGE<small>슈퍼아머</small></button>
+            </div>
+        </div>
+
+        <div class="key-guide-bar" id="key-guide-bar">
+            <div class="key-item"><span class="k">A / D</span>이동 &amp; 백대시(A,A)</div>
+            <div class="key-item"><span class="k">뒤(직전)</span>저스트 패링!</div>
+            <div class="key-item"><span class="k">S + J/K</span>하단 쓸기(다운)</div>
+            <div class="key-item"><span class="k">U</span>LP(상)</div>
+            <div class="key-item"><span class="k">I</span>RP(중)</div>
+            <div class="key-item"><span class="k">J</span>LK(하)</div>
+            <div class="key-item"><span class="k">K</span>RK(강타)</div>
+            <div class="key-item"><span class="k">O / ↘I</span>초풍신권(띄우기)</div>
+            <div class="key-item"><span class="k">SPACE</span>레이지 아츠</div>
+        </div>
+    </footer>
+
+    <!-- 시작 및 모드 선택 메뉴 -->
+    <div class="menu-overlay" id="menu-overlay">
+        <div class="title-logo">IRON FIST 2.0</div>
+        <div class="title-sub">NEON ARENA // HIGH-RESPONSE COMBAT</div>
+
+        <div class="menu-panel">
+            <div class="option-group">
+                <span class="option-label">GAME MODE (대전 모드)</span>
+                <div class="btn-row" id="mode-select">
+                    <button class="select-btn active" data-mode="cpu">1P vs CPU</button>
+                    <button class="select-btn" data-mode="pvp">1P vs 2P (로컬)</button>
+                </div>
+            </div>
+
+            <div class="option-group" id="diff-group">
+                <span class="option-label">CPU DIFFICULTY (난이도)</span>
+                <div class="btn-row" id="diff-select">
+                    <button class="select-btn" data-diff="easy">쉬움 (EASY)</button>
+                    <button class="select-btn active" data-diff="normal">보통 (NORMAL)</button>
+                    <button class="select-btn" data-diff="hard">어려움 (TEKKEN GOD)</button>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <span class="option-label">STAGE SELECT (스테이지)</span>
+                <div class="btn-row" id="stage-select">
+                    <button class="select-btn active" data-stage="helipad">🌃 네온 헬리패드</button>
+                    <button class="select-btn" data-stage="dojo">🏯 황혼의 무술 도장</button>
+                </div>
+            </div>
+
+            <button class="start-fight-btn" id="btn-start-fight">FIGHT! (대전 시작)</button>
+        </div>
+
+        <div class="controls-hint" id="menu-controls-hint">
+            <strong>⚔️ 공방 핵심 가이드 (스턴락 완전 제거!):</strong><br>
+            • <strong>3연타 제한 &amp; 기상 무적:</strong> 3연타 피니시 후 거리가 벌어지며, 다운 후 일어날 때 <strong>완전 무적</strong>이 부여됩니다.<br>
+            • <strong>저스트 패링 &amp; 백대시:</strong> 피격 직전 <strong>뒤 방향키</strong>로 <strong>저스트 패링</strong>(반격 기회), <strong>뒤 두 번(A,A)</strong>으로 회피 백대시!<br>
+            • <strong>카운터 &amp; 띄우기:</strong> 상대 공격 시동을 끊으면 <strong>COUNTER HIT!</strong>, <strong>초풍신권(O 또는 S+D+I)</strong>으로 공중 콤보 연결!
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ============================================================================
+ * 1. WEB AUDIO API 아케이드 사운드 엔진 (타격, 패링 금속음, 카운터 붐, 신스 BGM)
+ * ============================================================================
+ */
+class ArcadeAudio {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmTimer = null;
+        this.step = 0;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        if (this.muted) {
+            this.stopBGM();
+        } else {
+            this.init();
+            this.startBGM();
+        }
+        return this.muted;
+    }
+
+    // 묵직한 타격음 & 카운터 히트 붐
+    playHit(power = 'normal', isCounter = false) {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = power === 'heavy' || isCounter ? 'sawtooth' : 'triangle';
+        const startFreq = isCounter ? 220 : power === 'heavy' ? 185 : 145;
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(28, now + (power === 'heavy' || isCounter ? 0.26 : 0.14));
+
+        gain.gain.setValueAtTime(isCounter ? 0.5 : power === 'heavy' ? 0.42 : 0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (power === 'heavy' || isCounter ? 0.27 : 0.15));
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.28);
+
+        this.playNoise(power === 'heavy' ? 0.16 : 0.08, isCounter ? 2100 : 1000, isCounter ? 0.4 : 0.22);
+
+        // 초풍신권 전기 스파크음
+        if (power === 'electric') {
+            const zap = this.ctx.createOscillator();
+            const zGain = this.ctx.createGain();
+            zap.type = 'sawtooth';
+            zap.frequency.setValueAtTime(980, now);
+            zap.frequency.exponentialRampToValueAtTime(170, now + 0.26);
+            zGain.gain.setValueAtTime(0.28, now);
+            zGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            zap.connect(zGain);
+            zGain.connect(this.ctx.destination);
+            zap.start(now);
+            zap.stop(now + 0.27);
+        }
+    }
+
+    // 일반 가드 방어음
+    playGuard() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(240, now + 0.08);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+    }
+
+    // 저스트 패링 (금속성 챙! 반격음)
+    playParry() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const metallicFreqs = [1320, 1980, 2640];
+        metallicFreqs.forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.exponentialRampToValueAtTime(f * 0.92, now + 0.28);
+            gain.gain.setValueAtTime(0.18 / (idx + 1), now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        });
+    }
+
+    // 백대시 / 헛스윙 바람 소리
+    playWhiff() {
+        if (this.muted) return;
+        this.init();
+        this.playNoise(0.07, 650, 0.1);
+    }
+
+    // 레이지 아츠 슈퍼아머 발동음
+    playRageActivate() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(720, now + 0.32);
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.38);
+    }
+
+    // K.O. 폭발음
+    playKO() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        this.playNoise(0.65, 420, 0.45);
+        const sub = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(120, now);
+        sub.frequency.exponentialRampToValueAtTime(24, now + 0.7);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.72);
+        sub.connect(gain);
+        gain.connect(this.ctx.destination);
+        sub.start(now);
+        sub.stop(now + 0.75);
+    }
+
+    playNoise(duration, filterFreq, volume) {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = filterFreq;
+
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+    }
+
+    startBGM() {
+        if (this.muted || this.bgmTimer) return;
+        this.init();
+        const bassNotes = [55, 55, 65.41, 55, 73.42, 65.41, 49.00, 55];
+        this.bgmTimer = setInterval(() => {
+            if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+            const now = this.ctx.currentTime;
+            const freq = bassNotes[this.step % bassNotes.length];
+
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(340, now);
+
+            gain.gain.setValueAtTime(0.065, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.17);
+
+            if (this.step % 2 === 0) {
+                const kick = this.ctx.createOscillator();
+                const kGain = this.ctx.createGain();
+                kick.frequency.setValueAtTime(110, now);
+                kick.frequency.exponentialRampToValueAtTime(35, now + 0.08);
+                kGain.gain.setValueAtTime(0.11, now);
+                kGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+                kick.connect(kGain);
+                kGain.connect(this.ctx.destination);
+                kick.start(now);
+                kick.stop(now + 0.1);
+            } else {
+                this.playNoise(0.03, 5000, 0.025);
+            }
+
+            this.step++;
+        }, 175);
+    }
+
+    stopBGM() {
+        if (this.bgmTimer) {
+            clearInterval(this.bgmTimer);
+            this.bgmTimer = null;
+        }
+    }
+}
+
+/**
+ * ============================================================================
+ * 2. 기술 데이터 (짧은 히트스턴, 푸시백, 하단 쓸기, 초풍신권, 슈퍼아머 레이지 아츠)
+ * ============================================================================
+ */
+const MOVES = {
+    LP: {
+        name: '왼손 잽 (LP)',
+        height: 'HIGH',
+        startup: 4,
+        active: 4,
+        recovery: 8,
+        damage: 10,
+        chipDamage: 1,
+        hitstun: 11,      // 짧은 경직으로 무한 스턴락 방지
+        blockstun: 8,
+        pushback: 34,     // 타격 시 거리 확보
+        launchY: 0,
+        rangeX: 95,
+        hitY: -115,
+        power: 'normal',
+        nextCombo: 'RP'
+    },
+    RP: {
+        name: '오른손 스트레이트 (RP)',
+        height: 'MID',
+        startup: 6,
+        active: 5,
+        recovery: 11,
+        damage: 15,
+        chipDamage: 2,
+        hitstun: 13,
+        blockstun: 10,
+        pushback: 44,
+        launchY: 0,
+        rangeX: 104,
+        hitY: -105,
+        power: 'normal',
+        nextCombo: 'RK'
+    },
+    LK: {
+        name: '로우 킥 (LK)',
+        height: 'LOW',
+        startup: 6,
+        active: 5,
+        recovery: 12,
+        damage: 12,
+        chipDamage: 1,
+        hitstun: 12,
+        blockstun: 9,
+        pushback: 38,
+        launchY: 0,
+        rangeX: 110,
+        hitY: -28,
+        power: 'normal',
+        nextCombo: 'RP'
+    },
+    SWEEP: {
+        name: '하단 쓸기 (스윕)',
+        height: 'LOW',
+        startup: 9,
+        active: 6,
+        recovery: 16,
+        damage: 18,
+        chipDamage: 2,
+        hitstun: 14,
+        blockstun: 13,
+        pushback: 52,
+        launchY: -5.5,    // 상대를 넘어뜨려 다운시킴 (기상 무적 유발)
+        knockdown: true,
+        rangeX: 118,
+        hitY: -18,
+        power: 'heavy',
+        nextCombo: null
+    },
+    RK: {
+        name: '미들 하이킥 (RK)',
+        height: 'MID',
+        startup: 8,
+        active: 6,
+        recovery: 14,
+        damage: 20,
+        chipDamage: 3,
+        hitstun: 14,
+        blockstun: 12,
+        pushback: 68,     // 강한 푸시백으로 공방 리셋
+        launchY: -6.5,    // 피니시 넉다운
+        knockdown: true,
+        rangeX: 116,
+        hitY: -92,
+        power: 'heavy',
+        nextCombo: null
+    },
+    EWGF: {
+        name: '초풍신권 (EWGF)',
+        height: 'MID',
+        startup: 9,
+        active: 6,
+        recovery: 16,
+        damage: 22,
+        chipDamage: 3,
+        hitstun: 14,
+        blockstun: 13,
+        pushback: 36,
+        launchY: -13.6,   // 공중 띄우기 런처!
+        rangeX: 108,
+        hitY: -95,
+        power: 'electric',
+        nextCombo: 'RK'
+    },
+    RAGE_ART: {
+        name: '레이지 아츠 - 천멸 뇌신권',
+        height: 'MID',
+        startup: 13,
+        active: 10,
+        recovery: 22,
+        damage: 65,
+        chipDamage: 9,
+        hitstun: 14,
+        blockstun: 16,
+        pushback: 88,
+        launchY: -11.5,
+        knockdown: true,
+        rangeX: 148,
+        hitY: -95,
+        power: 'electric',
+        isRageArt: true
+    }
+};
+
+/**
+ * ============================================================================
+ * 3. 파이터 클래스 (기상 무적, 백대시 무적, 저스트 패링, 공중 중력 스케일링)
+ * ============================================================================
+ */
+class Fighter {
+    constructor(options) {
+        this.id = options.id;
+        this.name = options.name;
+        this.isCPU = options.isCPU || false;
+        this.theme = options.theme;
+        this.maxHp = 200;
+        this.reset(options.startX, options.facing);
+    }
+
+    reset(x, facing) {
+        this.x = x;
+        this.y = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.facing = facing;
+        this.hp = this.maxHp;
+        this.displayHp = this.maxHp;
+        this.state = 'IDLE'; // IDLE, WALK, CROUCH, JUMP, DASH, ATTACK, HITSTUN, AIRBORNE, BLOCKSTUN, PARRY_STUN, KNOCKDOWN, WAKEUP, VICTORY
+        this.stateTimer = 0;
+        this.currentMove = null;
+        this.moveFrame = 0;
+        this.hasHitThisMove = false;
+
+        // 무적 및 특수 타이머
+        this.invulnTimer = 0;         // 기상 무적 / 백대시 무적 프레임
+        this.lastBackPressTime = 0;   // 저스트 패링(140ms) 감지용
+        this.lastTapDir = 0;
+        this.lastTapTime = 0;
+        this.airHitsTaken = 0;        // 공중 피격 횟수 (중력 스케일링용)
+        this.groundHitsTaken = 0;     // 지상 피격 횟수 (최대 3연타 제한용)
+
+        // 콤보 & 레이지
+        this.comboCount = 0;
+        this.comboDamage = 0;
+        this.comboResetTimer = 0;
+        this.rageUsed = false;
+
+        this.input = {
+            left: false,
+            right: false,
+            up: false,
+            down: false
+        };
+
+        this.afterimages = [];
+        this.animTime = Math.random() * 10;
+    }
+
+    get isRage() {
+        return this.hp > 0 && this.hp <= this.maxHp * 0.25 && !this.rageUsed;
+    }
+
+    get isGrounded() {
+        return this.y >= 0;
+    }
+
+    get isInvulnerable() {
+        return this.invulnTimer > 0 || this.state === 'KNOCKDOWN' || this.state === 'WAKEUP';
+    }
+
+    // 레이지 아츠 시동 중 슈퍼아머 판정
+    get hasSuperArmor() {
+        return (
+            this.state === 'ATTACK' &&
+            this.currentMove &&
+            this.currentMove.isRageArt &&
+            this.moveFrame <= this.currentMove.startup + 4
+        );
+    }
+
+    updateFacing(opponent) {
+        if (this.isGrounded && ['IDLE', 'WALK', 'CROUCH'].includes(this.state)) {
+            this.facing = opponent.x >= this.x ? 1 : -1;
+        }
+    }
+
+    // 방향키 입력 시 백대시/앞대시 및 저스트 패링 타이밍 기록
+    triggerTapDirection(dir) {
+        const now = performance.now();
+        const isBackDir = (this.facing === 1 && dir === -1) || (this.facing === -1 && dir === 1);
+
+        if (isBackDir) {
+            this.lastBackPressTime = now;
+        }
+
+        if (!this.isGrounded || !['IDLE', 'WALK'].includes(this.state)) return;
+
+        if (this.lastTapDir === dir && now - this.lastTapTime < 260) {
+            const isForward = dir === this.facing;
+            this.state = 'DASH';
+            this.stateTimer = isForward ? 11 : 13;
+            this.vx = dir * (isForward ? 13.5 : 13.0);
+            // 백대시 초반 8프레임 회피 무적 부여!
+            if (!isForward) {
+                this.invulnTimer = 8;
+            }
+            this.lastTapDir = 0;
+        } else {
+            this.lastTapDir = dir;
+            this.lastTapTime = now;
+        }
+    }
+
+    // 공격 실행 (앉은 상태 킥은 자동으로 하단 쓸기 SWEEP 발동, S+D+I는 초풍신권 단축 입력)
+    startAttack(moveKey, game) {
+        let resolvedKey = moveKey;
+        if (this.state === 'CROUCH' && (moveKey === 'LK' || moveKey === 'RK')) {
+            resolvedKey = 'SWEEP';
+        } else if (
+            moveKey === 'RP' &&
+            this.input.down &&
+            ((this.facing === 1 && this.input.right) || (this.facing === -1 && this.input.left))
+        ) {
+            resolvedKey = 'EWGF';
+        }
+
+        const move = MOVES[resolvedKey];
+        if (!move) return;
+
+        if (move.isRageArt && !this.isRage) return;
+
+        // 중립 상태 또는 콤보 연계 타이밍 (최대 3타까지만 콤보 캔슬 허용)
+        const canNormalStart = this.isGrounded && ['IDLE', 'WALK', 'CROUCH', 'DASH'].includes(this.state);
+        const canComboCancel =
+            this.state === 'ATTACK' &&
+            this.hasHitThisMove &&
+            this.comboCount < 3 &&
+            this.currentMove &&
+            this.currentMove.nextCombo === resolvedKey;
+
+        if (!canNormalStart && !canComboCancel) return;
+
+        if (move.isRageArt) {
+            this.rageUsed = true;
+            game.triggerRageCutin(this);
+        } else {
+            game.audio.playWhiff();
+        }
+
+        this.state = 'ATTACK';
+        this.currentMove = move;
+        this.moveFrame = 0;
+        this.hasHitThisMove = false;
+        this.vx = this.facing * (resolvedKey === 'EWGF' ? 5.2 : move.isRageArt ? 9.0 : 2.2);
+    }
+
+    update(opponent, game) {
+        this.animTime += 0.14;
+
+        if (this.invulnTimer > 0) {
+            this.invulnTimer--;
+        }
+
+        if (this.displayHp > this.hp) {
+            this.displayHp = Math.max(this.hp, this.displayHp - 0.9);
+        }
+
+        if (this.comboResetTimer > 0) {
+            this.comboResetTimer--;
+            if (this.comboResetTimer === 0) {
+                this.comboCount = 0;
+                this.comboDamage = 0;
+            }
+        }
+
+        switch (this.state) {
+            case 'IDLE':
+            case 'WALK':
+            case 'CROUCH':
+                this.groundHitsTaken = 0;
+                this.airHitsTaken = 0;
+                this.handleNeutralMovement(opponent);
+                break;
+
+            case 'JUMP':
+                this.vx *= 0.98;
+                break;
+
+            case 'DASH':
+                this.stateTimer--;
+                this.vx *= 0.85;
+                if (this.stateTimer % 2 === 0) this.recordAfterimage('#38bdf8');
+                if (this.stateTimer <= 0) {
+                    this.state = 'IDLE';
+                    this.vx = 0;
+                }
+                break;
+
+            case 'ATTACK':
+                this.moveFrame++;
+                this.vx *= 0.82;
+                if (this.currentMove.power === 'electric' || this.currentMove.isRageArt) {
+                    if (this.moveFrame % 2 === 0) this.recordAfterimage('#fbbf24');
+                }
+                const totalFrames = this.currentMove.startup + this.currentMove.active + this.currentMove.recovery;
+                if (this.moveFrame >= totalFrames) {
+                    this.state = 'IDLE';
+                    this.currentMove = null;
+                }
+                break;
+
+            case 'HITSTUN':
+            case 'BLOCKSTUN':
+            case 'PARRY_STUN':
+                this.stateTimer--;
+                this.vx *= 0.82;
+                if (this.stateTimer <= 0) {
+                    this.groundHitsTaken = 0;
+                    this.state = this.isGrounded ? 'IDLE' : 'AIRBORNE';
+                }
+                break;
+
+            case 'AIRBORNE':
+                this.vx *= 0.96;
+                if (this.isGrounded && this.vy >= 0) {
+                    this.y = 0;
+                    this.vy = 0;
+                    this.airHitsTaken = 0;
+                    this.groundHitsTaken = 0;
+                    this.state = 'KNOCKDOWN';
+                    this.stateTimer = 18; // 바닥 다운 시간
+                    game.spawnSparks(this.x, 0, '#94a3b8', 8);
+                }
+                break;
+
+            case 'KNOCKDOWN':
+                this.vx *= 0.78;
+                if (this.hp > 0) {
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0) {
+                        // 기상 동작 진입 + 24프레임(약 0.4초) 추가 기상 무적!
+                        this.state = 'WAKEUP';
+                        this.stateTimer = 18;
+                        this.invulnTimer = 24;
+                        this.updateFacing(opponent);
+                    }
+                }
+                break;
+
+            case 'WAKEUP':
+                this.vx = 0;
+                this.stateTimer--;
+                if (this.stateTimer <= 0) {
+                    this.state = 'IDLE';
+                    this.updateFacing(opponent);
+                }
+                break;
+
+            case 'VICTORY':
+                this.vx = 0;
+                break;
+        }
+
+        // 중력 적분 (공중 피격 횟수에 따라 하강 중력이 강해져 3~4타 후 깔끔하게 착지)
+        if (!this.isGrounded || this.vy < 0) {
+            const gravityScale = this.state === 'AIRBORNE' ? 1 + this.airHitsTaken * 0.28 : 1;
+            this.vy += 0.68 * gravityScale;
+            this.y += this.vy;
+            if (this.y >= 0) {
+                this.y = 0;
+                this.vy = 0;
+                if (this.state === 'JUMP') {
+                    this.state = 'IDLE';
+                }
+            }
+        }
+
+        this.x += this.vx;
+
+        // 캐릭터 간 몸통 겹침 방지
+        const minDist = 60;
+        const dist = Math.abs(this.x - opponent.x);
+        if (dist < minDist && Math.abs(this.y - opponent.y) < 70) {
+            const overlap = (minDist - dist) * 0.5;
+            if (this.x < opponent.x) {
+                this.x -= overlap;
+                opponent.x += overlap;
+            } else {
+                this.x += overlap;
+                opponent.x -= overlap;
+            }
+        }
+
+        // 아레나 좌우 벽 경계
+        const arenaHalfW = 460;
+        this.x = Math.max(-arenaHalfW, Math.min(arenaHalfW, this.x));
+
+        // 잔상 수명 감소
+        for (let i = this.afterimages.length - 1; i >= 0; i--) {
+            this.afterimages[i].alpha -= 0.08;
+            if (this.afterimages[i].alpha <= 0) this.afterimages.splice(i, 1);
+        }
+    }
+
+    handleNeutralMovement(opponent) {
+        this.updateFacing(opponent);
+
+        if (this.input.up && this.isGrounded) {
+            this.state = 'JUMP';
+            this.vy = -14.2;
+            const moveDir = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
+            this.vx = moveDir * 5.4;
+            return;
+        }
+
+        if (this.input.down) {
+            this.state = 'CROUCH';
+            this.vx = 0;
+            return;
+        }
+
+        const moveDir = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
+        if (moveDir !== 0) {
+            this.state = 'WALK';
+            const isForward = moveDir === this.facing;
+            this.vx = moveDir * (isForward ? 5.0 : 3.9);
+        } else {
+            this.state = 'IDLE';
+            this.vx = 0;
+        }
+    }
+
+    recordAfterimage(color) {
+        this.afterimages.push({
+            x: this.x,
+            y: this.y,
+            facing: this.facing,
+            alpha: 0.55,
+            color
+        });
+    }
+
+    // 가드 및 저스트 패링(140ms 이내 뒤 입력) 판정
+    checkDefense(attackHeight) {
+        if (!this.isGrounded) return 'NONE';
+        if (!['IDLE', 'WALK', 'CROUCH', 'BLOCKSTUN'].includes(this.state)) return 'NONE';
+
+        const holdingBack = (this.facing === 1 && this.input.left) || (this.facing === -1 && this.input.right);
+        if (!holdingBack) return 'NONE';
+
+        const isCrouching = this.input.down || this.state === 'CROUCH';
+        const validGuard =
+            (attackHeight === 'MID' && !isCrouching) ||
+            (attackHeight === 'LOW' && isCrouching) ||
+            (attackHeight === 'HIGH' && !isCrouching);
+
+        if (!validGuard) return 'NONE';
+
+        // 뒤 방향키를 누른 지 140ms 이내에 공격이 닿으면 저스트 패링 발동!
+        const now = performance.now();
+        if (now - this.lastBackPressTime <= 140 && this.state !== 'BLOCKSTUN') {
+            return 'PARRY';
+        }
+        return 'BLOCK';
+    }
+}
+
+/**
+ * ============================================================================
+ * 4. 반응형 CPU 인공지능 (방어, 백대시, 헛스윙 캐치, 3연타 압박)
+ * ============================================================================
+ */
+class AIController {
+    constructor(fighter, difficulty = 'normal') {
+        this.fighter = fighter;
+        this.setDifficulty(difficulty);
+        this.decisionTimer = 0;
+    }
+
+    setDifficulty(diff) {
+        this.difficulty = diff;
+        if (diff === 'easy') {
+            this.reactionInterval = 24;
+            this.guardChance = 0.25;
+            this.comboChance = 0.25;
+        } else if (diff === 'hard') {
+            this.reactionInterval = 8;
+            this.guardChance = 0.72;
+            this.comboChance = 0.85;
+        } else {
+            this.reactionInterval = 14;
+            this.guardChance = 0.48;
+            this.comboChance = 0.58;
+        }
+    }
+
+    update(opponent, game) {
+        const f = this.fighter;
+        if (game.phase !== 'FIGHT') {
+            f.input = { left: false, right: false, up: false, down: false };
+            return;
+        }
+
+        // 콤보 연계 입력 (최대 3타)
+        if (f.state === 'ATTACK' && f.hasHitThisMove && f.comboCount < 3 && f.currentMove && f.currentMove.nextCombo) {
+            if (Math.random() < this.comboChance) {
+                f.startAttack(f.currentMove.nextCombo, game);
+                return;
+            }
+        }
+
+        this.decisionTimer--;
+        if (this.decisionTimer > 0) return;
+        this.decisionTimer = this.reactionInterval + Math.floor(Math.random() * 5);
+
+        const dist = Math.abs(f.x - opponent.x);
+        const dirToOpp = opponent.x >= f.x ? 1 : -1;
+
+        f.input = { left: false, right: false, up: false, down: false };
+
+        // 상대가 다운/기상 무적 중이면 거리를 벌리고 대기
+        if (opponent.isInvulnerable) {
+            if (dist < 130) {
+                f.triggerTapDirection(-dirToOpp);
+            }
+            return;
+        }
+
+        // 1. 상대가 공격 중일 때 가드/패링 또는 백대시 회피
+        if (opponent.state === 'ATTACK' && dist < 145 && Math.random() < this.guardChance) {
+            if (Math.random() < 0.35 && f.isGrounded) {
+                f.triggerTapDirection(-dirToOpp); // 백대시로 회피 후 반격 노림
+                return;
+            }
+            if (dirToOpp === 1) {
+                f.input.left = true;
+                f.triggerTapDirection(-1);
+            } else {
+                f.input.right = true;
+                f.triggerTapDirection(1);
+            }
+            if (opponent.currentMove && opponent.currentMove.height === 'LOW') {
+                f.input.down = true;
+            }
+            return;
+        }
+
+        // 2. 레이지 아츠 슈퍼아머 반격
+        if (f.isRage && dist < 140 && Math.random() < (this.difficulty === 'hard' ? 0.5 : 0.25)) {
+            f.startAttack('RAGE_ART', game);
+            return;
+        }
+
+        // 3. 거리 조절
+        if (dist > 105) {
+            if (dirToOpp === 1) f.input.right = true;
+            else f.input.left = true;
+            if (dist > 230 && Math.random() < 0.28) {
+                f.triggerTapDirection(dirToOpp);
+            }
+            return;
+        }
+
+        // 4. 근접 공방 선택
+        const roll = Math.random();
+        if (opponent.state === 'AIRBORNE') {
+            f.startAttack(roll < 0.55 ? 'RK' : 'RP', game);
+        } else if (roll < 0.32) {
+            f.startAttack('LP', game);
+        } else if (roll < 0.56) {
+            f.startAttack('RP', game);
+        } else if (roll < 0.74) {
+            f.startAttack('LK', game);
+        } else if (roll < 0.86) {
+            f.state = 'CROUCH';
+            f.startAttack('SWEEP', game);
+        } else if (roll < 0.95) {
+            f.startAttack('EWGF', game);
+        } else {
+            f.triggerTapDirection(-dirToOpp);
+        }
+    }
+}
+
+/**
+ * ============================================================================
+ * 5. 메인 아레나 엔진 (공방 판정, 푸시백, 3연타 제한, 패링, 렌더링)
+ * ============================================================================
+ */
+class TekkenArenaGame {
+    constructor() {
+        this.canvas = document.getElementById('arena');
+        this.ctx = this.canvas.getContext('2d');
+        this.audio = new ArcadeAudio();
+
+        this.mode = 'cpu';
+        this.difficulty = 'normal';
+        this.stage = 'helipad';
+
+        this.round = 1;
+        this.p1Wins = 0;
+        this.p2Wins = 0;
+        this.timer = 60;
+        this.timerFrames = 0;
+        this.phase = 'MENU';
+        this.hitstopFrames = 0;
+        this.screenShake = 0;
+        this.camera = { x: 0, y: 0, zoom: 1 };
+
+        this.sparks = [];
+        this.callouts = [];
+
+        this.p1 = new Fighter({
+            id: 1,
+            name: 'JIN KAZAMA',
+            isCPU: false,
+            startX: -155,
+            facing: 1,
+            theme: {
+                skin: '#f1c27d',
+                hair: '#0f172a',
+                giTop: null,
+                pants: '#0f172a',
+                flame: '#38bdf8',
+                gloves: '#ef4444'
+            }
+        });
+
+        this.p2 = new Fighter({
+            id: 2,
+            name: 'DEVIL RIVAL',
+            isCPU: true,
+            startX: 155,
+            facing: -1,
+            theme: {
+                skin: '#e2a76f',
+                hair: '#e11d48',
+                giTop: '#4c0519',
+                pants: '#1e1b4b',
+                flame: '#f43f5e',
+                gloves: '#fbbf24'
+            }
+        });
+
+        this.ai = new AIController(this.p2, this.difficulty);
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.bindInputs();
+        this.bindMenuUI();
+
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    bindMenuUI() {
+        document.querySelectorAll('#mode-select .select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#mode-select .select-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.mode = btn.dataset.mode;
+                document.getElementById('diff-group').style.display = this.mode === 'cpu' ? 'flex' : 'none';
+                this.updateKeyGuideForMode();
+            });
+        });
+
+        document.querySelectorAll('#diff-select .select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#diff-select .select-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.difficulty = btn.dataset.diff;
+                this.ai.setDifficulty(this.difficulty);
+            });
+        });
+
+        document.querySelectorAll('#stage-select .select-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#stage-select .select-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.stage = btn.dataset.stage;
+                this.updateStageBtnLabel();
+            });
+        });
+
+        document.getElementById('btn-start-fight').addEventListener('click', () => {
+            document.getElementById('menu-overlay').classList.add('hidden');
+            this.audio.init();
+            this.audio.startBGM();
+            this.startMatch();
+        });
+
+        document.getElementById('btn-stage').addEventListener('click', () => {
+            this.stage = this.stage === 'helipad' ? 'dojo' : 'helipad';
+            this.updateStageBtnLabel();
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', (e) => {
+            const muted = this.audio.toggleMute();
+            e.target.textContent = muted ? '🔇 음소거' : '🔊 BGM/SFX';
+        });
+
+        document.getElementById('btn-menu').addEventListener('click', () => {
+            this.phase = 'MENU';
+            document.getElementById('menu-overlay').classList.remove('hidden');
+        });
+    }
+
+    updateStageBtnLabel() {
+        document.getElementById('btn-stage').textContent =
+            this.stage === 'helipad' ? '🌃 헬리패드' : '🏯 무술 도장';
+    }
+
+    updateKeyGuideForMode() {
+        const bar = document.getElementById('key-guide-bar');
+        const vpad = document.getElementById('virtual-pad');
+        if (this.mode === 'pvp') {
+            vpad.style.display = 'none';
+            bar.innerHTML = `
+                <div class="key-item"><strong style="color:#38bdf8">[1P]</strong> <span class="k">WASD</span>이동(A,A백대시) <span class="k">U</span>LP <span class="k">I</span>RP <span class="k">J</span>LK <span class="k">K</span>RK <span class="k">O</span>초풍신 <span class="k">SPACE</span>필살</div>
+                <div class="key-item"><strong style="color:#f43f5e">[2P]</strong> <span class="k">방향키</span>이동 <span class="k">Num1/Z</span>LP <span class="k">Num2/X</span>RP <span class="k">Num4/C</span>LK <span class="k">Num5/V</span>RK <span class="k">Num6/B</span>초풍신 <span class="k">Enter</span>필살</div>
+            `;
+        } else {
+            vpad.style.display = 'flex';
+            bar.innerHTML = `
+                <div class="key-item"><span class="k">A / D</span>이동 &amp; 백대시(A,A)</div>
+                <div class="key-item"><span class="k">뒤(직전)</span>저스트 패링!</div>
+                <div class="key-item"><span class="k">S + J/K</span>하단 쓸기(다운)</div>
+                <div class="key-item"><span class="k">U</span>LP(상)</div>
+                <div class="key-item"><span class="k">I</span>RP(중)</div>
+                <div class="key-item"><span class="k">J</span>LK(하)</div>
+                <div class="key-item"><span class="k">K</span>RK(강타)</div>
+                <div class="key-item"><span class="k">O / ↘I</span>초풍신권</div>
+                <div class="key-item"><span class="k">SPACE</span>레이지 아츠</div>
+            `;
+        }
+    }
+
+    bindInputs() {
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            this.handleKeyInput(e.code, true);
+        });
+
+        window.addEventListener('keyup', (e) => {
+            this.handleKeyInput(e.code, false);
+        });
+
+        document.querySelectorAll('.v-btn').forEach(btn => {
+            const code = btn.dataset.key;
+            const press = (e) => {
+                e.preventDefault();
+                btn.classList.add('pressed');
+                this.handleKeyInput(code, true);
+            };
+            const release = (e) => {
+                e.preventDefault();
+                btn.classList.remove('pressed');
+                this.handleKeyInput(code, false);
+            };
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointerleave', release);
+            btn.addEventListener('pointercancel', release);
+        });
+    }
+
+    handleKeyInput(code, isDown) {
+        if (this.phase !== 'FIGHT') return;
+
+        if (this.mode === 'cpu') {
+            if (code === 'KeyA' || code === 'ArrowLeft') {
+                this.p1.input.left = isDown;
+                if (isDown) this.p1.triggerTapDirection(-1);
+            }
+            if (code === 'KeyD' || code === 'ArrowRight') {
+                this.p1.input.right = isDown;
+                if (isDown) this.p1.triggerTapDirection(1);
+            }
+            if (code === 'KeyW' || code === 'ArrowUp') this.p1.input.up = isDown;
+            if (code === 'KeyS' || code === 'ArrowDown') this.p1.input.down = isDown;
+        } else {
+            if (code === 'KeyA') { this.p1.input.left = isDown; if (isDown) this.p1.triggerTapDirection(-1); }
+            if (code === 'KeyD') { this.p1.input.right = isDown; if (isDown) this.p1.triggerTapDirection(1); }
+            if (code === 'KeyW') this.p1.input.up = isDown;
+            if (code === 'KeyS') this.p1.input.down = isDown;
+
+            if (code === 'ArrowLeft') { this.p2.input.left = isDown; if (isDown) this.p2.triggerTapDirection(-1); }
+            if (code === 'ArrowRight') { this.p2.input.right = isDown; if (isDown) this.p2.triggerTapDirection(1); }
+            if (code === 'ArrowUp') this.p2.input.up = isDown;
+            if (code === 'ArrowDown') this.p2.input.down = isDown;
+        }
+
+        if (!isDown) return;
+
+        // 1P 공격
+        if (code === 'KeyU') this.p1.startAttack('LP', this);
+        if (code === 'KeyI') this.p1.startAttack('RP', this);
+        if (code === 'KeyJ') this.p1.startAttack('LK', this);
+        if (code === 'KeyK') this.p1.startAttack('RK', this);
+        if (code === 'KeyO') this.p1.startAttack('EWGF', this);
+        if (code === 'Space' || code === 'KeyL') this.p1.startAttack('RAGE_ART', this);
+
+        // 2P 공격
+        if (this.mode === 'pvp') {
+            if (code === 'Numpad1' || code === 'KeyZ') this.p2.startAttack('LP', this);
+            if (code === 'Numpad2' || code === 'KeyX') this.p2.startAttack('RP', this);
+            if (code === 'Numpad4' || code === 'KeyC') this.p2.startAttack('LK', this);
+            if (code === 'Numpad5' || code === 'KeyV') this.p2.startAttack('RK', this);
+            if (code === 'Numpad6' || code === 'Numpad3' || code === 'KeyB') this.p2.startAttack('EWGF', this);
+            if (code === 'Enter' || code === 'Numpad0') this.p2.startAttack('RAGE_ART', this);
+        }
+    }
+
+    startMatch() {
+        this.round = 1;
+        this.p1Wins = 0;
+        this.p2Wins = 0;
+        this.p2.isCPU = this.mode === 'cpu';
+        document.getElementById('p2-name-label').textContent =
+            this.mode === 'cpu' ? `DEVIL RIVAL (${this.difficulty.toUpperCase()})` : 'PLAYER 2';
+        this.updateRoundDots();
+        this.startRound();
+    }
+
+    startRound() {
+        this.p1.reset(-155, 1);
+        this.p2.reset(155, -1);
+        this.timer = 60;
+        this.timerFrames = 0;
+        this.sparks = [];
+        this.callouts = [];
+        this.phase = 'INTRO';
+
+        this.showBanner(`ROUND ${this.round}`, 'GET READY FOR THE NEXT BATTLE');
+        setTimeout(() => {
+            if (this.phase !== 'INTRO') return;
+            this.showBanner('FIGHT!', '');
+            this.phase = 'FIGHT';
+            setTimeout(() => this.hideBanner(), 750);
+        }, 1350);
+    }
+
+    showBanner(mainText, subText) {
+        const m = document.getElementById('banner-main');
+        const s = document.getElementById('banner-sub');
+        m.textContent = mainText;
+        m.classList.add('show');
+        if (subText) {
+            s.textContent = subText;
+            s.classList.add('show');
+        } else {
+            s.classList.remove('show');
+        }
+    }
+
+    hideBanner() {
+        document.getElementById('banner-main').classList.remove('show');
+        document.getElementById('banner-sub').classList.remove('show');
+    }
+
+    triggerRageCutin(attacker) {
+        this.hitstopFrames = 24;
+        this.screenShake = 18;
+        this.audio.playRageActivate();
+
+        const cutin = document.getElementById('rage-cutin');
+        document.getElementById('cutin-title').textContent = `${attacker.name} - RAGE ART`;
+        document.getElementById('cutin-sub').textContent =
+            attacker.id === 1 ? '천멸 뇌신권 (ARMORED REVERSAL)' : '인페르노 블래스트 (ARMORED REVERSAL)';
+        cutin.classList.add('active');
+
+        setTimeout(() => {
+            cutin.classList.remove('active');
+        }, 620);
+    }
+
+    /**
+     * 핵심 공방 히트 판정 (무적, 저스트 패링, 3연타 제한, 카운터 히트, 슈퍼아머)
+     */
+    checkCombatHits(attacker, defender) {
+        if (attacker.state !== 'ATTACK' || attacker.hasHitThisMove) return;
+        const move = attacker.currentMove;
+        if (!move) return;
+
+        if (attacker.moveFrame < move.startup || attacker.moveFrame > move.startup + move.active) return;
+
+        // 1. 기상 무적, 다운 무적, 백대시 무적 상태면 타격 통과!
+        if (defender.isInvulnerable) return;
+
+        const dx = (defender.x - attacker.x) * attacker.facing;
+        const dy = Math.abs(defender.y - attacker.y);
+
+        if (dx >= -15 && dx <= move.rangeX && dy <= 95) {
+            // 상단(HIGH) 공격은 앉아서 회피(Duck) 가능
+            if (move.height === 'HIGH' && defender.isGrounded && defender.state === 'CROUCH') {
+                this.addCallout(defender.x, defender.y - 125, 'DUCK EVADE!', '#38bdf8');
+                attacker.hasHitThisMove = true;
+                return;
+            }
+
+            attacker.hasHitThisMove = true;
+            const hitWorldX = defender.x - attacker.facing * 18;
+            const hitWorldY = defender.y + move.hitY;
+
+            // 2. 방어 및 저스트 패링 판정 (레이지 아츠는 패링 불가, 일반 가드만 가능)
+            const defenseResult = defender.checkDefense(move.height);
+            if (defenseResult === 'PARRY' && !move.isRageArt) {
+                // 저스트 패링 성공! 공격자를 무방비 경직 상태로 만들고 방어자에게 반격 프레임 이점 부여
+                attacker.state = 'PARRY_STUN';
+                attacker.stateTimer = 22;
+                attacker.vx = -attacker.facing * 6.5;
+                defender.vx = -attacker.facing * 2.0;
+
+                this.hitstopFrames = 10;
+                this.screenShake = 10;
+                this.audio.playParry();
+                this.spawnSparks(hitWorldX, hitWorldY, '#fef08a', 22);
+                this.addCallout(defender.x, defender.y - 140, 'JUST PARRY! (반격 기회)', '#fef08a');
+                return;
+            } else if (defenseResult === 'BLOCK' || (defenseResult === 'PARRY' && move.isRageArt)) {
+                defender.hp = Math.max(1, defender.hp - move.chipDamage);
+                defender.state = 'BLOCKSTUN';
+                defender.stateTimer = move.blockstun;
+                defender.vx = attacker.facing * (move.pushback * 0.45);
+                attacker.vx = -attacker.facing * 4.5;
+
+                this.hitstopFrames = 5;
+                this.audio.playGuard();
+                this.spawnSparks(hitWorldX, hitWorldY, '#38bdf8', 10);
+                this.addCallout(defender.x, defender.y - 135, 'GUARD!', '#60a5fa');
+                return;
+            }
+
+            // 3. 레이지 아츠 슈퍼아머 중이면 데미지만 입히고 공격을 끊지 않음!
+            if (defender.hasSuperArmor) {
+                const armorDmg = Math.round(move.damage * 0.65);
+                defender.hp = Math.max(1, defender.hp - armorDmg);
+                this.audio.playHit('heavy', false);
+                this.spawnSparks(hitWorldX, hitWorldY, '#ef4444', 16);
+                this.addCallout(defender.x, defender.y - 145, 'SUPER ARMOR!', '#f97316');
+                return;
+            }
+
+            // 4. 카운터 히트 판정 (상대의 공격 시동 프레임을 끊었을 때)
+            const isCounter = defender.state === 'ATTACK' && defender.moveFrame <= defender.currentMove.startup;
+            const isAirCombo = !defender.isGrounded || defender.state === 'AIRBORNE';
+
+            // 공중 콤보 데미지 스케일링
+            const scaling = isAirCombo ? Math.max(0.45, 1 - defender.airHitsTaken * 0.14) : 1;
+            const rageBonus = attacker.isRage ? 1.15 : 1;
+            const counterBonus = isCounter ? 1.25 : 1;
+
+            const finalDamage = Math.round(move.damage * scaling * rageBonus * counterBonus);
+            defender.hp = Math.max(0, defender.hp - finalDamage);
+
+            attacker.comboCount++;
+            attacker.comboDamage += finalDamage;
+            attacker.comboResetTimer = 70;
+
+            // 5. 피격 리액션 및 3연타 피니시 강제 다운/넉백 처리 (스턴락 방지)
+            if (isAirCombo || move.launchY < 0) {
+                defender.state = 'AIRBORNE';
+                defender.airHitsTaken++;
+                if (move.launchY < 0 && !isAirCombo) {
+                    defender.vy = move.launchY;
+                } else if (defender.airHitsTaken >= 3) {
+                    // 공중 3타 이상 맞으면 바닥으로 강하게 내리꽂음!
+                    defender.vy = 6.5;
+                } else {
+                    defender.vy = -6.8;
+                }
+                defender.vx = attacker.facing * (move.pushback * 0.22);
+                attacker.vx = -attacker.facing * 2.0;
+            } else {
+                defender.groundHitsTaken++;
+                // 지상 3연타째이거나 다운 기술이면 강제 넉다운 + 기상 무적 트리거!
+                if (defender.groundHitsTaken >= 3 || move.knockdown) {
+                    defender.state = 'AIRBORNE';
+                    defender.vy = -6.2;
+                    defender.vx = attacker.facing * (move.pushback * 0.32);
+                    attacker.vx = -attacker.facing * 4.5;
+                    defender.groundHitsTaken = 0;
+                    this.addCallout(defender.x, defender.y - 125, 'KNOCKDOWN!', '#fb923c');
+                } else {
+                    defender.state = 'HITSTUN';
+                    defender.stateTimer = move.hitstun;
+                    // 양쪽이 함께 밀려나는 푸시백으로 무한 연타 방지
+                    defender.vx = attacker.facing * (move.pushback * 0.35);
+                    attacker.vx = -attacker.facing * (move.pushback * 0.18);
+                }
+            }
+
+            // 타격감 연출
+            this.hitstopFrames = isCounter ? 9 : move.power === 'electric' ? 8 : move.power === 'heavy' ? 6 : 4;
+            this.screenShake = isCounter ? 16 : move.power === 'electric' ? 14 : move.power === 'heavy' ? 10 : 5;
+            this.audio.playHit(move.power, isCounter);
+
+            const sparkColor = isCounter ? '#ef4444' : move.power === 'electric' ? '#38bdf8' : '#fbbf24';
+            this.spawnSparks(hitWorldX, hitWorldY, sparkColor, isCounter || move.power === 'electric' ? 22 : 13);
+
+            if (isCounter) {
+                this.addCallout(defender.x, defender.y - 148, 'COUNTER HIT!!', '#ef4444');
+            } else if (move.launchY < 0 && !move.knockdown) {
+                this.addCallout(defender.x, defender.y - 148, 'LAUNCH!', '#38bdf8');
+            }
+
+            if (defender.hp <= 0) {
+                this.handleKO(attacker, defender);
+            }
+        }
+    }
+
+    handleKO(winner, loser) {
+        this.phase = 'ROUND_END';
+        this.hitstopFrames = 18;
+        this.screenShake = 24;
+        this.audio.playKO();
+
+        loser.state = 'AIRBORNE';
+        loser.vy = -11;
+        loser.vx = winner.facing * 9;
+        winner.state = 'VICTORY';
+
+        const isPerfect = winner.hp === winner.maxHp;
+        const isGreat = winner.hp <= winner.maxHp * 0.15;
+
+        if (winner.id === 1) this.p1Wins++;
+        else this.p2Wins++;
+        this.updateRoundDots();
+
+        const subTitle = isPerfect ? 'PERFECT!!' : isGreat ? 'GREAT!!' : `${winner.name} WINS`;
+        this.showBanner('K.O.!', subTitle);
+
+        setTimeout(() => {
+            if (this.p1Wins >= 2 || this.p2Wins >= 2) {
+                this.phase = 'MATCH_END';
+                const champ = this.p1Wins >= 2 ? this.p1.name : this.p2.name;
+                this.showBanner('CHAMPION!', `${champ} VICTORY!`);
+                setTimeout(() => {
+                    document.getElementById('menu-overlay').classList.remove('hidden');
+                }, 2500);
+            } else {
+                this.round++;
+                this.startRound();
+            }
+        }, 2300);
+    }
+
+    handleTimeOver() {
+        this.phase = 'ROUND_END';
+        const winner = this.p1.hp >= this.p2.hp ? this.p1 : this.p2;
+        if (winner.id === 1) this.p1Wins++;
+        else this.p2Wins++;
+        this.updateRoundDots();
+        winner.state = 'VICTORY';
+        this.showBanner('TIME OVER', `${winner.name} WINS`);
+
+        setTimeout(() => {
+            if (this.p1Wins >= 2 || this.p2Wins >= 2) {
+                this.phase = 'MATCH_END';
+                document.getElementById('menu-overlay').classList.remove('hidden');
+            } else {
+                this.round++;
+                this.startRound();
+            }
+        }, 2200);
+    }
+
+    spawnSparks(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 3 + Math.random() * 11;
+            this.sparks.push({
+                x,
+                y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1.0,
+                decay: 0.045 + Math.random() * 0.04,
+                size: 3 + Math.random() * 5,
+                color
+            });
+        }
+    }
+
+    addCallout(x, y, text, color) {
+        this.callouts.push({ x, y, text, color, life: 1.0 });
+    }
+
+    updateRoundDots() {
+        const p1Dots = document.querySelectorAll('#p1-rounds .round-dot');
+        const p2Dots = document.querySelectorAll('#p2-rounds .round-dot');
+        p1Dots.forEach((d, i) => d.classList.toggle('won', i < this.p1Wins));
+        p2Dots.forEach((d, i) => d.classList.toggle('won', i < this.p2Wins));
+    }
+
+    updateHUD() {
+        const p1Pct = (this.p1.hp / this.p1.maxHp) * 100;
+        const p1DmgPct = (this.p1.displayHp / this.p1.maxHp) * 100;
+        document.getElementById('p1-hp-fill').style.width = `${p1Pct}%`;
+        document.getElementById('p1-hp-dmg').style.width = `${p1DmgPct}%`;
+        document.getElementById('p1-hp-outer').classList.toggle('rage-active', this.p1.isRage);
+        document.getElementById('p1-rage-badge').classList.toggle('show', this.p1.isRage);
+
+        const p2Pct = (this.p2.hp / this.p2.maxHp) * 100;
+        const p2DmgPct = (this.p2.displayHp / this.p2.maxHp) * 100;
+        document.getElementById('p2-hp-fill').style.width = `${p2Pct}%`;
+        document.getElementById('p2-hp-dmg').style.width = `${p2DmgPct}%`;
+        document.getElementById('p2-hp-outer').classList.toggle('rage-active', this.p2.isRage);
+        document.getElementById('p2-rage-badge').classList.toggle('show', this.p2.isRage);
+
+        const p1ComboEl = document.getElementById('p1-combo');
+        if (this.p1.comboCount >= 2) {
+            p1ComboEl.classList.add('active');
+            document.getElementById('p1-combo-num').textContent = this.p1.comboCount;
+            document.getElementById('p1-combo-dmg').textContent = `${this.p1.comboDamage} DMG`;
+        } else {
+            p1ComboEl.classList.remove('active');
+        }
+
+        const p2ComboEl = document.getElementById('p2-combo');
+        if (this.p2.comboCount >= 2) {
+            p2ComboEl.classList.add('active');
+            document.getElementById('p2-combo-num').textContent = this.p2.comboCount;
+            document.getElementById('p2-combo-dmg').textContent = `${this.p2.comboDamage} DMG`;
+        } else {
+            p2ComboEl.classList.remove('active');
+        }
+
+        const tEl = document.getElementById('timer-val');
+        tEl.textContent = String(this.timer).padStart(2, '0');
+        tEl.classList.toggle('urgent', this.timer <= 10);
+    }
+
+    update() {
+        if (this.hitstopFrames > 0) {
+            this.hitstopFrames--;
+            return;
+        }
+
+        if (this.screenShake > 0) {
+            this.screenShake *= 0.85;
+            if (this.screenShake < 0.4) this.screenShake = 0;
+        }
+
+        if (this.phase === 'FIGHT') {
+            this.timerFrames++;
+            if (this.timerFrames >= 60) {
+                this.timerFrames = 0;
+                this.timer = Math.max(0, this.timer - 1);
+                if (this.timer === 0) {
+                    this.handleTimeOver();
+                }
+            }
+
+            if (this.p2.isCPU) {
+                this.ai.update(this.p1, this);
+            }
+        }
+
+        this.p1.update(this.p2, this);
+        this.p2.update(this.p1, this);
+
+        if (this.phase === 'FIGHT') {
+            this.checkCombatHits(this.p1, this.p2);
+            this.checkCombatHits(this.p2, this.p1);
+        }
+
+        const midX = (this.p1.x + this.p2.x) * 0.5;
+        const dist = Math.abs(this.p1.x - this.p2.x);
+        const targetZoom = Math.max(0.88, Math.min(1.22, 1.28 - dist / 950));
+        this.camera.x += (midX - this.camera.x) * 0.1;
+        this.camera.zoom += (targetZoom - this.camera.zoom) * 0.08;
+
+        for (let i = this.sparks.length - 1; i >= 0; i--) {
+            const s = this.sparks[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.vy += 0.25;
+            s.life -= s.decay;
+            if (s.life <= 0) this.sparks.splice(i, 1);
+        }
+
+        for (let i = this.callouts.length - 1; i >= 0; i--) {
+            const c = this.callouts[i];
+            c.y -= 1.1;
+            c.life -= 0.025;
+            if (c.life <= 0) this.callouts.splice(i, 1);
+        }
+
+        this.updateHUD();
+    }
+
+    render() {
+        const ctx = this.ctx;
+        const W = this.canvas.width;
+        const H = this.canvas.height;
+        const floorY = H * 0.77;
+
+        ctx.clearRect(0, 0, W, H);
+
+        this.renderBackground(ctx, W, H, floorY);
+
+        ctx.save();
+        const shakeX = (Math.random() - 0.5) * this.screenShake;
+        const shakeY = (Math.random() - 0.5) * this.screenShake;
+
+        ctx.translate(W * 0.5 + shakeX, floorY + shakeY);
+        ctx.scale(this.camera.zoom, this.camera.zoom);
+        ctx.translate(-this.camera.x, 0);
+
+        this.renderPerspectiveFloor(ctx, W, H);
+
+        const fighters = this.p1.state === 'ATTACK' ? [this.p2, this.p1] : [this.p1, this.p2];
+        fighters.forEach(f => {
+            this.renderFighterShadow(ctx, f);
+            this.renderFighter(ctx, f);
+        });
+
+        this.renderSparks(ctx);
+        this.renderCallouts(ctx);
+
+        ctx.restore();
+    }
+
+    renderBackground(ctx, W, H, floorY) {
+        if (this.stage === 'helipad') {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+            skyGrad.addColorStop(0, '#020617');
+            skyGrad.addColorStop(0.55, '#0f172a');
+            skyGrad.addColorStop(1, '#1e1b4b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, floorY);
+
+            const moonX = W * 0.5 - this.camera.x * 0.08;
+            const moonGrad = ctx.createRadialGradient(moonX, H * 0.26, 15, moonX, H * 0.26, 150);
+            moonGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+            moonGrad.addColorStop(0.5, 'rgba(99, 102, 241, 0.12)');
+            moonGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = moonGrad;
+            ctx.beginPath();
+            ctx.arc(moonX, H * 0.26, 150, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#090d16';
+            for (let i = -6; i <= 6; i++) {
+                const bx = W * 0.5 + i * 140 - this.camera.x * 0.22;
+                const bh = 110 + Math.abs(Math.sin(i * 2.3)) * 150;
+                ctx.fillRect(bx, floorY - bh, 110, bh);
+
+                ctx.fillStyle = i % 2 === 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(244, 63, 94, 0.22)';
+                for (let wy = floorY - bh + 15; wy < floorY - 20; wy += 22) {
+                    ctx.fillRect(bx + 15, wy, 28, 4);
+                    ctx.fillRect(bx + 60, wy, 28, 4);
+                }
+                ctx.fillStyle = '#090d16';
+            }
+        } else {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+            skyGrad.addColorStop(0, '#1c0a00');
+            skyGrad.addColorStop(0.5, '#7c2d12');
+            skyGrad.addColorStop(1, '#ea580c');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, floorY);
+
+            const sunX = W * 0.5 - this.camera.x * 0.06;
+            ctx.fillStyle = 'rgba(254, 240, 138, 0.85)';
+            ctx.beginPath();
+            ctx.arc(sunX, floorY - 120, 95, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(28, 25, 23, 0.88)';
+            for (let i = -4; i <= 4; i++) {
+                const px = W * 0.5 + i * 220 - this.camera.x * 0.35;
+                ctx.fillRect(px - 18, floorY - 260, 36, 260);
+                ctx.fillStyle = '#991b1b';
+                ctx.fillRect(px - 10, floorY - 230, 20, 130);
+                ctx.fillStyle = 'rgba(28, 25, 23, 0.88)';
+            }
+        }
+    }
+
+    renderPerspectiveFloor(ctx, W, H) {
+        const floorDepth = H * 0.35;
+        const halfArena = 540;
+
+        const floorGrad = ctx.createLinearGradient(0, -15, 0, floorDepth);
+        if (this.stage === 'helipad') {
+            floorGrad.addColorStop(0, '#0f172a');
+            floorGrad.addColorStop(0.4, '#1e293b');
+            floorGrad.addColorStop(1, '#020617');
+        } else {
+            floorGrad.addColorStop(0, '#292524');
+            floorGrad.addColorStop(0.5, '#44403c');
+            floorGrad.addColorStop(1, '#1c1917');
+        }
+
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(-1200, -10, 2400, floorDepth + 50);
+
+        ctx.strokeStyle = this.stage === 'helipad'
+            ? 'rgba(56, 189, 248, 0.28)'
+            : 'rgba(251, 191, 36, 0.22)';
+        ctx.lineWidth = 2;
+
+        const rows = [0, 18, 42, 74, 116, 170];
+        rows.forEach(ry => {
+            ctx.beginPath();
+            ctx.moveTo(-1200, ry);
+            ctx.lineTo(1200, ry);
+            ctx.stroke();
+        });
+
+        for (let gx = -halfArena; gx <= halfArena; gx += 90) {
+            ctx.beginPath();
+            ctx.moveTo(gx, 0);
+            ctx.lineTo(gx * 1.45, floorDepth);
+            ctx.stroke();
+        }
+
+        if (this.stage === 'helipad') {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.ellipse(0, 48, 170, 32, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        [-490, 490].forEach(wallX => {
+            const wallGrad = ctx.createLinearGradient(wallX, -220, wallX, 20);
+            wallGrad.addColorStop(0, 'transparent');
+            wallGrad.addColorStop(0.5, 'rgba(244, 63, 94, 0.45)');
+            wallGrad.addColorStop(1, 'rgba(244, 63, 94, 0.85)');
+            ctx.fillStyle = wallGrad;
+            ctx.fillRect(wallX - 3, -220, 6, 240);
+        });
+    }
+
+    renderFighterShadow(ctx, f) {
+        const scale = Math.max(0.35, 1 + f.y / 320);
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(f.x, 6, 42 * scale, 11 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    renderFighter(ctx, f) {
+        f.afterimages.forEach(img => {
+            ctx.save();
+            ctx.globalAlpha = img.alpha * 0.45;
+            ctx.translate(img.x, img.y);
+            ctx.scale(img.facing, 1);
+            ctx.fillStyle = img.color;
+            ctx.beginPath();
+            ctx.roundRect(-22, -135, 44, 130, 14);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(f.x, f.y);
+
+        // 기상 무적 및 회피 무적 상태 시 푸른빛 반짝임 효과
+        if (f.isInvulnerable && f.hp > 0) {
+            ctx.globalAlpha = 0.65 + Math.sin(f.animTime * 8) * 0.3;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 18;
+        }
+
+        // 슈퍼아머 발동 중 황금빛 테두리 오라
+        if (f.hasSuperArmor) {
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 24;
+        }
+
+        // 레이지 상태 붉은 불꽃 오라
+        if (f.isRage) {
+            const pulse = 1 + Math.sin(f.animTime * 2.5) * 0.12;
+            const auraGrad = ctx.createRadialGradient(0, -70, 10, 0, -70, 85 * pulse);
+            auraGrad.addColorStop(0, 'rgba(239, 68, 68, 0.55)');
+            auraGrad.addColorStop(0.6, 'rgba(220, 38, 38, 0.2)');
+            auraGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = auraGrad;
+            ctx.beginPath();
+            ctx.arc(0, -70, 85 * pulse, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (f.state === 'AIRBORNE') {
+            ctx.translate(0, -65);
+            ctx.rotate(-f.facing * 0.95);
+            ctx.translate(0, 65);
+        } else if (f.state === 'KNOCKDOWN') {
+            ctx.translate(0, -16);
+            ctx.rotate(-f.facing * (Math.PI * 0.48));
+        } else if (f.state === 'WAKEUP') {
+            ctx.translate(0, -10);
+            ctx.rotate(-f.facing * 0.25);
+        }
+
+        ctx.scale(f.facing, 1);
+
+        const breath = Math.sin(f.animTime) * 3;
+        const walkSwing = f.state === 'WALK' ? Math.sin(f.animTime * 1.8) * 16 : 0;
+        const isCrouch = f.state === 'CROUCH';
+
+        let hipY = isCrouch ? -42 : -64 + breath * 0.5;
+        let shoulderY = isCrouch ? -86 : -118 + breath;
+        let torsoLean = isCrouch ? 10 : 4;
+
+        let frontHand = { x: 26, y: shoulderY + 12 };
+        let backHand = { x: -12, y: shoulderY + 16 };
+        let frontFoot = { x: 22 + walkSwing, y: 0 };
+        let backFoot = { x: -22 - walkSwing, y: 0 };
+
+        const isGuarding =
+            f.state === 'BLOCKSTUN' ||
+            (['IDLE', 'WALK', 'CROUCH'].includes(f.state) &&
+                ((f.facing === 1 && f.input.left) || (f.facing === -1 && f.input.right)));
+
+        if (isGuarding) {
+            frontHand = { x: 24, y: shoulderY - 12 };
+            backHand = { x: 14, y: shoulderY - 6 };
+            // 가드 배리어 실드 시각 표시
+            ctx.save();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(24, shoulderY + 10, 32, -Math.PI * 0.4, Math.PI * 0.4);
+            ctx.stroke();
+            ctx.restore();
+        } else if (f.state === 'HITSTUN' || f.state === 'PARRY_STUN') {
+            torsoLean = -18;
+            frontHand = { x: -20, y: shoulderY - 10 };
+            backHand = { x: -26, y: shoulderY + 5 };
+        } else if (f.state === 'ATTACK' && f.currentMove) {
+            const m = f.currentMove;
+            const isActive = f.moveFrame >= m.startup && f.moveFrame <= m.startup + m.active;
+            const ext = isActive ? 1 : 0.45;
+
+            if (m === MOVES.LP) {
+                torsoLean = 14 * ext;
+                frontHand = { x: 26 + 58 * ext, y: shoulderY - 4 };
+            } else if (m === MOVES.RP) {
+                torsoLean = 18 * ext;
+                backHand = { x: 20 + 70 * ext, y: shoulderY + 2 };
+                frontHand = { x: -16, y: shoulderY + 14 };
+            } else if (m === MOVES.EWGF || m.isRageArt) {
+                torsoLean = 16 * ext;
+                frontHand = { x: 24 + 56 * ext, y: shoulderY - 42 * ext };
+                if (isActive) {
+                    ctx.save();
+                    ctx.strokeStyle = m.isRageArt ? '#ef4444' : '#38bdf8';
+                    ctx.lineWidth = 6;
+                    ctx.shadowColor = m.isRageArt ? '#fef08a' : '#38bdf8';
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(35, shoulderY - 10, 48, -Math.PI * 0.4, Math.PI * 0.25);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            } else if (m === MOVES.LK || m === MOVES.SWEEP) {
+                hipY = -44;
+                shoulderY = -88;
+                frontFoot = { x: 30 + (m === MOVES.SWEEP ? 78 : 66) * ext, y: -10 };
+            } else if (m === MOVES.RK) {
+                torsoLean = -12 * ext;
+                frontFoot = { x: 28 + 74 * ext, y: -76 * ext };
+            }
+        } else if (f.state === 'VICTORY') {
+            frontHand = { x: 16, y: shoulderY - 48 };
+        }
+
+        // 관절 렌더링
+        this.drawLimb(ctx, 0, hipY, backFoot.x * 0.5, hipY * 0.5, backFoot.x, backFoot.y, f.theme.pants, 15, true);
+        this.drawLimb(ctx, torsoLean - 4, shoulderY, backHand.x * 0.5, shoulderY + 12, backHand.x, backHand.y, f.theme.skin, 11, false, f.theme.gloves);
+
+        // 몸통
+        ctx.save();
+        ctx.fillStyle = f.theme.giTop || f.theme.skin;
+        ctx.beginPath();
+        ctx.moveTo(-15, hipY);
+        ctx.lineTo(15, hipY);
+        ctx.lineTo(torsoLean + 18, shoulderY);
+        ctx.lineTo(torsoLean - 18, shoulderY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(-16, hipY - 6, 32, 9);
+        ctx.restore();
+
+        // 머리 & 헤어
+        const headX = torsoLean + 4;
+        const headY = shoulderY - 18;
+        ctx.fillStyle = f.theme.skin;
+        ctx.beginPath();
+        ctx.arc(headX, headY, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = f.theme.hair;
+        ctx.beginPath();
+        ctx.moveTo(headX - 15, headY - 2);
+        ctx.lineTo(headX - 20, headY - 18);
+        ctx.lineTo(headX - 4, headY - 14);
+        ctx.lineTo(headX + 4, headY - 24);
+        ctx.lineTo(headX + 12, headY - 13);
+        ctx.lineTo(headX + 18, headY - 16);
+        ctx.lineTo(headX + 13, headY - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = f.isRage ? '#ef4444' : '#38bdf8';
+        ctx.fillRect(headX + 6, headY - 3, 5, 3);
+
+        // 앞다리 & 앞팔
+        this.drawLimb(ctx, 4, hipY, frontFoot.x * 0.5 + 8, hipY * 0.5, frontFoot.x, frontFoot.y, f.theme.pants, 16, true, null, f.theme.flame);
+        this.drawLimb(ctx, torsoLean + 6, shoulderY, frontHand.x * 0.5, shoulderY + 10, frontHand.x, frontHand.y, f.theme.skin, 12, false, f.theme.gloves);
+
+        ctx.restore();
+    }
+
+    drawLimb(ctx, x1, y1, mx, my, x2, y2, color, width, isLeg, gloveColor = null, flameColor = null) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(mx, my, x2, y2);
+        ctx.stroke();
+
+        if (isLeg && flameColor) {
+            ctx.fillStyle = flameColor;
+            ctx.beginPath();
+            ctx.arc(x2, y2 - 6, width * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (gloveColor) {
+            ctx.fillStyle = gloveColor;
+            ctx.beginPath();
+            ctx.arc(x2, y2, width * 0.65, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    renderSparks(ctx) {
+        this.sparks.forEach(s => {
+            ctx.save();
+            ctx.globalAlpha = s.life;
+            ctx.fillStyle = s.color;
+            ctx.shadowColor = s.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    renderCallouts(ctx) {
+        this.callouts.forEach(c => {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, c.life * 1.4);
+            ctx.font = '900 16px "Orbitron", "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#000';
+            ctx.fillText(c.text, c.x + 2, c.y + 2);
+            ctx.fillStyle = c.color;
+            ctx.fillText(c.text, c.x, c.y);
+            ctx.restore();
+        });
+    }
+
+    loop(now) {
+        const dt = now - this.lastTime;
+        if (dt >= 15.5) {
+            this.lastTime = now;
+            this.update();
+            this.render();
+        }
+        requestAnimationFrame((t) => this.loop(t));
+    }
+}
+
+window.onload = () => {
+    window.game = new TekkenArenaGame();
+};
+</script>
+</body>
+</html>

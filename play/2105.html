@@ -1,0 +1,2919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>지수원 피하기</title>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Jua & Noto Sans KR for vibrant arcade look -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a1a2e;
+            font-family: 'Jua', 'Noto Sans KR', sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        /* Top HUD */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px 20px;
+            width: 100%;
+        }
+
+        .hud-controls {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .icon-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            border: 3px solid #fff;
+            background: linear-gradient(180deg, #ffbe0b 0%, #fb5607 100%);
+            color: #fff;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #9b2226, 0 6px 12px rgba(0,0,0,0.3);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .icon-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #9b2226;
+        }
+
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .stat-badge {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 6px 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+
+        .multiplier-tag {
+            background: linear-gradient(135deg, #00f5d4, #00bbf9);
+            color: #0f172a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 900;
+            box-shadow: 0 2px 0 #0077b6;
+        }
+
+        .multiplier-tag.boosted {
+            background: linear-gradient(135deg, #ff006e, #ffbe0b);
+            color: #fff;
+            animation: pulse 0.5s infinite alternate;
+        }
+
+        .score-text {
+            font-size: 28px;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .coin-text {
+            font-size: 22px;
+            color: #ffd166;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        /* Active Power-ups HUD */
+        .powerups-hud {
+            position: absolute;
+            bottom: 24px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .powerup-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid #fff;
+            border-radius: 20px;
+            padding: 6px 12px;
+            color: #fff;
+            font-size: 16px;
+            animation: slideInLeft 0.3s ease-out;
+        }
+
+        .powerup-progress-bg {
+            width: 90px;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .powerup-progress-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 6px;
+            transition: width 0.1s linear;
+        }
+
+        /* Fullscreen Modal Screens (Start, Pause, Game Over) */
+        .modal-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(16, 24, 48, 0.65) 0%, rgba(10, 15, 30, 0.9) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            pointer-events: auto;
+            z-index: 20;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .game-title {
+            font-size: clamp(46px, 9vw, 84px);
+            line-height: 1.05;
+            background: linear-gradient(180deg, #fff3b0 0%, #ffbe0b 45%, #fb5607 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 6px 0 #7f1d1d) drop-shadow(0 12px 20px rgba(0,0,0,0.6));
+            margin-bottom: 8px;
+            transform: rotate(-2deg);
+        }
+
+        .game-subtitle {
+            font-size: clamp(18px, 3vw, 24px);
+            color: #38bdf8;
+            text-shadow: 0 3px 0 #0c4a6e;
+            margin-bottom: 28px;
+            letter-spacing: 2px;
+        }
+
+        .card-panel {
+            background: rgba(30, 41, 59, 0.9);
+            border: 3px solid #60a5fa;
+            border-radius: 24px;
+            padding: 20px 28px;
+            margin-bottom: 28px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            color: #f8fafc;
+        }
+
+        .controls-guide {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 16px;
+            text-align: left;
+            margin-top: 10px;
+        }
+
+        .guide-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px 12px;
+            border-radius: 12px;
+        }
+
+        .key-badge {
+            background: #334155;
+            border: 1px solid #94a3b8;
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 14px;
+            color: #ffd166;
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%);
+            border: 4px solid #ffffff;
+            border-radius: 999px;
+            padding: 16px 48px;
+            font-family: 'Jua', sans-serif;
+            font-size: 32px;
+            color: #ffffff;
+            text-shadow: 0 3px 0 #14532d;
+            box-shadow: 0 7px 0 #15803d, 0 14px 24px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            animation: bounceBtn 1.5s infinite ease-in-out;
+        }
+
+        .action-btn:hover {
+            filter: brightness(1.08);
+        }
+
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 2px 0 #15803d;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            font-size: 22px;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .new-record-badge {
+            background: #ff006e;
+            color: #fff;
+            font-size: 14px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            margin-left: 8px;
+            animation: pulse 0.6s infinite alternate;
+        }
+
+        /* Floating Banner Notification */
+        #toast-banner {
+            position: absolute;
+            top: 22%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: linear-gradient(90deg, #ff006e, #8338ec);
+            border: 3px solid #fff;
+            color: #fff;
+            padding: 10px 28px;
+            border-radius: 999px;
+            font-size: 26px;
+            text-shadow: 0 2px 0 #000;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 15;
+            white-space: nowrap;
+        }
+
+        #toast-banner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+
+        @keyframes bounceBtn {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Ending Dialogue & Clear Overlay */
+        #ending-dialogue-box {
+            position: absolute;
+            bottom: 36px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(92%, 560px);
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            border: 3px solid #f472b6;
+            border-radius: 24px;
+            padding: 20px 26px;
+            color: #fff;
+            box-shadow: 0 12px 32px rgba(244, 114, 182, 0.45);
+            z-index: 25;
+            text-align: left;
+            animation: slideUpFade 0.5s ease-out;
+        }
+
+        .ending-speaker {
+            display: inline-block;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 900;
+            padding: 3px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 0 #b45309;
+        }
+
+        .ending-text {
+            font-size: clamp(19px, 3.2vw, 24px);
+            line-height: 1.45;
+            color: #fdf2f8;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        @keyframes slideUpFade {
+            from { transform: translate(-50%, 30px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Three.js Canvas will be appended here -->
+
+        <!-- Live Gameplay HUD -->
+        <div id="hud-layer" class="ui-layer hidden">
+            <div class="hud-top">
+                <div class="hud-controls">
+                    <button id="btn-pause" class="icon-btn" title="일시정지">⏸️</button>
+                    <button id="btn-mute" class="icon-btn" title="소리 켜기/끄기">🔊</button>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-badge">
+                        <span id="hud-chapter" class="multiplier-tag" style="background: linear-gradient(135deg, #06b6d4, #0284c7); color: #fff;">CH.1 바다 해저 🌊</span>
+                        <span id="hud-multiplier" class="multiplier-tag">1x</span>
+                        <span id="hud-score" class="score-text">000000</span>
+                    </div>
+                    <div class="stat-badge">
+                        <span>🪙</span>
+                        <span id="hud-coins" class="coin-text">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Power-ups -->
+            <div id="powerups-container" class="powerups-hud"></div>
+        </div>
+
+        <!-- Dynamic Event Toast -->
+        <div id="toast-banner">제트팩 발동! 🚀</div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="modal-screen">
+            <h1 class="game-title">지수원 피하기</h1>
+            <div class="game-subtitle">AVOID JI SU-WON</div>
+
+            <div class="card-panel">
+                <div style="font-size: 20px; color: #ffd166; margin-bottom: 6px;">
+                    🏆 최고 기록: <span id="start-highscore">0</span>점
+                </div>
+                <div class="controls-guide">
+                    <div class="guide-item"><span class="key-badge">← → / A D</span> 레인 이동</div>
+                    <div class="guide-item"><span class="key-badge">↑ / W</span> 점프</div>
+                    <div class="guide-item"><span class="key-badge">↓ / S</span> 구르기</div>
+                    <div class="guide-item"><span class="key-badge">터치/마우스</span> 스와이프</div>
+                </div>
+            </div>
+
+            <button id="btn-start" class="action-btn">게임 시작</button>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="modal-screen hidden">
+            <h2 class="game-title" style="font-size: 56px;">일시 정지</h2>
+            <div class="card-panel">
+                <p style="font-size: 20px; color: #cbd5e1;">잠시 숨을 고르세요!</p>
+            </div>
+            <button id="btn-resume" class="action-btn">계속하기</button>
+        </div>
+
+        <!-- Ending Confession Dialogue (10,000 pts) -->
+        <div id="ending-dialogue-box" class="hidden">
+            <div class="ending-speaker">🌸 지수원</div>
+            <div id="ending-dialogue-text" class="ending-text">"드디어 따라잡았어... 사실 너한테 꼭 이 꽃을 주면서 고백하고 싶었어. 나랑 사귀어 줄래? 💐❤️"</div>
+        </div>
+
+        <!-- Ending Clear Screen -->
+        <div id="ending-screen" class="modal-screen hidden" style="background: radial-gradient(circle at center, rgba(131, 24, 67, 0.58) 0%, rgba(15, 23, 42, 0.88) 100%);">
+            <div style="font-size: 22px; color: #fbcfe8; margin-bottom: 4px; text-shadow: 0 2px 0 #831843;">✨ 10,000점 달성! 해피 엔딩 ✨</div>
+            <h2 class="game-title" style="font-size: clamp(44px, 8vw, 68px); background: linear-gradient(180deg, #fff1f2 0%, #f472b6 50%, #e11d48 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">고백 성공! 💐</h2>
+            <div class="card-panel" style="border-color: #f472b6;">
+                <p style="font-size: 19px; color: #fce7f3; margin-bottom: 14px; line-height: 1.45;">
+                    끝까지 달려 10,000점을 돌파했습니다!<br>지수원의 수줍은 꽃다발 고백을 받았습니다 💖
+                </p>
+                <div class="result-row">
+                    <span>달성 점수</span>
+                    <span id="ending-score" style="color: #f472b6; font-size: 28px;">10,000</span>
+                </div>
+                <div class="result-row">
+                    <span>획득 코인</span>
+                    <span id="ending-coins" style="color: #ffd166;">🪙 0</span>
+                </div>
+                <div class="result-row">
+                    <span>최고 기록 <span id="ending-new-record-tag" class="new-record-badge hidden">NEW!</span></span>
+                    <span id="ending-highscore" style="color: #4ade80;">0</span>
+                </div>
+            </div>
+            <button id="btn-ending-restart" class="action-btn" style="background: linear-gradient(180deg, #f472b6 0%, #db2777 100%); box-shadow: 0 7px 0 #9d174d, 0 14px 24px rgba(0,0,0,0.4);">처음부터 다시 하기</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="modal-screen hidden">
+            <h2 class="game-title" style="font-size: 58px;">게임 오버!</h2>
+            <div class="card-panel">
+                <div class="result-row">
+                    <span>최종 점수</span>
+                    <span id="final-score" style="color: #38bdf8; font-size: 28px;">0</span>
+                </div>
+                <div class="result-row">
+                    <span>획득 코인</span>
+                    <span id="final-coins" style="color: #ffd166;">🪙 0</span>
+                </div>
+                <div class="result-row">
+                    <span>최고 기록 <span id="new-record-tag" class="new-record-badge hidden">NEW!</span></span>
+                    <span id="final-highscore" style="color: #4ade80;">0</span>
+                </div>
+            </div>
+            <button id="btn-restart" class="action-btn">다시 하기</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * 1. SOUND MANAGER (WEB AUDIO API SYNTHESIZER)
+         * ==========================================
+         */
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playTone(freqStart, freqEnd, duration, type = 'sine', vol = 0.15) {
+                if (this.muted) return;
+                try {
+                    if (!this.ctx) this.init();
+                    if (!this.ctx) return;
+
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freqStart, now);
+                    if (freqEnd !== freqStart) {
+                        osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + duration);
+                    }
+
+                    gain.gain.setValueAtTime(vol, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + duration);
+                } catch (e) {
+                    // Ignore audio context errors before user interaction
+                }
+            }
+
+            playLaneSwitch() {
+                this.playTone(260, 420, 0.08, 'triangle', 0.12);
+            }
+
+            playJump() {
+                this.playTone(220, 560, 0.18, 'sine', 0.16);
+            }
+
+            playRoll() {
+                this.playTone(340, 140, 0.16, 'triangle', 0.14);
+            }
+
+            playCoin() {
+                this.playTone(987.77, 1318.51, 0.12, 'sine', 0.12);
+            }
+
+            playPowerup() {
+                this.playTone(440, 880, 0.25, 'triangle', 0.16);
+                setTimeout(() => this.playTone(660, 1180, 0.25, 'sine', 0.14), 90);
+            }
+
+            playStumble() {
+                this.playTone(180, 75, 0.22, 'sawtooth', 0.16);
+            }
+
+            playCrash() {
+                this.playTone(140, 42, 0.45, 'sawtooth', 0.22);
+            }
+
+            playWhistle() {
+                this.playTone(2400, 2650, 0.14, 'sine', 0.09);
+                setTimeout(() => this.playTone(2650, 2200, 0.18, 'sine', 0.09), 150);
+            }
+
+            playEndingFanfare() {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 987.77, 1046.50];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, freq * 1.01, 0.28, 'sine', 0.15), idx * 140);
+                });
+            }
+        }
+
+        const sound = new SoundManager();
+
+        /**
+         * ==========================================
+         * 2. GAME CONFIGURATION & STATE
+         * ==========================================
+         */
+        const CONFIG = {
+            LANE_WIDTH: 3.2,
+            LANES: [-3.2, 0, 3.2], // Left (0), Center (1), Right (2)
+            BASE_SPEED: 28,
+            MAX_SPEED: 74,
+            SPEED_ACCEL: 0.42,
+            GRAVITY: -68,
+            JUMP_FORCE: 24.5,
+            TRAIN_HEIGHT: 3.4,
+            TRAIN_WIDTH: 2.5,
+            SPAWN_Z: -175,
+            DESPAWN_Z: 28,
+            POWERUP_DURATION: {
+                magnet: 12,
+                jetpack: 8,
+                multiplier: 12
+            }
+        };
+
+        const state = {
+            status: 'START', // START, PLAYING, PAUSED, GAMEOVER, ENDING
+            score: 0,
+            coins: 0,
+            highScore: parseInt(localStorage.getItem('metro_surfer_highscore') || '0', 10),
+            speed: CONFIG.BASE_SPEED,
+            difficultyLevel: 0,
+            currentLane: 1, // 0, 1, 2
+            previousLane: 1,
+            playerX: 0,
+            playerY: 0,
+            velY: 0,
+            groundY: 0,
+            isJumping: false,
+            isRolling: false,
+            rollTimer: 0,
+            stumbleTimer: 0,
+            chaserDistance: 4.5,
+            powerups: {
+                magnet: 0,
+                jetpack: 0,
+                multiplier: 0
+            },
+            chapter: 1,
+            endingTimer: 0,
+            shakeTime: 0,
+            shakeIntensity: 0,
+            nextSpawnZ: -45,
+            runCycle: 0
+        };
+
+        /**
+         * ==========================================
+         * 3. THREE.JS SCENE, CAMERA & LIGHTING
+         * ==========================================
+         */
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x084c61);
+        scene.fog = new THREE.Fog(0x084c61, 55, 165);
+
+        const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 220);
+        camera.position.set(0, 6.2, 10.5);
+        camera.lookAt(0, 2.2, -12);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.insertBefore(renderer.domElement, container.firstChild);
+
+        // Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.85);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff3d6, 0.95);
+        dirLight.position.set(22, 38, 18);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 5;
+        dirLight.shadow.camera.far = 120;
+        const d = 28;
+        dirLight.shadow.camera.left = -d;
+        dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d;
+        dirLight.shadow.camera.bottom = -d;
+        scene.add(dirLight);
+
+        // Shared Materials
+        const materials = {
+            ground: new THREE.MeshLambertMaterial({ color: 0x0e7490 }),
+            ballast: new THREE.MeshLambertMaterial({ color: 0xd97706 }),
+            rail: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.3 }),
+            sleeper: new THREE.MeshLambertMaterial({ color: 0x92400e }),
+            wall: new THREE.MeshLambertMaterial({ color: 0x155e75 }),
+            wallTrim: new THREE.MeshLambertMaterial({ color: 0x22d3ee }),
+            coin: new THREE.MeshStandardMaterial({ color: 0xffd166, emissive: 0xd97706, emissiveIntensity: 0.35, metalness: 0.6, roughness: 0.2 }),
+            barrierRed: new THREE.MeshLambertMaterial({ color: 0xef4444 }),
+            barrierWhite: new THREE.MeshLambertMaterial({ color: 0xf8fafc }),
+            ramp: new THREE.MeshLambertMaterial({ color: 0xf59e0b })
+        };
+
+        // Track Environment (Scrolling Sleepers & Side Scenery)
+        const trackGroup = new THREE.Group();
+        scene.add(trackGroup);
+
+        const groundPlane = new THREE.Mesh(new THREE.BoxGeometry(16, 1, 240), materials.ground);
+        groundPlane.position.set(0, -0.5, -80);
+        groundPlane.receiveShadow = true;
+        trackGroup.add(groundPlane);
+
+        // 외곽 광활한 배경 지평선 평원 (트랙 양옆 바깥 전체 영역)
+        const outerGroundMat = new THREE.MeshLambertMaterial({ color: 0x0b5269 });
+        const outerGroundPlane = new THREE.Mesh(new THREE.PlaneGeometry(360, 320), outerGroundMat);
+        outerGroundPlane.rotation.x = -Math.PI / 2;
+        outerGroundPlane.position.set(0, -0.15, -90);
+        outerGroundPlane.receiveShadow = true;
+        trackGroup.add(outerGroundPlane);
+
+        // 하늘 & 원경 배경 그룹 (태양/빛줄기, 구름/물고기 떼, 먼 산맥/학교 본관)
+        const skyBackdropGroup = new THREE.Group();
+        scene.add(skyBackdropGroup);
+        let animatedSkyItems = [];
+
+        // 3 Track Beds & Rails
+        CONFIG.LANES.forEach(laneX => {
+            const bed = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.12, 240), materials.ballast);
+            bed.position.set(laneX, 0.04, -80);
+            bed.receiveShadow = true;
+            trackGroup.add(bed);
+
+            [-0.72, 0.72].forEach(offset => {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 240), materials.rail);
+                rail.position.set(laneX + offset, 0.14, -80);
+                trackGroup.add(rail);
+            });
+        });
+
+        // Side Walls
+        [-7.6, 7.6].forEach(wallX => {
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4.5, 240), materials.wall);
+            wall.position.set(wallX, 2.25, -80);
+            wall.receiveShadow = true;
+            trackGroup.add(wall);
+
+            const trim = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 240), materials.wallTrim);
+            trim.position.set(wallX, 4.6, -80);
+            trackGroup.add(trim);
+        });
+
+        // Scrolling Sleepers
+        const sleepers = [];
+        const sleeperGeo = new THREE.BoxGeometry(2.3, 0.08, 0.35);
+        for (let z = 25; z > -185; z -= 2.5) {
+            const row = new THREE.Group();
+            CONFIG.LANES.forEach(laneX => {
+                const s = new THREE.Mesh(sleeperGeo, materials.sleeper);
+                s.position.set(laneX, 0.09, 0);
+                row.add(s);
+            });
+            row.position.z = z;
+            scene.add(row);
+            sleepers.push(row);
+        }
+
+        // 챕터별 주변 환경 오브젝트
+        const sceneryProps = [];
+        const overheadArches = [];
+        const chapterConfig = {
+            1: {
+                name: 'CH.1 바다 해저 🌊',
+                toast: '챕터 1: 신비로운 바다 해저! 🌊🐠',
+                badgeBg: 'linear-gradient(135deg, #06b6d4, #0284c7)',
+                skyHex: 0x084c61,
+                outerGroundHex: 0x0a3d4f,
+                groundHex: 0x0e7490,
+                ballastHex: 0xd97706,
+                sleeperHex: 0x92400e,
+                wallHex: 0x155e75,
+                wallTrimHex: 0x22d3ee
+            },
+            2: {
+                name: 'CH.2 울창한 정글 🌴',
+                toast: '챕터 2: 야생의 정글 속으로! 🌴🐒',
+                badgeBg: 'linear-gradient(135deg, #22c55e, #15803d)',
+                skyHex: 0x3f6212,
+                outerGroundHex: 0x1a3a18,
+                groundHex: 0x14532d,
+                ballastHex: 0x713f12,
+                sleeperHex: 0x451a03,
+                wallHex: 0x365314,
+                wallTrimHex: 0x84cc16
+            },
+            3: {
+                name: 'CH.3 학교 캠퍼스 🏫',
+                toast: '챕터 3: 학교 운동장과 교실! 🏫📚',
+                badgeBg: 'linear-gradient(135deg, #f59e0b, #ea580c)',
+                skyHex: 0x60a5fa,
+                outerGroundHex: 0x4d7c0f,
+                groundHex: 0x475569,
+                ballastHex: 0x94a3b8,
+                sleeperHex: 0xf8fafc,
+                wallHex: 0xfef3c7,
+                wallTrimHex: 0xd97706
+            }
+        };
+
+        function buildSkyAndHorizon(chapterNum) {
+            while (skyBackdropGroup.children.length > 0) {
+                skyBackdropGroup.remove(skyBackdropGroup.children[0]);
+            }
+            animatedSkyItems = [];
+
+            if (chapterNum === 1) {
+                // 수면 위에서 쏟아지는 태양광 원반 & 해저 빛줄기
+                const sunGlow = new THREE.Mesh(
+                    new THREE.CircleGeometry(18, 24),
+                    new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.45, fog: false })
+                );
+                sunGlow.position.set(0, 48, -165);
+                skyBackdropGroup.add(sunGlow);
+
+                for (let r = -2; r <= 2; r++) {
+                    const ray = new THREE.Mesh(
+                        new THREE.PlaneGeometry(7, 85),
+                        new THREE.MeshBasicMaterial({ color: 0xa5f3fc, transparent: true, opacity: 0.12, side: THREE.DoubleSide, fog: false })
+                    );
+                    ray.position.set(r * 16, 28, -155);
+                    ray.rotation.z = r * 0.14;
+                    skyBackdropGroup.add(ray);
+                    animatedSkyItems.push({ mesh: ray, type: 'RAY', baseX: r * 16, phase: r });
+                }
+
+                // 먼 바다 해저 암초 실루엣 산맥
+                const ridgeMat = new THREE.MeshBasicMaterial({ color: 0x063747 });
+                for (let m = -4; m <= 4; m++) {
+                    const ridge = new THREE.Mesh(new THREE.ConeGeometry(24, 24 + (Math.abs(m) % 3) * 8, 5), ridgeMat);
+                    ridge.position.set(m * 28, 10, -162);
+                    skyBackdropGroup.add(ridge);
+                }
+
+                // 하늘(바닷속)을 헤엄치는 열대어 떼
+                const fishColors = [0xfde047, 0xfb7185, 0x38bdf8, 0xf97316];
+                for (let f = 0; f < 14; f++) {
+                    const fish = new THREE.Group();
+                    const fMat = new THREE.MeshBasicMaterial({ color: fishColors[f % fishColors.length] });
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.3), fMat);
+                    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.6, 0.2), fMat);
+                    tail.position.x = -0.65;
+                    fish.add(body, tail);
+                    const startX = -55 + f * 8;
+                    const startY = 12 + (f % 5) * 4.5;
+                    const startZ = -60 - (f % 4) * 24;
+                    fish.position.set(startX, startY, startZ);
+                    skyBackdropGroup.add(fish);
+                    animatedSkyItems.push({ mesh: fish, type: 'SWIM', speed: 6 + (f % 4) * 2, baseY: startY, phase: f });
+                }
+            } else if (chapterNum === 2) {
+                // 정글 하늘의 따스한 태양 & 안개 낀 화산/밀림 산맥
+                const jungleSun = new THREE.Mesh(
+                    new THREE.CircleGeometry(14, 24),
+                    new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.75, fog: false })
+                );
+                jungleSun.position.set(28, 44, -165);
+                skyBackdropGroup.add(jungleSun);
+
+                const mountainMat = new THREE.MeshBasicMaterial({ color: 0x26400b });
+                for (let m = -4; m <= 4; m++) {
+                    const peak = new THREE.Mesh(new THREE.ConeGeometry(30, 32 + (Math.abs(m) % 2) * 12, 6), mountainMat);
+                    peak.position.set(m * 32, 14, -165);
+                    skyBackdropGroup.add(peak);
+                }
+
+                // 밀림 위를 나는 새 떼 & 떠가는 구름
+                for (let c = 0; c < 8; c++) {
+                    const cloud = new THREE.Group();
+                    const cMat = new THREE.MeshBasicMaterial({ color: 0xecfccb, transparent: true, opacity: 0.55, fog: false });
+                    const p1 = new THREE.Mesh(new THREE.BoxGeometry(9, 2.2, 3), cMat);
+                    const p2 = new THREE.Mesh(new THREE.BoxGeometry(5.5, 2.4, 3), cMat);
+                    p2.position.set(1.5, 1.3, 0);
+                    cloud.add(p1, p2);
+                    const cx = -65 + c * 18;
+                    const cy = 28 + (c % 3) * 5;
+                    const cz = -125 - (c % 2) * 25;
+                    cloud.position.set(cx, cy, cz);
+                    skyBackdropGroup.add(cloud);
+                    animatedSkyItems.push({ mesh: cloud, type: 'DRIFT', speed: 2.2 + (c % 3) * 0.7, baseY: cy, phase: c });
+                }
+            } else {
+                // 챕터 3: 학교 맑은 하늘의 태양, 뭉게구름, 원경 학교 본관 & 시계탑
+                const sun = new THREE.Mesh(
+                    new THREE.CircleGeometry(12, 24),
+                    new THREE.MeshBasicMaterial({ color: 0xfde047, fog: false })
+                );
+                sun.position.set(-34, 48, -168);
+                skyBackdropGroup.add(sun);
+
+                // 원경 학교 중앙 본관 & 시계탑 실루엣
+                const mainSchoolMat = new THREE.MeshBasicMaterial({ color: 0xfde68a });
+                const mainRoofMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+                const mainHall = new THREE.Mesh(new THREE.BoxGeometry(74, 18, 12), mainSchoolMat);
+                mainHall.position.set(0, 9, -162);
+                skyBackdropGroup.add(mainHall);
+
+                const mainRoof = new THREE.Mesh(new THREE.BoxGeometry(76, 2.2, 13), mainRoofMat);
+                mainRoof.position.set(0, 19, -162);
+                skyBackdropGroup.add(mainRoof);
+
+                const clockTower = new THREE.Mesh(new THREE.BoxGeometry(11, 12, 10), mainSchoolMat);
+                clockTower.position.set(0, 24, -162);
+                skyBackdropGroup.add(clockTower);
+
+                const clockFace = new THREE.Mesh(
+                    new THREE.CircleGeometry(3.2, 16),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false })
+                );
+                clockFace.position.set(0, 25, -156.8);
+                skyBackdropGroup.add(clockFace);
+
+                // 뭉게구름
+                for (let c = 0; c < 10; c++) {
+                    const cloud = new THREE.Group();
+                    const cMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, fog: false });
+                    const b1 = new THREE.Mesh(new THREE.SphereGeometry(3.2, 8, 8), cMat);
+                    const b2 = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 8), cMat);
+                    b2.position.set(2.8, -0.4, 0);
+                    const b3 = new THREE.Mesh(new THREE.SphereGeometry(2.4, 8, 8), cMat);
+                    b3.position.set(-2.6, -0.5, 0);
+                    cloud.add(b1, b2, b3);
+                    const cx = -75 + c * 17;
+                    const cy = 27 + (c % 4) * 4.5;
+                    const cz = -120 - (c % 3) * 18;
+                    cloud.position.set(cx, cy, cz);
+                    skyBackdropGroup.add(cloud);
+                    animatedSkyItems.push({ mesh: cloud, type: 'DRIFT', speed: 2.8 + (c % 3) * 0.8, baseY: cy, phase: c });
+                }
+            }
+        }
+
+        function buildChapterScenery(chapterNum) {
+            sceneryProps.forEach(obj => scene.remove(obj));
+            sceneryProps.length = 0;
+            overheadArches.forEach(obj => scene.remove(obj));
+            overheadArches.length = 0;
+
+            const cfg = chapterConfig[chapterNum];
+            outerGroundMat.color.setHex(cfg.outerGroundHex);
+            materials.ground.color.setHex(cfg.groundHex);
+            materials.ballast.color.setHex(cfg.ballastHex);
+            materials.sleeper.color.setHex(cfg.sleeperHex);
+            materials.wall.color.setHex(cfg.wallHex);
+            materials.wallTrim.color.setHex(cfg.wallTrimHex);
+
+            buildSkyAndHorizon(chapterNum);
+
+            // 트랙 상단 주기적 랜드마크 아치 (제트팩 높이보다 높게 배치하여 시야와 속도감 강조)
+            for (let a = 0; a < 4; a++) {
+                const archGroup = new THREE.Group();
+                const zPos = -35 - a * 55;
+
+                if (chapterNum === 1) {
+                    // 해저 거대 산호 아치
+                    const archMat = new THREE.MeshLambertMaterial({ color: 0x06b6d4 });
+                    const glowMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+                    [-7.6, 7.6].forEach(px => {
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.9, 13.5, 8), archMat);
+                        pillar.position.set(px, 6.75, 0);
+                        archGroup.add(pillar);
+                    });
+                    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(16.8, 1.1, 1.2), archMat);
+                    topBeam.position.set(0, 13.5, 0);
+                    const lightStrip = new THREE.Mesh(new THREE.BoxGeometry(15.2, 0.3, 1.3), glowMat);
+                    lightStrip.position.set(0, 13.0, 0);
+                    archGroup.add(topBeam, lightStrip);
+                } else if (chapterNum === 2) {
+                    // 정글 고대 유적 돌문 & 덩굴 아치
+                    const stoneMat = new THREE.MeshLambertMaterial({ color: 0x57534e });
+                    const vineMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+                    [-7.6, 7.6].forEach(px => {
+                        const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.4, 13.5, 1.4), stoneMat);
+                        pillar.position.set(px, 6.75, 0);
+                        archGroup.add(pillar);
+                    });
+                    const lintel = new THREE.Mesh(new THREE.BoxGeometry(17.2, 1.5, 1.6), stoneMat);
+                    lintel.position.set(0, 13.5, 0);
+                    archGroup.add(lintel);
+                    for (let v = -6; v <= 6; v += 2.4) {
+                        const vine = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.8 + (Math.abs(v) % 2), 0.25), vineMat);
+                        vine.position.set(v, 12.1, 0.7);
+                        archGroup.add(vine);
+                    }
+                } else {
+                    // 학교 교문 & 응원 현수막 아치
+                    const gateMat = new THREE.MeshLambertMaterial({ color: 0xb91c1c });
+                    const bannerMat = new THREE.MeshLambertMaterial({ color: 0xfef08a });
+                    [-7.6, 7.6].forEach(px => {
+                        const post = new THREE.Mesh(new THREE.BoxGeometry(1.1, 13.5, 1.1), gateMat);
+                        post.position.set(px, 6.75, 0);
+                        archGroup.add(post);
+                    });
+                    const topBar = new THREE.Mesh(new THREE.BoxGeometry(16.6, 1.2, 1.2), gateMat);
+                    topBar.position.set(0, 13.6, 0);
+                    const banner = new THREE.Mesh(new THREE.BoxGeometry(14.0, 1.1, 0.3), bannerMat);
+                    banner.position.set(0, 12.5, 0);
+                    archGroup.add(topBar, banner);
+                }
+
+                archGroup.position.z = zPos;
+                scene.add(archGroup);
+                overheadArches.push(archGroup);
+            }
+
+            for (let i = 0; i < 26; i++) {
+                const side = i % 2 === 0 ? -1 : 1;
+                const zPos = 20 - i * 8.5;
+                const propGroup = new THREE.Group();
+
+                if (chapterNum === 1) {
+                    // 챕터 1: 바다 해저
+                    const coralColors = [0xff6b6b, 0xff9f1c, 0xc77dff, 0x2ec4b6, 0xf72585];
+                    const cMat = new THREE.MeshLambertMaterial({ color: coralColors[i % coralColors.length] });
+                    const rockMat = new THREE.MeshLambertMaterial({ color: 0x1e3a5f });
+                    const kelpMat = new THREE.MeshLambertMaterial({ color: 0x10b981 });
+
+                    const rockH = 4 + (i % 5) * 2.2;
+                    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(2.6, 0), rockMat);
+                    rock.scale.set(1.2, rockH / 2.5, 1.2);
+                    rock.position.set(0, rockH / 2, 0);
+                    propGroup.add(rock);
+
+                    const coralTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, 3.2, 7), cMat);
+                    coralTrunk.position.set(-side * 1.6, 1.6, 1.2);
+                    propGroup.add(coralTrunk);
+
+                    const coralBranch = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.45), cMat);
+                    coralBranch.position.set(-side * 1.6, 2.6, 1.2);
+                    coralBranch.rotation.z = 0.35;
+                    propGroup.add(coralBranch);
+
+                    for (let k = 0; k < 3; k++) {
+                        const kelp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 4.5 + k * 1.4, 0.14), kelpMat);
+                        kelp.position.set(-side * (1.2 + k * 0.6), 2.2 + k * 0.6, -1.2 + k * 0.8);
+                        kelp.rotation.z = (k - 1) * 0.15;
+                        propGroup.add(kelp);
+                    }
+
+                    const bubble = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.45 + (i % 3) * 0.2, 10, 10),
+                        new THREE.MeshBasicMaterial({ color: 0xa5f3fc, transparent: true, opacity: 0.65 })
+                    );
+                    bubble.position.set(-side * 2.5, 6 + (i % 4) * 2.5, 0);
+                    propGroup.add(bubble);
+
+                    propGroup.position.set(side * 12.5, 0, zPos);
+                } else if (chapterNum === 2) {
+                    // 챕터 2: 정글
+                    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c3a21 });
+                    const leafMat = new THREE.MeshLambertMaterial({ color: i % 2 === 0 ? 0x16a34a : 0x15803d });
+                    const ruinMat = new THREE.MeshLambertMaterial({ color: 0x78716c });
+
+                    const treeH = 9 + (i % 4) * 3;
+                    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.85, treeH, 8), trunkMat);
+                    trunk.position.set(0, treeH / 2, 0);
+                    propGroup.add(trunk);
+
+                    const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(3.2, 0), leafMat);
+                    crown1.position.set(0, treeH + 1.2, 0);
+                    propGroup.add(crown1);
+
+                    const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(2.3, 0), leafMat);
+                    crown2.position.set(-side * 1.8, treeH + 0.3, 1.1);
+                    propGroup.add(crown2);
+
+                    if (i % 3 === 0) {
+                        const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.2, 1.8), ruinMat);
+                        pillar.position.set(-side * 2.2, 2.6, -1.8);
+                        propGroup.add(pillar);
+                    }
+
+                    propGroup.position.set(side * 12.2, 0, zPos);
+                } else {
+                    // 챕터 3: 학교
+                    const schoolWallMat = new THREE.MeshLambertMaterial({ color: i % 3 === 0 ? 0xfef3c7 : 0xfde68a });
+                    const roofMat = new THREE.MeshLambertMaterial({ color: 0xb91c1c });
+                    const windowMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8 });
+                    const foliageMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+
+                    const bWidth = 6.5;
+                    const bHeight = 12 + (i % 3) * 3.5;
+                    const bDepth = 7.2;
+
+                    const schoolBuilding = new THREE.Mesh(new THREE.BoxGeometry(bWidth, bHeight, bDepth), schoolWallMat);
+                    schoolBuilding.position.set(0, bHeight / 2, 0);
+                    propGroup.add(schoolBuilding);
+
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(bWidth + 0.4, 0.8, bDepth + 0.4), roofMat);
+                    roof.position.set(0, bHeight + 0.4, 0);
+                    propGroup.add(roof);
+
+                    const innerFaceX = -side * (bWidth / 2 + 0.05);
+                    for (let wy = 3; wy < bHeight - 1.5; wy += 3.2) {
+                        for (let wz = -2.0; wz <= 2.0; wz += 2.0) {
+                            const win = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.5, 1.2), windowMat);
+                            win.position.set(innerFaceX, wy, wz);
+                            propGroup.add(win);
+                        }
+                    }
+
+                    const treeTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 3.6, 7), new THREE.MeshLambertMaterial({ color: 0x78350f }));
+                    treeTrunk.position.set(-side * 4.3, 1.8, 2.2);
+                    propGroup.add(treeTrunk);
+
+                    const treeTop = new THREE.Mesh(new THREE.SphereGeometry(1.7, 8, 8), foliageMat);
+                    treeTop.position.set(-side * 4.3, 4.2, 2.2);
+                    propGroup.add(treeTop);
+
+                    propGroup.position.set(side * 13.8, 0, zPos);
+                }
+
+                scene.add(propGroup);
+                sceneryProps.push(propGroup);
+            }
+        }
+
+        // 초기 챕터 1(바다 해저) 환경 세팅
+        buildChapterScenery(1);
+        scene.background.setHex(chapterConfig[1].skyHex);
+        scene.fog.color.setHex(chapterConfig[1].skyHex);
+
+        /**
+         * ==========================================
+         * 4. CHARACTER MODELS (RUNNER GIRL & CHASER BOY)
+         * ==========================================
+         */
+        function createRunnerGirlCharacter() {
+            const group = new THREE.Group();
+
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xffe4d6 });
+            const hairMat = new THREE.MeshLambertMaterial({ color: 0x111318 });
+            const pinMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const shirtMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+            const tieMat = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+            const skirtMat = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+            const bagMat = new THREE.MeshLambertMaterial({ color: 0xc4b5fd });
+            const sockMat = new THREE.MeshLambertMaterial({ color: 0xef4444 });
+            const slipperBlackMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
+            const slipperWhiteMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+
+            // Torso (White School Shirt)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.78, 0.4), shirtMat);
+            torso.position.y = 1.25;
+            torso.castShadow = true;
+            group.add(torso);
+
+            // Black Necktie (front)
+            const tie = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.55, 0.06), tieMat);
+            tie.position.set(0, 1.28, -0.22);
+            group.add(tie);
+
+            // Black School Skirt
+            const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.44, 0.52, 12), skirtMat);
+            skirt.position.y = 0.72;
+            skirt.castShadow = true;
+            group.add(skirt);
+
+            // Lavender Backpack & Shoulder Straps
+            const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.72, 0.34), bagMat);
+            backpack.position.set(0, 1.24, 0.34);
+            backpack.castShadow = true;
+            group.add(backpack);
+
+            [-0.25, 0.25].forEach(sx => {
+                const strap = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.68, 0.48), bagMat);
+                strap.position.set(sx, 1.3, 0.02);
+                group.add(strap);
+            });
+
+            // Head & Black Bob Hair + Red Hairpin
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skinMat);
+            head.position.y = 1.98;
+            head.castShadow = true;
+            group.add(head);
+
+            // Hair Top & Bangs
+            const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.24, 0.68), hairMat);
+            hairTop.position.set(0, 2.24, 0);
+            group.add(hairTop);
+
+            const bangs = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.16, 0.08), hairMat);
+            bangs.position.set(0, 2.1, -0.32);
+            group.add(bangs);
+
+            // Red Hairpin on front-left bang
+            const hairpin = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.045, 0.09), pinMat);
+            hairpin.position.set(0.18, 2.13, -0.33);
+            hairpin.rotation.z = -0.22;
+            group.add(hairpin);
+
+            // Side & Back Bob Hair (sways while running)
+            const hairBackGroup = new THREE.Group();
+            hairBackGroup.position.set(0, 2.0, 0.18);
+            const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.78, 0.38), hairMat);
+            hairBack.position.y = -0.22;
+            hairBackGroup.add(hairBack);
+
+            [-0.33, 0.33].forEach(hx => {
+                const sideLock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.68, 0.44), hairMat);
+                sideLock.position.set(hx, -0.22, -0.22);
+                hairBackGroup.add(sideLock);
+            });
+            group.add(hairBackGroup);
+
+            // Limbs (Arms in white long sleeves + Legs with red socks & 3-stripe slippers)
+            function createLeg(xOffset) {
+                const legPivot = new THREE.Group();
+                legPivot.position.set(xOffset, 0.55, 0);
+
+                const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.42, 0.22), skinMat);
+                thigh.position.y = -0.2;
+                legPivot.add(thigh);
+
+                const sock = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.13, 0.24), sockMat);
+                sock.position.set(0, -0.46, -0.02);
+                legPivot.add(sock);
+
+                const slipperSole = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.07, 0.36), slipperBlackMat);
+                slipperSole.position.set(0, -0.52, -0.05);
+                legPivot.add(slipperSole);
+
+                const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.05, 0.05), slipperWhiteMat);
+                stripe1.position.set(0, -0.47, -0.05);
+                legPivot.add(stripe1);
+
+                const stripe2 = stripe1.clone();
+                stripe2.position.z = -0.14;
+                legPivot.add(stripe2);
+
+                return legPivot;
+            }
+
+            function createArm(xOffset) {
+                const armPivot = new THREE.Group();
+                armPivot.position.set(xOffset, 1.56, 0);
+
+                const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.52, 0.2), shirtMat);
+                sleeve.position.y = -0.24;
+                armPivot.add(sleeve);
+
+                const hand = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.16), skinMat);
+                hand.position.y = -0.54;
+                armPivot.add(hand);
+
+                return armPivot;
+            }
+
+            const leftLeg = createLeg(-0.18);
+            const rightLeg = createLeg(0.18);
+            const leftArm = createArm(-0.46);
+            const rightArm = createArm(0.46);
+
+            group.add(leftLeg, rightLeg, leftArm, rightArm);
+
+            // Jetpack Visual (Hidden unless active)
+            const jetpack = new THREE.Group();
+            const tankMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, metalness: 0.5, roughness: 0.3 });
+            [-0.18, 0.18].forEach(tx => {
+                const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.72, 10), tankMat);
+                tank.position.set(tx, 1.25, 0.54);
+                jetpack.add(tank);
+            });
+            jetpack.visible = false;
+            group.add(jetpack);
+
+            return {
+                mesh: group,
+                leftLeg,
+                rightLeg,
+                leftArm,
+                rightArm,
+                hairBackGroup,
+                jetpack
+            };
+        }
+
+        function createBoyChaserCharacter() {
+            const group = new THREE.Group();
+
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xfde2d2 });
+            const hairMat = new THREE.MeshLambertMaterial({ color: 0x262322 });
+            const coatMat = new THREE.MeshLambertMaterial({ color: 0xd99b26 }); // Mustard duffle coat
+            const innerShirtMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+            const toggleMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
+            const bagMat = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+            const pantsMat = new THREE.MeshLambertMaterial({ color: 0x111318 });
+            const shoeMat = new THREE.MeshLambertMaterial({ color: 0x9ca3af });
+            const shoeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+
+            // Long Mustard Duffle Coat Torso
+            const coatBody = new THREE.Mesh(new THREE.BoxGeometry(0.82, 1.15, 0.48), coatMat);
+            coatBody.position.y = 1.12;
+            coatBody.castShadow = true;
+            group.add(coatBody);
+
+            // White Inner Shirt Collar (front)
+            const innerShirt = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.35, 0.06), innerShirtMat);
+            innerShirt.position.set(0, 1.52, -0.23);
+            group.add(innerShirt);
+
+            // 4 Black Duffle Coat Toggle Buttons (front)
+            for (let t = 0; t < 4; t++) {
+                const toggle = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.05, 0.06), toggleMat);
+                toggle.position.set(0, 1.38 - t * 0.22, -0.25);
+                group.add(toggle);
+            }
+
+            // Black Backpack & Straps
+            const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.82, 0.36), bagMat);
+            backpack.position.set(0, 1.24, 0.38);
+            backpack.castShadow = true;
+            group.add(backpack);
+
+            [-0.28, 0.28].forEach(sx => {
+                const strap = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.72, 0.56), bagMat);
+                strap.position.set(sx, 1.34, 0.02);
+                group.add(strap);
+            });
+
+            // Head & Short Crew-cut Hair
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.64, 0.64), skinMat);
+            head.position.y = 2.02;
+            head.castShadow = true;
+            group.add(head);
+
+            const hairCap = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.24, 0.68), hairMat);
+            hairCap.position.set(0, 2.26, 0.02);
+            group.add(hairCap);
+
+            const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.42, 0.14), hairMat);
+            hairBack.position.set(0, 2.06, 0.3);
+            group.add(hairBack);
+
+            // Limbs (Black Pants + Grey/White Sneakers + Mustard Coat Sleeves)
+            function createChaserLeg(xOffset) {
+                const legPivot = new THREE.Group();
+                legPivot.position.set(xOffset, 0.62, 0);
+
+                const pant = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.5, 0.26), pantsMat);
+                pant.position.y = -0.24;
+                legPivot.add(pant);
+
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.4), shoeMat);
+                shoe.position.set(0, -0.54, -0.06);
+                legPivot.add(shoe);
+
+                const sole = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.05, 0.41), shoeWhiteMat);
+                sole.position.set(0, -0.6, -0.06);
+                legPivot.add(sole);
+
+                return legPivot;
+            }
+
+            function createChaserArm(xOffset) {
+                const armPivot = new THREE.Group();
+                armPivot.position.set(xOffset, 1.58, 0);
+
+                const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.56, 0.24), coatMat);
+                sleeve.position.y = -0.26;
+                armPivot.add(sleeve);
+
+                const hand = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.18), skinMat);
+                hand.position.y = -0.58;
+                armPivot.add(hand);
+
+                return armPivot;
+            }
+
+            const leftLeg = createChaserLeg(-0.2);
+            const rightLeg = createChaserLeg(0.2);
+            const leftArm = createChaserArm(-0.53);
+            const rightArm = createChaserArm(0.53);
+
+            group.add(leftLeg, rightLeg, leftArm, rightArm);
+
+            return {
+                mesh: group,
+                leftLeg,
+                rightLeg,
+                leftArm,
+                rightArm
+            };
+        }
+
+        // 10,000점 엔딩 전용 캐릭터: 검은 세미 울프컷 + 검은 교복 마이 + 노란 명찰('지수원') + 꽃다발
+        function createEndingBoyCharacter() {
+            const group = new THREE.Group();
+
+            const skinMat = new THREE.MeshLambertMaterial({ color: 0xffe6d8 });
+            const hairMat = new THREE.MeshLambertMaterial({ color: 0x111318 });
+            const blazerMat = new THREE.MeshLambertMaterial({ color: 0x111318 }); // 검은 교복 마이
+            const shirtMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });  // 흰 와이셔츠
+            const tieMat = new THREE.MeshLambertMaterial({ color: 0x090d16 });    // 검은 넥타이
+            const pantsMat = new THREE.MeshLambertMaterial({ color: 0x111318 });
+            const shoeMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+
+            // 노란 명찰 ('지수원' 텍스트 캔버스 텍스처)
+            const tagCanvas = document.createElement('canvas');
+            tagCanvas.width = 128;
+            tagCanvas.height = 48;
+            const tCtx = tagCanvas.getContext('2d');
+            tCtx.fillStyle = '#facc15';
+            tCtx.fillRect(0, 0, 128, 48);
+            tCtx.strokeStyle = '#854d0e';
+            tCtx.lineWidth = 6;
+            tCtx.strokeRect(3, 3, 122, 42);
+            tCtx.fillStyle = '#111827';
+            tCtx.font = 'bold 26px sans-serif';
+            tCtx.textAlign = 'center';
+            tCtx.textBaseline = 'middle';
+            tCtx.fillText('지수원', 64, 25);
+            const nameTagTex = new THREE.CanvasTexture(tagCanvas);
+            const nameTagMat = new THREE.MeshBasicMaterial({ map: nameTagTex });
+
+            // 교복 마이 상체
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.92, 0.44), blazerMat);
+            torso.position.y = 1.24;
+            torso.castShadow = true;
+            group.add(torso);
+
+            // 흰 와이셔츠 V넥 & 검은 넥타이 (전면 -Z 방향)
+            const shirtFront = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.44, 0.05), shirtMat);
+            shirtFront.position.set(0, 1.46, -0.21);
+            group.add(shirtFront);
+
+            const tie = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.42, 0.06), tieMat);
+            tie.position.set(0, 1.42, -0.22);
+            group.add(tie);
+
+            // 왼쪽 가슴 위 노란 명찰
+            const nameTag = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.07, 0.04), nameTagMat);
+            nameTag.position.set(0.22, 1.44, -0.225);
+            group.add(nameTag);
+
+            // 얼굴 & 웃는 입매
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skinMat);
+            head.position.y = 2.02;
+            head.castShadow = true;
+            group.add(head);
+
+            // 눈 & 미소 디테일 (전면 -Z)
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+            const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            [-0.14, 0.14].forEach(ex => {
+                const sclera = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.08, 0.02), eyeWhiteMat);
+                sclera.position.set(ex, 2.04, -0.312);
+                const pupil = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.025), eyeMat);
+                pupil.position.set(ex, 2.04, -0.315);
+                group.add(sclera, pupil);
+            });
+
+            const smile = new THREE.Mesh(
+                new THREE.BoxGeometry(0.16, 0.045, 0.02),
+                new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+            );
+            smile.position.set(0, 1.88, -0.313);
+            group.add(smile);
+
+            // 세미 울프컷 헤어스타일 (앞머리 뱅 + 정수리 삐침 머리 + 뒷목까지 내려오는 긴 뒷머리)
+            const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.24, 0.68), hairMat);
+            hairTop.position.set(0, 2.28, 0.01);
+            group.add(hairTop);
+
+            // 정수리 삐침 머리 (사진 특징)
+            const ahoge1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.08), hairMat);
+            ahoge1.position.set(-0.08, 2.44, 0.04);
+            ahoge1.rotation.z = 0.45;
+            const ahoge2 = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.18, 0.07), hairMat);
+            ahoge2.position.set(0.03, 2.42, 0.06);
+            ahoge2.rotation.z = -0.35;
+            group.add(ahoge1, ahoge2);
+
+            // 앞머리 뱅
+            const bangs = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.17, 0.08), hairMat);
+            bangs.position.set(0, 2.15, -0.32);
+            group.add(bangs);
+
+            // 뒷목까지 내려오는 세미 울프컷 뒷머리 & 옆머리
+            const wolfBack = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.86, 0.24), hairMat);
+            wolfBack.position.set(0, 1.86, 0.26);
+            group.add(wolfBack);
+
+            [-0.32, 0.32].forEach(sx => {
+                const sideHair = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.62, 0.34), hairMat);
+                sideHair.position.set(sx, 1.94, 0.12);
+                group.add(sideHair);
+            });
+
+            // 하체 (검은 교복 바지 & 구두)
+            [-0.19, 0.19].forEach(lx => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.78, 0.24), pantsMat);
+                leg.position.set(lx, 0.44, 0);
+                leg.castShadow = true;
+                group.add(leg);
+
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.13, 0.38), shoeMat);
+                shoe.position.set(lx, 0.07, -0.05);
+                group.add(shoe);
+            });
+
+            // 꽃다발을 내미는 양팔
+            const leftArm = new THREE.Group();
+            leftArm.position.set(-0.48, 1.56, 0);
+            const lSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.56, 0.21), blazerMat);
+            lSleeve.position.y = -0.26;
+            const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.15, 0.16), skinMat);
+            lHand.position.y = -0.56;
+            leftArm.add(lSleeve, lHand);
+            leftArm.rotation.x = 1.05;
+            leftArm.rotation.z = -0.22;
+
+            const rightArm = new THREE.Group();
+            rightArm.position.set(0.48, 1.56, 0);
+            const rSleeve = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.56, 0.21), blazerMat);
+            rSleeve.position.y = -0.26;
+            const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.15, 0.16), skinMat);
+            rHand.position.y = -0.56;
+            rightArm.add(rSleeve, rHand);
+            rightArm.rotation.x = 1.05;
+            rightArm.rotation.z = 0.22;
+
+            group.add(leftArm, rightArm);
+
+            // 화사한 장미 꽃다발 (손 앞쪽 -Z 방향)
+            const bouquet = new THREE.Group();
+            bouquet.position.set(0, 1.24, -0.62);
+            bouquet.rotation.x = -0.45;
+
+            const wrapCone = new THREE.Mesh(
+                new THREE.ConeGeometry(0.28, 0.58, 10),
+                new THREE.MeshLambertMaterial({ color: 0xfce7f3 })
+            );
+            wrapCone.rotation.x = Math.PI;
+            wrapCone.position.y = -0.15;
+            bouquet.add(wrapCone);
+
+            const ribbon = new THREE.Mesh(
+                new THREE.TorusGeometry(0.12, 0.03, 6, 12),
+                new THREE.MeshBasicMaterial({ color: 0xf43f5e })
+            );
+            ribbon.rotation.x = Math.PI / 2;
+            ribbon.position.y = -0.18;
+            bouquet.add(ribbon);
+
+            const flowerColors = [0xff1e56, 0xff5d8f, 0xffbe0b, 0xf43f5e, 0xff85a1];
+            const flowerOffsets = [
+                [0, 0.22, 0],
+                [-0.14, 0.18, 0.08],
+                [0.14, 0.18, 0.08],
+                [-0.09, 0.17, -0.11],
+                [0.09, 0.17, -0.11],
+                [0, 0.26, -0.05]
+            ];
+            flowerOffsets.forEach((pos, idx) => {
+                const rose = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(0.11, 0),
+                    new THREE.MeshLambertMaterial({ color: flowerColors[idx % flowerColors.length] })
+                );
+                rose.position.set(pos[0], pos[1], pos[2]);
+                bouquet.add(rose);
+            });
+
+            group.add(bouquet);
+
+            return {
+                mesh: group,
+                leftArm,
+                rightArm,
+                bouquet
+            };
+        }
+
+        const player = createRunnerGirlCharacter();
+        scene.add(player.mesh);
+
+        const chaserGroup = new THREE.Group();
+        const chaserBoy = createBoyChaserCharacter();
+        chaserGroup.add(chaserBoy.mesh);
+        scene.add(chaserGroup);
+
+        const endingBoy = createEndingBoyCharacter();
+        endingBoy.mesh.visible = false;
+        scene.add(endingBoy.mesh);
+
+        /**
+         * ==========================================
+         * 5. OBSTACLES & COLLECTIBLES FACTORIES
+         * ==========================================
+         */
+        let entities = [];
+        let collectibles = [];
+        let particles = [];
+
+        function createTrain(laneIdx, zCenter, length = 18, isMoving = false, speedOffset = 18) {
+            const group = new THREE.Group();
+            const bodyColors = [0x2563eb, 0xdc2626, 0x059669, 0xd97706, 0x7c3aed];
+            const color = bodyColors[Math.floor(Math.random() * bodyColors.length)];
+
+            const bodyMat = new THREE.MeshLambertMaterial({ color });
+            const roofMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+            const stripeMat = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 });
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(CONFIG.TRAIN_WIDTH, CONFIG.TRAIN_HEIGHT - 0.3, length),
+                bodyMat
+            );
+            body.position.y = (CONFIG.TRAIN_HEIGHT - 0.3) / 2 + 0.15;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            const roof = new THREE.Mesh(
+                new THREE.BoxGeometry(CONFIG.TRAIN_WIDTH - 0.16, 0.28, length - 0.2),
+                roofMat
+            );
+            roof.position.y = CONFIG.TRAIN_HEIGHT + 0.02;
+            group.add(roof);
+
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(CONFIG.TRAIN_WIDTH + 0.05, 0.25, length + 0.02),
+                stripeMat
+            );
+            stripe.position.y = 1.45;
+            group.add(stripe);
+
+            const frontZ = length / 2 + 0.02;
+            const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.95, 0.08), glassMat);
+            windshield.position.set(0, 2.35, frontZ);
+            group.add(windshield);
+
+            [-0.75, 0.75].forEach(hx => {
+                const headlight = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.1, 10), lightMat);
+                headlight.rotation.x = Math.PI / 2;
+                headlight.position.set(hx, 0.85, frontZ + 0.02);
+                group.add(headlight);
+            });
+
+            group.position.set(CONFIG.LANES[laneIdx], 0, zCenter);
+            scene.add(group);
+
+            entities.push({
+                type: 'TRAIN',
+                mesh: group,
+                lane: laneIdx,
+                z: zCenter,
+                length,
+                height: CONFIG.TRAIN_HEIGHT + 0.15,
+                speedOffset: isMoving ? speedOffset : 0
+            });
+        }
+
+        function createTrainWithRamp(laneIdx, zCenter, length = 18) {
+            createTrain(laneIdx, zCenter, length, false, 0);
+
+            const rampLength = 6.5;
+            const rampHeight = CONFIG.TRAIN_HEIGHT + 0.15;
+            const rampZ = zCenter + length / 2 + rampLength / 2;
+
+            const rampGroup = new THREE.Group();
+            const slopeAngle = Math.atan2(rampHeight, rampLength);
+            const hyp = Math.hypot(rampLength, rampHeight);
+
+            const deck = new THREE.Mesh(
+                new THREE.BoxGeometry(CONFIG.TRAIN_WIDTH - 0.1, 0.24, hyp),
+                materials.ramp
+            );
+            deck.position.y = rampHeight / 2;
+            deck.rotation.x = slopeAngle;
+            deck.castShadow = true;
+            deck.receiveShadow = true;
+            rampGroup.add(deck);
+
+            [-1.12, 1.12].forEach(rx => {
+                const rail = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.14, 0.45, hyp),
+                    materials.barrierWhite
+                );
+                rail.position.set(rx, rampHeight / 2 + 0.2, 0);
+                rail.rotation.x = slopeAngle;
+                rampGroup.add(rail);
+            });
+
+            rampGroup.position.set(CONFIG.LANES[laneIdx], 0, rampZ);
+            scene.add(rampGroup);
+
+            entities.push({
+                type: 'RAMP',
+                mesh: rampGroup,
+                lane: laneIdx,
+                z: rampZ,
+                length: rampLength,
+                height: rampHeight,
+                speedOffset: 0
+            });
+        }
+
+        function createLowBarrier(laneIdx, zCenter) {
+            const group = new THREE.Group();
+
+            [-1.0, 1.0].forEach(px => {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.15, 0.18), materials.barrierWhite);
+                post.position.set(px, 0.58, 0);
+                post.castShadow = true;
+                group.add(post);
+            });
+
+            const board1 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.32, 0.16), materials.barrierRed);
+            board1.position.set(0, 0.92, 0);
+            board1.castShadow = true;
+            group.add(board1);
+
+            const board2 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.24, 0.16), materials.barrierWhite);
+            board2.position.set(0, 0.55, 0);
+            group.add(board2);
+
+            group.position.set(CONFIG.LANES[laneIdx], 0, zCenter);
+            scene.add(group);
+
+            entities.push({
+                type: 'LOW_BARRIER',
+                mesh: group,
+                lane: laneIdx,
+                z: zCenter,
+                length: 0.7,
+                height: 1.15,
+                speedOffset: 0
+            });
+        }
+
+        function createHighBarrier(laneIdx, zCenter) {
+            const group = new THREE.Group();
+
+            [-1.08, 1.08].forEach(px => {
+                const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.1, 0.2), materials.barrierWhite);
+                leg.position.set(px, 1.55, 0);
+                leg.castShadow = true;
+                group.add(leg);
+            });
+
+            const signBoard = new THREE.Mesh(new THREE.BoxGeometry(2.45, 1.45, 0.24), materials.barrierRed);
+            signBoard.position.set(0, 2.35, 0);
+            signBoard.castShadow = true;
+            group.add(signBoard);
+
+            const innerStripe = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.35, 0.27), materials.barrierWhite);
+            innerStripe.position.set(0, 2.35, 0);
+            group.add(innerStripe);
+
+            group.position.set(CONFIG.LANES[laneIdx], 0, zCenter);
+            scene.add(group);
+
+            entities.push({
+                type: 'HIGH_BARRIER',
+                mesh: group,
+                lane: laneIdx,
+                z: zCenter,
+                length: 0.7,
+                height: 3.1,
+                bottomHeight: 1.55,
+                speedOffset: 0
+            });
+        }
+
+        const coinGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.14, 14);
+        coinGeo.rotateX(Math.PI / 2);
+
+        function spawnCoin(laneIdx, yPos, zPos) {
+            const mesh = new THREE.Mesh(coinGeo, materials.coin);
+            mesh.position.set(CONFIG.LANES[laneIdx], yPos, zPos);
+            scene.add(mesh);
+
+            collectibles.push({
+                type: 'COIN',
+                mesh,
+                lane: laneIdx,
+                x: CONFIG.LANES[laneIdx],
+                y: yPos,
+                z: zPos
+            });
+        }
+
+        function spawnCoinLine(laneIdx, startZ, count, spacing = 2.4, baseHeight = 1.0, arcHeight = 0) {
+            for (let i = 0; i < count; i++) {
+                const t = count > 1 ? i / (count - 1) : 0.5;
+                const arcOffset = arcHeight > 0 ? Math.sin(t * Math.PI) * arcHeight : 0;
+                spawnCoin(laneIdx, baseHeight + arcOffset, startZ - i * spacing);
+            }
+        }
+
+        function spawnPowerup(laneIdx, yPos, zPos) {
+            const types = ['magnet', 'jetpack', 'multiplier'];
+            const pType = types[Math.floor(Math.random() * types.length)];
+
+            const group = new THREE.Group();
+            let coreColor = 0xef4444;
+            if (pType === 'jetpack') coreColor = 0x06b6d4;
+            if (pType === 'multiplier') coreColor = 0xa855f7;
+
+            const core = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.55, 0),
+                new THREE.MeshStandardMaterial({ color: coreColor, emissive: coreColor, emissiveIntensity: 0.4 })
+            );
+            group.add(core);
+
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(0.72, 0.06, 8, 20),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            group.add(ring);
+
+            group.position.set(CONFIG.LANES[laneIdx], yPos, zPos);
+            scene.add(group);
+
+            collectibles.push({
+                type: 'POWERUP',
+                powerupType: pType,
+                mesh: group,
+                lane: laneIdx,
+                x: CONFIG.LANES[laneIdx],
+                y: yPos,
+                z: zPos
+            });
+        }
+
+        /**
+         * ==========================================
+         * 6. PROCEDURAL WAVE GENERATOR & PATH VALIDATOR
+         * ==========================================
+         */
+        function getDifficultyLevel() {
+            return Math.min(10, Math.floor(state.score / 1500));
+        }
+
+        function getEntitySweptRange(ent) {
+            const halfLen = ent.length / 2;
+            const currentMinZ = ent.z - halfLen;
+            const currentMaxZ = ent.z + halfLen;
+
+            if (ent.type === 'TRAIN' && ent.speedOffset > 0) {
+                const timeToDespawn = Math.max(0, (CONFIG.DESPAWN_Z + halfLen - ent.z) / (state.speed + ent.speedOffset));
+                const futureMaxZ = currentMaxZ + ent.speedOffset * timeToDespawn + 6.0;
+                return { minZ: currentMinZ - 4.0, maxZ: futureMaxZ };
+            }
+
+            return { minZ: currentMinZ - 3.5, maxZ: currentMaxZ + 3.5 };
+        }
+
+        function isLaneRangeClear(laneIdx, newMinZ, newMaxZ, isMovingTrain = false, movingSpeedOffset = 18) {
+            let checkMinZ = newMinZ - 3.5;
+            let checkMaxZ = newMaxZ + 3.5;
+
+            if (isMovingTrain) {
+                const len = newMaxZ - newMinZ;
+                const centerZ = (newMinZ + newMaxZ) / 2;
+                const timeToDespawn = Math.max(0, (CONFIG.DESPAWN_Z + len / 2 - centerZ) / (state.speed + movingSpeedOffset));
+                checkMaxZ = newMaxZ + movingSpeedOffset * timeToDespawn + 8.0;
+            }
+
+            for (const ent of entities) {
+                if (ent.lane !== laneIdx) continue;
+                const existing = getEntitySweptRange(ent);
+                if (checkMinZ <= existing.maxZ && checkMaxZ >= existing.minZ) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function tryPlaceTrain(laneIdx, zCenter, length, isMoving = false) {
+            const halfLen = length / 2;
+            const diff = getDifficultyLevel();
+            const movingSpeedOffset = isMoving ? (18 + diff * 2.2) : 0;
+            if (!isLaneRangeClear(laneIdx, zCenter - halfLen, zCenter + halfLen, isMoving, movingSpeedOffset)) {
+                return false;
+            }
+            createTrain(laneIdx, zCenter, length, isMoving, movingSpeedOffset);
+            return true;
+        }
+
+        function tryPlaceTrainWithRamp(laneIdx, zCenter, length) {
+            const rampLen = 6.5;
+            const halfLen = length / 2;
+            const totalMinZ = zCenter - halfLen;
+            const totalMaxZ = zCenter + halfLen + rampLen;
+            if (!isLaneRangeClear(laneIdx, totalMinZ, totalMaxZ, false)) {
+                return false;
+            }
+            createTrainWithRamp(laneIdx, zCenter, length);
+            return true;
+        }
+
+        function tryPlaceLowBarrier(laneIdx, zCenter) {
+            if (!isLaneRangeClear(laneIdx, zCenter - 1.2, zCenter + 1.2, false)) {
+                return false;
+            }
+            createLowBarrier(laneIdx, zCenter);
+            return true;
+        }
+
+        function tryPlaceHighBarrier(laneIdx, zCenter) {
+            if (!isLaneRangeClear(laneIdx, zCenter - 1.2, zCenter + 1.2, false)) {
+                return false;
+            }
+            createHighBarrier(laneIdx, zCenter);
+            return true;
+        }
+
+        function spawnWave(zStart) {
+            const diff = getDifficultyLevel();
+            const spacingShrink = Math.min(11, diff * 1.15);
+            const maxPattern = diff >= 1 ? 8 : 6;
+            let pattern = Math.floor(Math.random() * maxPattern);
+            if (diff >= 2 && Math.random() < Math.min(0.65, 0.25 + diff * 0.05)) {
+                pattern = [3, 4, 6, 7][Math.floor(Math.random() * 4)];
+            }
+
+            const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
+            const laneA = lanes[0];
+            const laneB = lanes[1];
+            const openLane = lanes[2];
+
+            const extraObstacleChance = Math.min(0.75, diff * 0.08);
+            const placeExtraPassableObstacle = (targetLane, zPos) => {
+                if (Math.random() < 0.5) {
+                    if (tryPlaceLowBarrier(targetLane, zPos)) {
+                        spawnCoinLine(targetLane, zPos + 4, 4, 2.2, 1.0, 2.2);
+                        return true;
+                    }
+                } else {
+                    if (tryPlaceHighBarrier(targetLane, zPos)) {
+                        spawnCoinLine(targetLane, zPos + 3, 4, 2.2, 0.8);
+                        return true;
+                    }
+                }
+                return false;
+            };
+
+            if (pattern === 0) {
+                if (tryPlaceTrainWithRamp(laneA, zStart - 16, 20)) {
+                    spawnCoinLine(laneA, zStart - 8, 7, 2.5, CONFIG.TRAIN_HEIGHT + 1.0);
+                }
+                tryPlaceTrain(laneB, zStart - 22, 16, true);
+                if (!(Math.random() < extraObstacleChance && placeExtraPassableObstacle(openLane, zStart - 14))) {
+                    spawnCoinLine(openLane, zStart - 6, 7, 2.5, 1.0);
+                }
+
+                if (Math.random() < Math.max(0.18, 0.35 - diff * 0.015)) {
+                    spawnPowerup(openLane, 1.3, zStart - 25);
+                }
+                return 37 - spacingShrink;
+            } else if (pattern === 1) {
+                tryPlaceTrain(laneA, zStart - 16, 18, true);
+                if (tryPlaceHighBarrier(laneB, zStart - 12)) {
+                    spawnCoinLine(laneB, zStart - 6, 5, 2.4, 0.8);
+                    if (diff >= 3) tryPlaceLowBarrier(laneB, zStart - 24);
+                }
+                if (Math.random() < extraObstacleChance) {
+                    placeExtraPassableObstacle(openLane, zStart - 15);
+                } else {
+                    spawnCoinLine(openLane, zStart - 8, 6, 2.5, 1.0);
+                }
+                return 33 - spacingShrink;
+            } else if (pattern === 2) {
+                if (tryPlaceLowBarrier(laneA, zStart - 8)) {
+                    spawnCoinLine(laneA, zStart - 3, 5, 2.4, 1.0, 2.3);
+                    if (diff >= 2) tryPlaceHighBarrier(laneA, zStart - 21);
+                }
+                if (tryPlaceHighBarrier(laneB, zStart - 14)) {
+                    spawnCoinLine(laneB, zStart - 10, 4, 2.4, 0.8);
+                    if (diff >= 4) tryPlaceLowBarrier(laneB, zStart - 26);
+                }
+                if (Math.random() < extraObstacleChance) {
+                    placeExtraPassableObstacle(openLane, zStart - 12);
+                } else if (Math.random() < Math.max(0.2, 0.4 - diff * 0.015)) {
+                    spawnPowerup(openLane, 1.3, zStart - 14);
+                } else {
+                    spawnCoinLine(openLane, zStart - 6, 6, 2.5, 1.0);
+                }
+                return 31 - spacingShrink;
+            } else if (pattern === 3) {
+                const firstPlaced = tryPlaceTrainWithRamp(laneA, zStart - 13, 14);
+                const secondPlaced = firstPlaced && tryPlaceTrain(laneA, zStart - 33, 14, false);
+                if (firstPlaced) {
+                    spawnCoinLine(laneA, zStart - 8, secondPlaced ? 11 : 5, 2.6, CONFIG.TRAIN_HEIGHT + 1.0);
+                }
+                tryPlaceHighBarrier(laneB, zStart - 16);
+                if (diff >= 2) {
+                    tryPlaceLowBarrier(laneB, zStart - 30);
+                    placeExtraPassableObstacle(openLane, zStart - 22);
+                }
+                return 46 - spacingShrink;
+            } else if (pattern === 4) {
+                tryPlaceTrain(laneA, zStart - 12, 15, true);
+                tryPlaceTrain(laneB, zStart - 26, 15, true);
+                if (Math.random() < extraObstacleChance) {
+                    placeExtraPassableObstacle(openLane, zStart - 16);
+                } else {
+                    spawnCoinLine(openLane, zStart - 6, 8, 2.6, 1.0);
+                }
+                if (Math.random() < 0.3) {
+                    spawnPowerup(openLane, 1.2, zStart - 28);
+                }
+                return 38 - spacingShrink;
+            } else if (pattern === 6) {
+                tryPlaceTrain(laneA, zStart - 15, 18, diff >= 3);
+                tryPlaceTrainWithRamp(laneB, zStart - 18, 18);
+                placeExtraPassableObstacle(openLane, zStart - 14);
+                if (diff >= 5) {
+                    placeExtraPassableObstacle(openLane, zStart - 27);
+                }
+                return 35 - spacingShrink;
+            } else if (pattern === 7) {
+                placeExtraPassableObstacle(laneA, zStart - 8);
+                placeExtraPassableObstacle(laneB, zStart - 14);
+                placeExtraPassableObstacle(openLane, zStart - 20);
+                if (diff >= 3) {
+                    placeExtraPassableObstacle(laneA, zStart - 26);
+                    placeExtraPassableObstacle(laneB, zStart - 31);
+                }
+                return 34 - spacingShrink;
+            } else {
+                tryPlaceLowBarrier(laneA, zStart - 10);
+                tryPlaceTrain(laneB, zStart - 14, 16, diff >= 2);
+                if (Math.random() < extraObstacleChance) {
+                    placeExtraPassableObstacle(openLane, zStart - 12);
+                } else {
+                    spawnCoinLine(openLane, zStart - 6, 6, 2.5, 1.0);
+                }
+                return 29 - spacingShrink;
+            }
+        }
+
+        /**
+         * ==========================================
+         * 7. PARTICLE EFFECTS
+         * ==========================================
+         */
+        function spawnParticles(x, y, z, colorHex, count = 10) {
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+            const geo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+            for (let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y, z);
+                scene.add(mesh);
+                particles.push({
+                    mesh,
+                    vx: (Math.random() - 0.5) * 9,
+                    vy: Math.random() * 8 + 2,
+                    vz: (Math.random() - 0.5) * 9,
+                    life: 0.45 + Math.random() * 0.25
+                });
+            }
+        }
+
+        /**
+         * ==========================================
+         * 8. UI & GAME FLOW CONTROLS
+         * ==========================================
+         */
+        const ui = {
+            hudLayer: document.getElementById('hud-layer'),
+            startScreen: document.getElementById('start-screen'),
+            pauseScreen: document.getElementById('pause-screen'),
+            gameoverScreen: document.getElementById('gameover-screen'),
+            endingDialogueBox: document.getElementById('ending-dialogue-box'),
+            endingScreen: document.getElementById('ending-screen'),
+            hudChapter: document.getElementById('hud-chapter'),
+            hudScore: document.getElementById('hud-score'),
+            hudCoins: document.getElementById('hud-coins'),
+            hudMultiplier: document.getElementById('hud-multiplier'),
+            powerupsContainer: document.getElementById('powerups-container'),
+            toastBanner: document.getElementById('toast-banner'),
+            startHighscore: document.getElementById('start-highscore'),
+            finalScore: document.getElementById('final-score'),
+            finalCoins: document.getElementById('final-coins'),
+            finalHighscore: document.getElementById('final-highscore'),
+            newRecordTag: document.getElementById('new-record-tag'),
+            endingScore: document.getElementById('ending-score'),
+            endingCoins: document.getElementById('ending-coins'),
+            endingHighscore: document.getElementById('ending-highscore'),
+            endingNewRecordTag: document.getElementById('ending-new-record-tag'),
+            btnMute: document.getElementById('btn-mute')
+        };
+
+        ui.startHighscore.textContent = state.highScore.toLocaleString();
+
+        let toastTimeout = null;
+        function showToast(text) {
+            ui.toastBanner.textContent = text;
+            ui.toastBanner.classList.add('show');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                ui.toastBanner.classList.remove('show');
+            }, 1600);
+        }
+
+        function clearWorldEntities() {
+            entities.forEach(e => scene.remove(e.mesh));
+            collectibles.forEach(c => scene.remove(c.mesh));
+            particles.forEach(p => scene.remove(p.mesh));
+            entities = [];
+            collectibles = [];
+            particles = [];
+            endingBoy.mesh.visible = false;
+            state.chapter = 1;
+            buildChapterScenery(1);
+            scene.background.setHex(chapterConfig[1].skyHex);
+            scene.fog.color.setHex(chapterConfig[1].skyHex);
+        }
+
+        function startGame() {
+            sound.init();
+            sound.playWhistle();
+            clearWorldEntities();
+
+            state.status = 'PLAYING';
+            state.score = 0;
+            state.coins = 0;
+            state.speed = CONFIG.BASE_SPEED;
+            state.difficultyLevel = 0;
+            state.chapter = 1;
+            state.endingTimer = 0;
+            state.currentLane = 1;
+            state.previousLane = 1;
+            state.playerX = 0;
+            state.playerY = 0;
+            state.velY = 0;
+            state.groundY = 0;
+            state.isJumping = false;
+            state.isRolling = false;
+            state.rollTimer = 0;
+            state.stumbleTimer = 7.5;
+            state.chaserDistance = 3.6;
+            state.powerups = { magnet: 0, jetpack: 0, multiplier: 0 };
+            state.shakeTime = 0;
+            state.nextSpawnZ = -48;
+
+            while (state.nextSpawnZ > CONFIG.SPAWN_Z) {
+                const len = spawnWave(state.nextSpawnZ);
+                state.nextSpawnZ -= len;
+            }
+
+            ui.startScreen.classList.add('hidden');
+            ui.pauseScreen.classList.add('hidden');
+            ui.gameoverScreen.classList.add('hidden');
+            ui.endingDialogueBox.classList.add('hidden');
+            ui.endingScreen.classList.add('hidden');
+            ui.hudLayer.classList.remove('hidden');
+
+            showToast('CH.1 바다 해저! 지수원에게서 도망쳐라! 🌊🏃‍♀️');
+        }
+
+        function pauseGame() {
+            if (state.status !== 'PLAYING') return;
+            state.status = 'PAUSED';
+            ui.pauseScreen.classList.remove('hidden');
+        }
+
+        function resumeGame() {
+            if (state.status !== 'PAUSED') return;
+            state.status = 'PLAYING';
+            ui.pauseScreen.classList.add('hidden');
+            lastTime = performance.now();
+        }
+
+        function triggerGameOver() {
+            if (state.status === 'GAMEOVER') return;
+            state.status = 'GAMEOVER';
+            sound.playCrash();
+            triggerCameraShake(0.45, 0.7);
+            spawnParticles(state.playerX, state.playerY + 1, 0, 0xffbe0b, 22);
+
+            const finalScoreInt = Math.floor(state.score);
+            const isNewRecord = finalScoreInt > state.highScore;
+            if (isNewRecord) {
+                state.highScore = finalScoreInt;
+                localStorage.setItem('metro_surfer_highscore', state.highScore.toString());
+            }
+
+            ui.finalScore.textContent = finalScoreInt.toLocaleString();
+            ui.finalCoins.textContent = `🪙 ${state.coins.toLocaleString()}`;
+            ui.finalHighscore.textContent = state.highScore.toLocaleString();
+            ui.newRecordTag.classList.toggle('hidden', !isNewRecord);
+
+            ui.hudLayer.classList.add('hidden');
+            setTimeout(() => {
+                ui.gameoverScreen.classList.remove('hidden');
+            }, 450);
+        }
+
+        function triggerEnding() {
+            if (state.status === 'ENDING') return;
+            state.status = 'ENDING';
+            state.score = 10000;
+            state.endingTimer = 0;
+
+            sound.playEndingFanfare();
+            ui.hudLayer.classList.add('hidden');
+            ui.toastBanner.classList.remove('show');
+
+            // 필드 장애물 및 코인 정리
+            entities.forEach(e => scene.remove(e.mesh));
+            collectibles.forEach(c => scene.remove(c.mesh));
+            entities = [];
+            collectibles = [];
+
+            // 도망자(여학생) 중앙 정지 자세 세팅
+            state.currentLane = 1;
+            state.playerX = 0;
+            state.playerY = 0;
+            state.velY = 0;
+            state.isJumping = false;
+            state.isRolling = false;
+            player.jetpack.visible = false;
+            player.mesh.scale.set(1, 1, 1);
+            player.mesh.position.set(0, 0, 1.2);
+            player.mesh.rotation.set(0, 0, 0); // 도망자의 전면(-Z)이 앞쪽(-Z)의 지수원을 정확히 마주봄
+            player.leftLeg.rotation.x = 0;
+            player.rightLeg.rotation.x = 0;
+            player.leftArm.rotation.x = 0;
+            player.rightArm.rotation.x = 0;
+            player.hairBackGroup.rotation.x = 0;
+
+            // 추격자 숨기고 엔딩 남학생(지수원) 등장
+            chaserGroup.visible = false;
+            endingBoy.mesh.visible = true;
+            endingBoy.mesh.position.set(0, 0, -4.5);
+            endingBoy.mesh.rotation.set(0, Math.PI, 0); // 지수원의 전면(-Z)이 회전되어 뒤쪽(+Z)의 도망자를 정확히 마주봄
+
+            // 하트 & 꽃잎 파티클 분출
+            spawnParticles(0, 2.2, 0, 0xff4d6d, 28);
+            spawnParticles(0, 2.5, -0.5, 0xfbcfe8, 22);
+
+            const finalScoreInt = Math.floor(state.score);
+            const isNewRecord = finalScoreInt > state.highScore;
+            if (isNewRecord) {
+                state.highScore = finalScoreInt;
+                localStorage.setItem('metro_surfer_highscore', state.highScore.toString());
+            }
+
+            ui.endingScore.textContent = finalScoreInt.toLocaleString();
+            ui.endingCoins.textContent = `🪙 ${state.coins.toLocaleString()}`;
+            ui.endingHighscore.textContent = state.highScore.toLocaleString();
+            ui.endingNewRecordTag.classList.toggle('hidden', !isNewRecord);
+
+            ui.endingDialogueBox.classList.remove('hidden');
+        }
+
+        function updateEndingCutscene(dt, now) {
+            state.endingTimer += dt;
+
+            // 엔딩 남학생이 도망자 앞까지 다가가 꽃다발을 내밈
+            const targetZ = -0.35;
+            endingBoy.mesh.position.z += (targetZ - endingBoy.mesh.position.z) * Math.min(1, 3.2 * dt);
+
+            // 꽃다발을 살짝 내밀며 고개 숙여 인사하는 애니메이션
+            const bowAngle = Math.min(0.18, state.endingTimer * 0.12);
+            endingBoy.mesh.rotation.x = bowAngle;
+            endingBoy.bouquet.position.z = -0.62 - Math.sin(now * 0.004) * 0.04;
+
+            // 주변에 핑크빛 꽃잎/하트 파티클 지속 생성
+            if (Math.random() < 0.35) {
+                spawnParticles(
+                    (Math.random() - 0.5) * 3.2,
+                    2.6 + Math.random() * 1.4,
+                    (Math.random() - 0.5) * 2.5,
+                    Math.random() < 0.5 ? 0xff4d6d : 0xf9a8d4,
+                    1
+                );
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= dt;
+                p.vy -= 4.5 * dt;
+                p.mesh.position.x += p.vx * 0.25 * dt;
+                p.mesh.position.y += p.vy * 0.35 * dt;
+                p.mesh.position.z += p.vz * 0.25 * dt;
+                p.mesh.scale.setScalar(Math.max(0.01, p.life * 2.2));
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // 두 캐릭터가 마주 보고 꽃을 건네는 모습을 잘 담는 측면 대각선 시네마틱 카메라
+            const camX = 3.2 + Math.sin(state.endingTimer * 0.45) * 0.45;
+            const camY = 2.35;
+            const camZ = 0.45;
+            camera.position.x += (camX - camera.position.x) * Math.min(1, 4 * dt);
+            camera.position.y += (camY - camera.position.y) * Math.min(1, 4 * dt);
+            camera.position.z += (camZ - camera.position.z) * Math.min(1, 4 * dt);
+            camera.lookAt(0, 1.45, 0.35);
+
+            // 4.5초 후 해피 엔딩 결과 모달 표시
+            if (state.endingTimer >= 4.5 && ui.endingScreen.classList.contains('hidden')) {
+                ui.endingDialogueBox.classList.add('hidden');
+                ui.endingScreen.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * ==========================================
+         * 9. PLAYER INPUT & MOVEMENT CONTROLS
+         * ==========================================
+         */
+        function triggerCameraShake(intensity, duration) {
+            state.shakeIntensity = intensity;
+            state.shakeTime = duration;
+        }
+
+        function moveLane(dir) {
+            if (state.status !== 'PLAYING') return;
+            const target = Math.max(0, Math.min(2, state.currentLane + dir));
+            if (target !== state.currentLane) {
+                state.previousLane = state.currentLane;
+                state.currentLane = target;
+                sound.playLaneSwitch();
+            }
+        }
+
+        function jump() {
+            if (state.status !== 'PLAYING') return;
+            if (state.powerups.jetpack > 0) return;
+
+            if (!state.isJumping && state.playerY <= state.groundY + 0.15) {
+                state.velY = CONFIG.JUMP_FORCE;
+                state.isJumping = true;
+                state.isRolling = false;
+                sound.playJump();
+            }
+        }
+
+        function roll() {
+            if (state.status !== 'PLAYING') return;
+            if (state.powerups.jetpack > 0) return;
+
+            if (state.isJumping) {
+                state.velY = -48;
+            }
+            state.isRolling = true;
+            state.rollTimer = 0.62;
+            sound.playRoll();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (state.status !== 'PLAYING') {
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    if (state.status === 'START' || state.status === 'GAMEOVER') startGame();
+                    else if (state.status === 'PAUSED') resumeGame();
+                }
+                return;
+            }
+
+            switch (e.code) {
+                case 'ArrowLeft':
+                case 'KeyA':
+                    moveLane(-1);
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    moveLane(1);
+                    break;
+                case 'ArrowUp':
+                case 'KeyW':
+                case 'Space':
+                    jump();
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    roll();
+                    break;
+                case 'Escape':
+                case 'KeyP':
+                    pauseGame();
+                    break;
+            }
+        });
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchHandled = false;
+
+        function handlePointerStart(x, y) {
+            touchStartX = x;
+            touchStartY = y;
+            touchHandled = false;
+        }
+
+        function handlePointerMove(x, y) {
+            if (touchHandled || state.status !== 'PLAYING') return;
+            const dx = x - touchStartX;
+            const dy = y - touchStartY;
+            const threshold = 28;
+
+            if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+                touchHandled = true;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    moveLane(dx > 0 ? 1 : -1);
+                } else {
+                    if (dy < 0) jump();
+                    else roll();
+                }
+            }
+        }
+
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                handlePointerStart(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: true });
+
+        let isMouseDown = false;
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            handlePointerStart(e.clientX, e.clientY);
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (isMouseDown) handlePointerMove(e.clientX, e.clientY);
+        });
+        window.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+        document.getElementById('btn-ending-restart').addEventListener('click', startGame);
+        document.getElementById('btn-pause').addEventListener('click', pauseGame);
+        document.getElementById('btn-resume').addEventListener('click', resumeGame);
+        ui.btnMute.addEventListener('click', () => {
+            const muted = sound.toggleMute();
+            ui.btnMute.textContent = muted ? '🔇' : '🔊';
+        });
+
+        /**
+         * ==========================================
+         * 10. MAIN SIMULATION & COLLISION LOOP
+         * ==========================================
+         */
+        function activatePowerup(type) {
+            sound.playPowerup();
+            state.powerups[type] = CONFIG.POWERUP_DURATION[type];
+
+            if (type === 'jetpack') {
+                showToast('제트팩 발동! 🚀');
+                state.isJumping = false;
+                state.isRolling = false;
+                for (let i = 1; i <= 14; i++) {
+                    const lane = Math.floor(Math.random() * 3);
+                    spawnCoin(lane, 8.2, -16 - i * 4.2);
+                }
+            } else if (type === 'magnet') {
+                showToast('슈퍼 자석 발동! 🧲');
+            } else if (type === 'multiplier') {
+                showToast('점수 2배 부스터! ⭐');
+            }
+        }
+
+        function handleStumble() {
+            if (state.stumbleTimer > 0) {
+                triggerGameOver();
+            } else {
+                state.stumbleTimer = 6.5;
+                sound.playStumble();
+                sound.playWhistle();
+                triggerCameraShake(0.25, 0.4);
+                showToast('앗! 부딪혔다! 지수원이 바짝 쫓아옵니다! 🏃‍♂️💨');
+            }
+        }
+
+        function updateGame(dt) {
+            if (state.status !== 'PLAYING') return;
+
+            // 1. Speed & Difficulty Progression
+            const currentDiff = getDifficultyLevel();
+            if (currentDiff > state.difficultyLevel) {
+                state.difficultyLevel = currentDiff;
+                showToast(`속도 상승! 위험 단계 Lv.${currentDiff + 1} 🔥`);
+            }
+
+            // 1-1. 점수에 따른 챕터 전환
+            const targetChapter = state.score >= 5500 ? 3 : (state.score >= 2500 ? 2 : 1);
+            if (targetChapter !== state.chapter) {
+                state.chapter = targetChapter;
+                buildChapterScenery(targetChapter);
+                sound.playPowerup();
+                showToast(chapterConfig[targetChapter].toast);
+            }
+
+            const scoreTargetSpeed = CONFIG.BASE_SPEED + Math.min(34, state.score * 0.0022);
+            state.speed = Math.min(CONFIG.MAX_SPEED, Math.max(state.speed + CONFIG.SPEED_ACCEL * dt, scoreTargetSpeed));
+            const mult = state.powerups.multiplier > 0 ? 2 : 1;
+            state.score += state.speed * dt * 2.2 * mult;
+
+            // 10,000점 도달 시 스페셜 고백 엔딩 발동!
+            if (state.score >= 10000) {
+                triggerEnding();
+                return;
+            }
+
+            // 2. Active Power-up Timers
+            ['magnet', 'jetpack', 'multiplier'].forEach(key => {
+                if (state.powerups[key] > 0) {
+                    state.powerups[key] = Math.max(0, state.powerups[key] - dt);
+                }
+            });
+
+            // 3. Lateral Lane Movement
+            const targetX = CONFIG.LANES[state.currentLane];
+            state.playerX += (targetX - state.playerX) * Math.min(1, 16 * dt);
+
+            // 4. Support Surface Check (Train Roof or Ramp)
+            let supportHeight = 0;
+            for (const ent of entities) {
+                if (ent.lane !== state.currentLane) continue;
+                const halfLen = ent.length / 2;
+                const minZ = ent.z - halfLen;
+                const maxZ = ent.z + halfLen;
+
+                if (0 >= minZ - 0.3 && 0 <= maxZ + 0.3) {
+                    if (ent.type === 'TRAIN' && state.playerY >= ent.height - 0.65) {
+                        supportHeight = Math.max(supportHeight, ent.height);
+                    } else if (ent.type === 'RAMP') {
+                        const progress = (maxZ - 0) / ent.length;
+                        const rampY = Math.max(0, Math.min(ent.height, progress * ent.height));
+                        supportHeight = Math.max(supportHeight, rampY);
+                    }
+                }
+            }
+            state.groundY = supportHeight;
+
+            // 5. Vertical Physics (Jetpack vs Gravity)
+            if (state.powerups.jetpack > 0) {
+                player.jetpack.visible = true;
+                const flyHeight = 8.2;
+                state.playerY += (flyHeight - state.playerY) * Math.min(1, 8 * dt);
+                state.velY = 0;
+                state.isJumping = false;
+                if (Math.random() < 0.6) {
+                    spawnParticles(state.playerX, state.playerY + 0.6, 0.6, 0xff5400, 1);
+                }
+            } else {
+                player.jetpack.visible = false;
+                if (state.playerY > state.groundY || state.velY > 0) {
+                    state.velY += CONFIG.GRAVITY * dt;
+                    state.playerY += state.velY * dt;
+
+                    if (state.playerY <= state.groundY) {
+                        state.playerY = state.groundY;
+                        state.velY = 0;
+                        state.isJumping = false;
+                    }
+                } else {
+                    state.playerY = state.groundY;
+                }
+            }
+
+            // 6. Roll Timer & Player Scale/Animation
+            if (state.isRolling) {
+                state.rollTimer -= dt;
+                if (state.rollTimer <= 0) {
+                    state.isRolling = false;
+                }
+            }
+
+            const targetScaleY = state.isRolling ? 0.48 : 1.0;
+            player.mesh.scale.y += (targetScaleY - player.mesh.scale.y) * Math.min(1, 20 * dt);
+            player.mesh.position.set(state.playerX, state.playerY, 0);
+
+            const vx = (targetX - state.playerX);
+            player.mesh.rotation.z = -vx * 0.14;
+
+            if (state.powerups.jetpack > 0) {
+                player.mesh.rotation.x = -0.35;
+                player.leftLeg.rotation.x = 0.2;
+                player.rightLeg.rotation.x = 0.2;
+                player.leftArm.rotation.x = -2.6;
+                player.rightArm.rotation.x = -2.6;
+                player.hairBackGroup.rotation.x = 0.35;
+            } else {
+                player.mesh.rotation.x = 0;
+                if (state.isJumping) {
+                    player.leftLeg.rotation.x = 0.65;
+                    player.rightLeg.rotation.x = -0.55;
+                    player.leftArm.rotation.x = -0.9;
+                    player.rightArm.rotation.x = 0.7;
+                    player.hairBackGroup.rotation.x = 0.3;
+                } else {
+                    state.runCycle += dt * (state.speed * 0.55);
+                    const swing = Math.sin(state.runCycle) * 0.95;
+                    player.leftLeg.rotation.x = swing;
+                    player.rightLeg.rotation.x = -swing;
+                    player.leftArm.rotation.x = -swing * 0.85;
+                    player.rightArm.rotation.x = swing * 0.85;
+                    player.hairBackGroup.rotation.x = 0.18 + Math.abs(Math.sin(state.runCycle)) * 0.15;
+                }
+            }
+
+            // 7. Scroll Environment (Sleepers & Chapter Scenery)
+            const dz = state.speed * dt;
+            sleepers.forEach(s => {
+                s.position.z += dz;
+                if (s.position.z > 26) s.position.z -= 210;
+            });
+
+            sceneryProps.forEach(prop => {
+                prop.position.z += dz;
+                if (prop.position.z > 30) prop.position.z -= 221;
+            });
+
+            overheadArches.forEach(arch => {
+                arch.position.z += dz;
+                if (arch.position.z > 30) arch.position.z -= 220;
+            });
+
+            // 원경 하늘/해저 생물 및 구름 애니메이션
+            const nowSec = performance.now() * 0.001;
+            animatedSkyItems.forEach(item => {
+                if (item.type === 'SWIM') {
+                    item.mesh.position.x += item.speed * dt;
+                    item.mesh.position.y = item.baseY + Math.sin(nowSec * 2.5 + item.phase) * 0.6;
+                    if (item.mesh.position.x > 65) item.mesh.position.x = -65;
+                } else if (item.type === 'DRIFT') {
+                    item.mesh.position.x += item.speed * dt;
+                    if (item.mesh.position.x > 85) item.mesh.position.x = -85;
+                } else if (item.type === 'RAY') {
+                    item.mesh.position.x = item.baseX + Math.sin(nowSec * 0.8 + item.phase) * 2.5;
+                }
+            });
+
+            const targetSkyColor = chapterConfig[state.chapter].skyHex;
+            scene.background.lerp(new THREE.Color(targetSkyColor), Math.min(1, 3.5 * dt));
+            scene.fog.color.copy(scene.background);
+
+            // 8. Spawn New Waves
+            state.nextSpawnZ += dz;
+            while (state.nextSpawnZ > CONFIG.SPAWN_Z) {
+                const waveLen = spawnWave(state.nextSpawnZ);
+                state.nextSpawnZ -= waveLen;
+            }
+
+            // 9. Update Obstacles & Check Collisions
+            const playerHeight = state.isRolling ? 0.95 : 2.15;
+            const playerBottom = state.playerY;
+            const playerTop = state.playerY + playerHeight;
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                const ent = entities[i];
+                let effectiveSpeed = state.speed + ent.speedOffset;
+
+                if (ent.type === 'TRAIN' && ent.speedOffset > 0) {
+                    const entFrontZ = ent.z + ent.length / 2;
+                    for (let j = 0; j < entities.length; j++) {
+                        if (i === j) continue;
+                        const other = entities[j];
+                        if (other.lane !== ent.lane) continue;
+                        const otherBackZ = other.z - other.length / 2;
+                        if (otherBackZ >= entFrontZ - 1.0 && otherBackZ - entFrontZ < 2.5) {
+                            effectiveSpeed = Math.min(effectiveSpeed, state.speed + other.speedOffset);
+                        }
+                    }
+                }
+
+                ent.z += effectiveSpeed * dt;
+                ent.mesh.position.z = ent.z;
+
+                if (ent.z - ent.length / 2 > CONFIG.DESPAWN_Z) {
+                    scene.remove(ent.mesh);
+                    entities.splice(i, 1);
+                    continue;
+                }
+
+                if (state.powerups.jetpack > 0) continue;
+
+                const zHalf = ent.length / 2 - 0.18;
+                const isZOverlap = Math.abs(ent.z) < zHalf + 0.32;
+                const isLaneOverlap = Math.abs(state.playerX - CONFIG.LANES[ent.lane]) < 0.95;
+
+                if (isZOverlap && isLaneOverlap) {
+                    if (ent.type === 'TRAIN') {
+                        if (playerBottom < ent.height - 0.55) {
+                            const frontEdge = ent.z + ent.length / 2;
+                            if (frontEdge < 1.2) {
+                                triggerGameOver();
+                                return;
+                            } else {
+                                state.currentLane = state.previousLane;
+                                handleStumble();
+                                scene.remove(ent.mesh);
+                                entities.splice(i, 1);
+                                continue;
+                            }
+                        }
+                    } else if (ent.type === 'LOW_BARRIER') {
+                        if (playerBottom < ent.height - 0.2) {
+                            handleStumble();
+                            spawnParticles(CONFIG.LANES[ent.lane], 0.8, ent.z, 0xef4444, 10);
+                            scene.remove(ent.mesh);
+                            entities.splice(i, 1);
+                            continue;
+                        }
+                    } else if (ent.type === 'HIGH_BARRIER') {
+                        if (!state.isRolling && playerTop > ent.bottomHeight + 0.1) {
+                            handleStumble();
+                            spawnParticles(CONFIG.LANES[ent.lane], 2.0, ent.z, 0xef4444, 10);
+                            scene.remove(ent.mesh);
+                            entities.splice(i, 1);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            // 10. Update Collectibles (Coins & Powerups)
+            const magnetActive = state.powerups.magnet > 0;
+            for (let i = collectibles.length - 1; i >= 0; i--) {
+                const item = collectibles[i];
+                item.z += dz;
+                item.mesh.rotation.y += 3.5 * dt;
+
+                if (magnetActive && item.type === 'COIN' && item.z > -32 && item.z < 5) {
+                    item.x += (state.playerX - item.x) * Math.min(1, 12 * dt);
+                    item.y += ((state.playerY + 1.1) - item.y) * Math.min(1, 12 * dt);
+                    item.z += (0 - item.z) * Math.min(1, 10 * dt);
+                }
+
+                item.mesh.position.set(item.x, item.y, item.z);
+
+                if (item.z > CONFIG.DESPAWN_Z) {
+                    scene.remove(item.mesh);
+                    collectibles.splice(i, 1);
+                    continue;
+                }
+
+                const dx = Math.abs(item.x - state.playerX);
+                const dy = Math.abs(item.y - (state.playerY + 1.0));
+                const dzItem = Math.abs(item.z);
+
+                if (dx < 1.15 && dy < 1.45 && dzItem < 1.15) {
+                    if (item.type === 'COIN') {
+                        state.coins += 1;
+                        state.score += 15 * mult;
+                        sound.playCoin();
+                        spawnParticles(item.x, item.y, item.z, 0xffd166, 4);
+                    } else if (item.type === 'POWERUP') {
+                        activatePowerup(item.powerupType);
+                        spawnParticles(item.x, item.y, item.z, 0x38bdf8, 12);
+                    }
+                    scene.remove(item.mesh);
+                    collectibles.splice(i, 1);
+                }
+            }
+
+            // 11. Update Chaser (Ji Su-won Boy)
+            if (state.stumbleTimer > 0) {
+                state.stumbleTimer -= dt;
+                state.chaserDistance += (2.4 - state.chaserDistance) * Math.min(1, 6 * dt);
+            } else {
+                state.chaserDistance += (9.5 - state.chaserDistance) * Math.min(1, 2 * dt);
+            }
+
+            if (state.chaserDistance < 8.5 && state.powerups.jetpack <= 0) {
+                chaserGroup.visible = true;
+                chaserGroup.position.set(
+                    state.playerX * 0.85,
+                    state.playerY,
+                    state.chaserDistance
+                );
+                const chaserSwing = Math.sin(state.runCycle * 1.15) * 0.95;
+                chaserBoy.leftLeg.rotation.x = chaserSwing;
+                chaserBoy.rightLeg.rotation.x = -chaserSwing;
+                chaserBoy.leftArm.rotation.x = -chaserSwing * 0.85;
+                chaserBoy.rightArm.rotation.x = chaserSwing * 0.85;
+            } else {
+                chaserGroup.visible = false;
+            }
+
+            // 12. Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= dt;
+                p.vy -= 22 * dt;
+                p.mesh.position.x += p.vx * dt;
+                p.mesh.position.y += p.vy * dt;
+                p.mesh.position.z += p.vz * dt;
+                p.mesh.scale.setScalar(Math.max(0.01, p.life * 2));
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // 13. Smooth Camera Follow + Shake
+            let camTargetX = state.playerX * 0.55;
+            let camTargetY = 6.2 + state.playerY * 0.48;
+            let camTargetZ = 10.5 + (state.powerups.jetpack > 0 ? 2.5 : 0);
+
+            if (state.shakeTime > 0) {
+                state.shakeTime -= dt;
+                camTargetX += (Math.random() - 0.5) * state.shakeIntensity;
+                camTargetY += (Math.random() - 0.5) * state.shakeIntensity;
+            }
+
+            camera.position.x += (camTargetX - camera.position.x) * Math.min(1, 10 * dt);
+            camera.position.y += (camTargetY - camera.position.y) * Math.min(1, 8 * dt);
+            camera.position.z += (camTargetZ - camera.position.z) * Math.min(1, 6 * dt);
+            camera.lookAt(state.playerX * 0.35, 2.0 + state.playerY * 0.35, -14);
+
+            // 14. Update HUD
+            updateHUD();
+        }
+
+        function updateHUD() {
+            const scoreStr = Math.floor(state.score).toString().padStart(6, '0');
+            ui.hudScore.textContent = scoreStr;
+            ui.hudCoins.textContent = state.coins.toLocaleString();
+
+            const chInfo = chapterConfig[state.chapter];
+            ui.hudChapter.textContent = chInfo.name;
+            ui.hudChapter.style.background = chInfo.badgeBg;
+
+            const isBoosted = state.powerups.multiplier > 0;
+            ui.hudMultiplier.textContent = isBoosted ? '2x' : '1x';
+            ui.hudMultiplier.classList.toggle('boosted', isBoosted);
+
+            let html = '';
+            const activeList = [
+                { key: 'jetpack', label: '🚀 제트팩', color: '#06b6d4' },
+                { key: 'magnet', label: '🧲 자석', color: '#ef4444' },
+                { key: 'multiplier', label: '⭐ 2배 점수', color: '#a855f7' }
+            ];
+
+            activeList.forEach(item => {
+                const rem = state.powerups[item.key];
+                if (rem > 0) {
+                    const pct = Math.min(100, (rem / CONFIG.POWERUP_DURATION[item.key]) * 100);
+                    html += `
+                        <div class="powerup-bar-item">
+                            <span>${item.label}</span>
+                            <div class="powerup-progress-bg">
+                                <div class="powerup-progress-fill" style="width:${pct}%; background:${item.color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            ui.powerupsContainer.innerHTML = html;
+        }
+
+        /**
+         * ==========================================
+         * 11. ANIMATION LOOP & RESIZE HANDLER
+         * ==========================================
+         */
+        let lastTime = performance.now();
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            lastTime = now;
+
+            if (state.status === 'START') {
+                state.runCycle += dt * 4;
+                player.mesh.position.set(0, Math.abs(Math.sin(state.runCycle)) * 0.15, 0);
+                player.mesh.rotation.y = Math.sin(now * 0.0015) * 0.35;
+                chaserGroup.visible = true;
+                chaserGroup.position.set(1.35, 0, 1.8);
+                chaserGroup.rotation.y = -0.3;
+                camera.position.set(0, 4.5, 8.2);
+                camera.lookAt(0, 1.6, 0);
+            } else if (state.status === 'ENDING') {
+                updateEndingCutscene(dt, now);
+            } else {
+                player.mesh.rotation.y = 0;
+                chaserGroup.rotation.y = 0;
+                updateGame(dt);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = function () {
+            lastTime = performance.now();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>

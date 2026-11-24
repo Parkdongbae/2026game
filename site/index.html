@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동신중 게임 갤러리</title>
+<meta name="description" content="동신중학교 학생들이 직접 만든 웹 게임 모음">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+<style>
+  :root {
+    --pink: #ff4d7d;
+    --pink-soft: #ffe3ec;
+    --purple: #7c4dff;
+    --page: linear-gradient(135deg, #ebe8ff 0%, #f6e9ff 45%, #ffe6f0 100%);
+    --panel: #ffffff;
+    --card: #ffffff;
+    --line: #ece8f5;
+    --text: #1f1b2e;
+    --muted: #6f6a82;
+    --chip: #ffffff;
+    --shadow: 0 6px 20px rgba(80, 50, 140, .10);
+    --shadow-hover: 0 14px 30px rgba(80, 50, 140, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --pink-soft: #4a1f31;
+      --page: linear-gradient(135deg, #17142a 0%, #1d1530 50%, #2a1426 100%);
+      --panel: #201c33;
+      --card: #2a2540;
+      --line: #3a3455;
+      --text: #f3f0ff;
+      --muted: #b0a9c9;
+      --chip: #2a2540;
+      --shadow: 0 6px 20px rgba(0, 0, 0, .35);
+      --shadow-hover: 0 14px 30px rgba(0, 0, 0, .5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page) fixed;
+    color: var(--text);
+    font-family: system-ui, "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.4;
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+
+  .panel {
+    max-width: 1240px;
+    margin: 20px auto;
+    background: var(--panel);
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+    overflow: clip;
+  }
+  @media (max-width: 1280px) { .panel { margin: 12px; } }
+
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { margin: 0; font-size: 1.45rem; font-weight: 800; white-space: nowrap; }
+  .summary { flex: 1; text-align: center; color: var(--muted); font-weight: 600; font-size: .95rem; }
+  .login {
+    border: 0; cursor: pointer;
+    min-height: 44px; padding: 0 18px;
+    border-radius: 999px;
+    background: var(--pink); color: #fff; font-weight: 700;
+    white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis;
+  }
+  .login.in { background: var(--chip); color: var(--text); border: 1.5px solid var(--line); }
+  .login[hidden] { display: none; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 16px 24px 4px; }
+  .search {
+    flex: 1 1 240px; max-width: 420px; min-height: 44px;
+    padding: 0 16px 0 40px;
+    border: 1.5px solid var(--line); border-radius: 999px;
+    background: var(--chip) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%239a94b3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='5.5'/%3E%3Cpath d='m12.5 12.5 4 4'/%3E%3C/svg%3E") 14px center no-repeat;
+  }
+  .sorts { display: flex; gap: 8px; margin-left: auto; }
+  .sort {
+    min-height: 44px; padding: 0 18px; cursor: pointer;
+    border: 1.5px solid var(--line); border-radius: 999px;
+    background: var(--chip); font-weight: 700;
+  }
+  .sort[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }
+
+  .grid {
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    padding: 18px 24px 8px;
+  }
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover, .card:focus-within { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .card-link { display: block; color: inherit; text-decoration: none; padding-bottom: 60px; }
+  .card-link:focus-visible { outline-offset: -3px; border-radius: 20px; }
+  .art {
+    aspect-ratio: 16 / 10;
+    display: grid; place-items: center;
+    font-size: clamp(2.6rem, 6vw, 4rem); font-weight: 900; color: #fff;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, .22);
+    user-select: none;
+  }
+  .medal { position: absolute; top: 8px; left: 10px; font-size: 1.9rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); }
+  .new {
+    position: absolute; top: 12px; right: 12px;
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--purple); color: #fff; font-size: .72rem; font-weight: 800; letter-spacing: .04em;
+  }
+  .title {
+    margin: 12px 14px 2px; text-align: center; font-size: 1rem; font-weight: 800;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+    overflow-wrap: anywhere; min-height: 2.8em;
+  }
+  .maker { margin: 0 14px; text-align: center; color: var(--muted); font-size: .9rem; font-weight: 600; }
+  .play {
+    position: absolute; left: 14px; bottom: 12px;
+    display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px;
+    border-radius: 999px; background: var(--pink-soft); color: var(--pink);
+    font-weight: 800; font-size: .88rem; pointer-events: none;
+    transition: background .15s, color .15s;
+  }
+  .card:hover .play { background: var(--pink); color: #fff; }
+  .like {
+    position: absolute; right: 8px; bottom: 8px;
+    min-width: 44px; min-height: 44px; padding: 0 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    border: 1.5px solid var(--line); border-radius: 999px;
+    background: var(--card); cursor: pointer; font-weight: 800; color: var(--muted);
+  }
+  .like .heart { font-size: 1.2rem; line-height: 1; color: var(--pink); display: inline-block; }
+  .like[aria-pressed="true"] { background: var(--pink); border-color: var(--pink); color: #fff; }
+  .like[aria-pressed="true"] .heart { color: #fff; }
+  .like.pop .heart { animation: pop .4s ease; }
+  .like.unpop .heart { animation: unpop .2s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  @keyframes unpop { 0% { transform: scale(1); } 50% { transform: scale(.85); } 100% { transform: scale(1); } }
+  .spark {
+    position: absolute; left: 50%; top: 40%; pointer-events: none;
+    color: var(--pink); font-size: .9rem;
+    animation: spark .6s ease-out forwards;
+  }
+  @keyframes spark {
+    from { transform: translate(-50%, -50%) scale(.6); opacity: 1; }
+    to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); opacity: 0; }
+  }
+
+  .skeleton { border-radius: 20px; min-height: 250px; background: linear-gradient(100deg, var(--line) 30%, var(--card) 50%, var(--line) 70%) 0 0 / 200% 100%; animation: shimmer 1.2s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .empty { grid-column: 1 / -1; text-align: center; padding: 60px 16px; color: var(--muted); font-weight: 600; }
+
+  footer { padding: 18px 24px 24px; text-align: center; color: var(--muted); font-size: .9rem; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; z-index: 50;
+    transform: translate(-50%, 20px);
+    max-width: calc(100vw - 32px);
+    padding: 12px 18px; border-radius: 14px;
+    background: #1f1b2e; color: #fff; font-weight: 600; font-size: .95rem; text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 600px) {
+    header { padding: 12px 14px; flex-wrap: wrap; }
+    h1 { font-size: 1.15rem; }
+    .summary { order: 3; flex-basis: 100%; text-align: left; font-size: .85rem; }
+    .login { margin-left: auto; padding: 0 14px; font-size: .9rem; }
+    .tools { padding: 12px 14px 0; }
+    .search { max-width: none; flex-basis: 100%; }
+    .sorts { margin-left: 0; width: 100%; }
+    .sort { flex: 1; padding: 0 6px; }
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px 14px 4px; }
+    .title { font-size: .92rem; margin: 10px 8px 2px; }
+    .maker { font-size: .82rem; margin: 0 8px; }
+    .play { left: 8px; padding: 0 10px; font-size: .8rem; }
+    .like { right: 6px; padding: 0 9px; }
+    .medal { font-size: 1.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .card:hover, .card:focus-within { transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="panel">
+  <header>
+    <h1>🎮 동신중 게임 갤러리</h1>
+    <div class="summary" id="summary"></div>
+    <button class="login" id="login" type="button" hidden>학교 계정 로그인</button>
+  </header>
+  <div class="tools">
+    <input class="search" id="search" type="search" placeholder="제목·이름·학번 검색" aria-label="게임 검색" autocomplete="off">
+    <div class="sorts" role="group" aria-label="정렬">
+      <button class="sort" type="button" data-sort="popular" aria-pressed="true">인기순</button>
+      <button class="sort" type="button" data-sort="recent" aria-pressed="false">최신순</button>
+      <button class="sort" type="button" data-sort="number" aria-pressed="false">학번순</button>
+    </div>
+  </div>
+  <main class="grid" id="grid" aria-live="polite"></main>
+  <footer id="footer"></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="./config.js"></script>
+<script type="module">
+const CFG = window.APP_CONFIG || {};
+const DOMAIN = String(CFG.allowedDomain || "").toLowerCase();
+const PLAY_BASE = String(CFG.playBase || "./");
+const FB_VER = "10.14.1";
+const NEW_MS = 72 * 60 * 60 * 1000;
+const FILE_RE = /^[0-9A-Za-z_-]+\.html$/;
+
+const $ = (id) => document.getElementById(id);
+const grid = $("grid"), summaryEl = $("summary"), loginBtn = $("login"), toastEl = $("toast"), searchEl = $("search");
+
+const state = {
+  games: [],
+  loaded: false,
+  loadError: false,
+  counts: new Map(),     // id -> number | null(실패). 없으면 읽는 중
+  countsReady: false,
+  myLikes: new Set(),
+  user: null,
+  busy: new Set(),
+  sort: "popular",
+  q: "",
+  likeAfterLogin: null,
+};
+let fb = null; // { auth, db, api }
+
+$("footer").textContent = `좋아요는 @${DOMAIN} 계정으로 게임마다 1번 누를 수 있어요.`;
+
+// ---------- 도구 ----------
+let toastTimer;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3000);
+}
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+function hash(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function firstGlyph(title) {
+  const t = title.trim();
+  if (!t) return "🎮";
+  let first = Array.from(t)[0];
+  try {
+    first = new Intl.Segmenter("ko", { granularity: "grapheme" }).segment(t)[Symbol.iterator]().next().value.segment;
+  } catch {}
+  return first.toUpperCase();
+}
+const norm = (s) => String(s).replace(/\s+/g, "").toLowerCase();
+const countOf = (id) => state.counts.get(id) || 0;
+const time = (g) => Date.parse(g.addedAt) || 0;
+
+// ---------- 정렬·메달 ----------
+function visibleGames() {
+  const q = norm(state.q);
+  let list = state.games.filter((g) => !q || norm(g.title + g.name + g.studentNo).includes(q));
+  if (state.sort === "recent") list.sort((a, b) => time(b) - time(a) || a.id.localeCompare(b.id));
+  else if (state.sort === "number") list.sort((a, b) => a.studentNo.localeCompare(b.studentNo) || a.id.localeCompare(b.id));
+  else list.sort((a, b) => countOf(b.id) - countOf(a.id) || time(b) - time(a) || a.id.localeCompare(b.id));
+  return list;
+}
+function medalMap() {
+  const top = [...new Set(state.games.map((g) => countOf(g.id)).filter((n) => n >= 1))].sort((a, b) => b - a).slice(0, 3);
+  const icons = ["🥇", "🥈", "🥉"];
+  const map = new Map();
+  for (const g of state.games) {
+    const i = top.indexOf(countOf(g.id));
+    if (i >= 0) map.set(g.id, icons[i]);
+  }
+  return map;
+}
+
+// ---------- 그리기 ----------
+function paintLike(btn, g) {
+  const liked = state.myLikes.has(g.id);
+  const has = state.counts.has(g.id);
+  const n = state.counts.get(g.id);
+  btn.setAttribute("aria-pressed", String(liked));
+  btn.replaceChildren(el("span", "heart", liked ? "♥" : "♡"));
+  let label = "";
+  if (!fb) label = "";
+  else if (!has) label = "·";
+  else if (n === null) label = "-";
+  else if (n > 0) label = String(n);
+  if (label) btn.append(el("span", "num", label));
+  btn.setAttribute("aria-label", `${g.name}의 게임 좋아요, 현재 ${n || 0}개`);
+}
+function updateSummary() {
+  if (!state.loaded) { summaryEl.textContent = ""; return; }
+  let text = `게임 ${state.games.length}개`;
+  if (state.countsReady) {
+    const total = state.games.reduce((s, g) => s + countOf(g.id), 0);
+    text += ` · 좋아요 ${total}개`;
+  }
+  if (state.user) {
+    const mine = state.games.filter((g) => state.myLikes.has(g.id)).length;
+    text += ` · 내가 누른 ♥ ${mine}/${state.games.length}`;
+  }
+  summaryEl.textContent = text;
+}
+function render() {
+  updateSummary();
+  if (!state.loaded) {
+    grid.replaceChildren(...Array.from({ length: 8 }, () => el("div", "skeleton")));
+    return;
+  }
+  if (state.loadError) { grid.replaceChildren(el("p", "empty", "게임 목록을 불러오지 못했어요. 새로고침해 주세요.")); return; }
+  if (state.games.length === 0) { grid.replaceChildren(el("p", "empty", "아직 올라온 게임이 없어요")); return; }
+  const list = visibleGames();
+  if (list.length === 0) { grid.replaceChildren(el("p", "empty", `'${state.q.trim()}'에 맞는 게임이 없어요`)); return; }
+
+  const medals = medalMap();
+  const now = Date.now();
+  const cards = list.map((g) => {
+    const card = el("article", "card");
+    const link = el("a", "card-link");
+    link.href = PLAY_BASE + g.file;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", `${g.title} — ${g.studentNo} ${g.name} (새 창에서 열림)`);
+
+    const h = hash(g.id) % 360;
+    const art = el("div", "art", firstGlyph(g.title));
+    art.style.background = `linear-gradient(135deg, hsl(${h} 85% 68%), hsl(${(h + 50) % 360} 85% 60%))`;
+    art.setAttribute("aria-hidden", "true");
+    link.append(art, el("h2", "title", g.title), el("p", "maker", `${g.studentNo} ${g.name}`), el("span", "play", "▶ 플레이"));
+    card.append(link);
+
+    if (medals.has(g.id)) { const m = el("span", "medal", medals.get(g.id)); m.setAttribute("aria-hidden", "true"); card.append(m); }
+    if (now - time(g) < NEW_MS) card.append(el("span", "new", "NEW"));
+
+    const btn = el("button", "like");
+    btn.type = "button";
+    btn.dataset.id = g.id;
+    paintLike(btn, g);
+    btn.addEventListener("click", () => onLike(g, btn));
+    card.append(btn);
+    return card;
+  });
+  grid.replaceChildren(...cards);
+}
+function repaintLike(g) {
+  const btn = grid.querySelector(`.like[data-id="${CSS.escape(g.id)}"]`);
+  if (btn) paintLike(btn, g);
+  updateSummary();
+  return btn;
+}
+function celebrate(btn) {
+  if (!btn || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  btn.classList.remove("pop"); void btn.offsetWidth; btn.classList.add("pop");
+  for (let i = 0; i < 6; i++) {
+    const s = el("span", "spark", "♥");
+    const a = (-150 + i * 24) * Math.PI / 180;
+    s.style.setProperty("--dx", `${Math.cos(a) * 34}px`);
+    s.style.setProperty("--dy", `${Math.sin(a) * 38 - 6}px`);
+    btn.append(s);
+    setTimeout(() => s.remove(), 650);
+  }
+}
+
+// ---------- 좋아요 ----------
+async function setLike(g, on) {
+  if (state.busy.has(g.id)) return;
+  const { db, api } = fb;
+  const uid = state.user.uid;
+  const ref = api.doc(db, "likes", `${g.id}_${uid}`);
+  const before = state.counts.get(g.id);
+  state.busy.add(g.id);
+  if (on) state.myLikes.add(g.id); else state.myLikes.delete(g.id);
+  if (typeof before === "number") state.counts.set(g.id, Math.max(0, before + (on ? 1 : -1)));
+  const btn = repaintLike(g);
+  if (on) celebrate(btn);
+  else if (btn) { btn.classList.remove("unpop"); void btn.offsetWidth; btn.classList.add("unpop"); }
+  try {
+    if (on) await api.setDoc(ref, { gameId: g.id, uid, createdAt: api.serverTimestamp() });
+    else await api.deleteDoc(ref);
+  } catch (e) {
+    console.warn("좋아요 저장 실패", e);
+    if (on) state.myLikes.delete(g.id); else state.myLikes.add(g.id);
+    if (before !== undefined) state.counts.set(g.id, before);
+    repaintLike(g);
+    toast("저장하지 못했어요. 다시 눌러 주세요");
+  } finally {
+    state.busy.delete(g.id);
+  }
+}
+async function onLike(g) {
+  if (!fb) { toast("좋아요 기능 준비 중이에요"); return; }
+  if (!state.user) { state.likeAfterLogin = g.id; await login(); return; }
+  await setLike(g, !state.myLikes.has(g.id));
+}
+async function login() {
+  const { auth, api } = fb;
+  const provider = new api.GoogleAuthProvider();
+  provider.setCustomParameters({ hd: DOMAIN, prompt: "select_account" });
+  try {
+    await api.signInWithPopup(auth, provider);
+  } catch (e) {
+    state.likeAfterLogin = null;
+    if (e.code === "auth/popup-blocked") toast("팝업을 허용한 뒤 다시 눌러 주세요");
+    else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") {
+      console.warn("로그인 실패", e);
+      toast("로그인하지 못했어요. 다시 시도해 주세요");
+    }
+  }
+}
+async function loadCounts() {
+  if (!fb || !state.loaded) return;
+  const { db, api } = fb;
+  const col = api.collection(db, "likes");
+  const results = await Promise.allSettled(
+    state.games.map((g) => api.getCountFromServer(api.query(col, api.where("gameId", "==", g.id))))
+  );
+  let failed = false;
+  results.forEach((r, i) => {
+    const id = state.games[i].id;
+    if (state.busy.has(id)) return;
+    if (r.status === "fulfilled") state.counts.set(id, r.value.data().count);
+    else { state.counts.set(id, null); failed = true; }
+  });
+  state.countsReady = true;
+  if (failed) toast("좋아요를 불러오지 못했어요");
+  render();
+}
+async function loadMyLikes() {
+  const { db, api } = fb;
+  const uid = state.user.uid;
+  try {
+    const snap = await api.getDocs(api.query(api.collection(db, "likes"), api.where("uid", "==", uid)));
+    if (state.user?.uid !== uid) return;
+    state.myLikes = new Set(snap.docs.map((d) => d.data().gameId));
+  } catch (e) {
+    console.warn("내 좋아요 읽기 실패", e);
+  }
+  render();
+  const pending = state.likeAfterLogin;
+  state.likeAfterLogin = null;
+  if (pending && !state.myLikes.has(pending)) {
+    const g = state.games.find((x) => x.id === pending);
+    if (g) await setLike(g, true);
+  }
+}
+function paintLogin() {
+  loginBtn.hidden = !fb;
+  loginBtn.classList.toggle("in", Boolean(state.user));
+  loginBtn.textContent = state.user ? `${state.user.displayName || "로그인됨"} · 로그아웃` : "학교 계정 로그인";
+}
+
+async function initFirebase() {
+  if (!CFG.firebase || !CFG.firebase.apiKey) return;
+  try {
+    const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+    const [appM, authM, fsM] = await Promise.all([
+      import(base + "firebase-app.js"),
+      import(base + "firebase-auth.js"),
+      import(base + "firebase-firestore.js"),
+    ]);
+    const app = appM.initializeApp(CFG.firebase);
+    fb = { auth: authM.getAuth(app), db: fsM.getFirestore(app), api: { ...authM, ...fsM } };
+  } catch (e) {
+    console.warn("Firebase 를 불러오지 못했어요", e);
+    fb = null;
+    return;
+  }
+  paintLogin();
+  render();
+  fb.api.onAuthStateChanged(fb.auth, async (user) => {
+    if (user && !String(user.email || "").toLowerCase().endsWith("@" + DOMAIN)) {
+      state.likeAfterLogin = null;
+      await fb.api.signOut(fb.auth);
+      toast(`학교 계정(@${DOMAIN})으로만 좋아요를 누를 수 있어요`);
+      return;
+    }
+    const wasOut = !state.user;
+    state.user = user;
+    paintLogin();
+    if (user) {
+      if (wasOut && state.likeAfterLogin) toast(`${user.displayName || ""}님, 환영해요!`.trim());
+      await loadMyLikes();
+    } else {
+      state.myLikes = new Set();
+      render();
+    }
+  });
+}
+
+// ---------- 시작 ----------
+try {
+  const saved = localStorage.getItem("gallery.sort");
+  if (["popular", "recent", "number"].includes(saved)) state.sort = saved;
+} catch {}
+const sortBtns = [...document.querySelectorAll(".sort")];
+const paintSort = () => sortBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sort === state.sort)));
+sortBtns.forEach((b) => b.addEventListener("click", () => {
+  state.sort = b.dataset.sort;
+  try { localStorage.setItem("gallery.sort", state.sort); } catch {}
+  paintSort();
+  render();
+}));
+paintSort();
+searchEl.addEventListener("input", () => { state.q = searchEl.value; render(); });
+loginBtn.addEventListener("click", () => {
+  if (!fb) return;
+  if (state.user) fb.api.signOut(fb.auth); else login();
+});
+
+render();
+const fbReady = initFirebase();
+try {
+  const res = await fetch("./games.json", { cache: "no-store" });
+  if (!res.ok) throw new Error(String(res.status));
+  const data = await res.json();
+  state.games = (Array.isArray(data.games) ? data.games : [])
+    .filter((g) => g && typeof g.id === "string" && typeof g.file === "string" && FILE_RE.test(g.file))
+    .map((g) => ({ ...g, title: String(g.title || ""), name: String(g.name || ""), studentNo: String(g.studentNo || "") }));
+} catch (e) {
+  console.warn("games.json 읽기 실패", e);
+  state.loadError = true;
+}
+state.loaded = true;
+render();
+await fbReady;
+loadCounts();
+</script>
+</body>
+</html>

@@ -1,0 +1,2924 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>선생님 몰래 춤추기!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', 'Noto Sans KR', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #1e293b;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .dance-btn {
+            transition: transform 0.08s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.08s ease;
+            box-shadow: 0 8px 0 #b91c1c, 0 12px 20px rgba(0, 0, 0, 0.4);
+        }
+        .dance-btn:active, .dance-btn.active {
+            transform: translateY(6px) scale(0.97);
+            box-shadow: 0 2px 0 #b91c1c, 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        .animate-pulse-fast {
+            animation: pulse-fast 0.4s infinite;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center bg-slate-900 text-slate-800 p-2 sm:p-4">
+
+    <!-- 게임 전체 컨테이너 -->
+    <div id="game-wrapper" class="relative w-full max-w-4xl h-full max-h-[820px] flex flex-col bg-amber-50 rounded-3xl shadow-2xl overflow-hidden border-4 border-amber-900/80">
+        
+        <!-- 상단 HUD (스테이지, 흥 게이지, 남은 시간, 음소거/일시정지) -->
+        <header class="bg-amber-900 text-white px-3 py-2 sm:px-6 sm:py-3 flex items-center justify-between gap-2 z-10 shadow-md">
+            <div class="flex items-center gap-1.5 sm:gap-3">
+                <div class="bg-amber-950 px-2.5 py-1 rounded-xl border border-amber-700 text-center">
+                    <span class="text-[10px] sm:text-xs text-amber-300 block">STAGE</span>
+                    <div class="flex items-center justify-center gap-1">
+                        <span id="hud-stage" class="text-base sm:text-xl font-bold text-yellow-400">1</span>
+                        <span id="hud-diff-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">쉬움</span>
+                    </div>
+                </div>
+                <div class="bg-amber-950 px-2.5 py-1 rounded-xl border border-amber-700 text-center">
+                    <span class="text-[10px] sm:text-xs text-amber-300 block">보유 점수</span>
+                    <span id="hud-score" class="text-base sm:text-xl font-bold text-white">0</span>
+                </div>
+                <!-- 보유 아이템 퀵 표시 (가짜 교과서 쉴드 / 커피 버프) -->
+                <div id="hud-items" class="hidden md:flex items-center gap-1.5 bg-amber-950/80 px-2.5 py-1.5 rounded-xl border border-amber-700/80 text-xs">
+                    <span id="hud-shield-badge" class="text-sky-300 font-bold" title="가짜 교과서 가림막">🛡️ 0</span>
+                    <span id="hud-decoy-badge" class="hidden text-emerald-300 font-bold ml-1" title="모범생 분신 인형 적용 중">🪆 ON</span>
+                    <span id="hud-coffee-badge" class="hidden text-amber-300 font-bold ml-1" title="선생님 커피 버프 적용 중">☕ ON</span>
+                    <span id="hud-bribe-badge" class="hidden text-pink-300 font-bold ml-1" title="모범생 매점 뇌물 적용 중">🍭 ON</span>
+                    <span id="hud-sign-badge" class="hidden text-indigo-300 font-bold ml-1" title="청소 중 팻말 적용 중">🚧 ON</span>
+                </div>
+            </div>
+
+            <!-- 흥 게이지 바 -->
+            <div class="flex-1 max-w-md mx-1 sm:mx-2">
+                <div class="flex justify-between text-xs sm:text-sm mb-1 font-bold">
+                    <span class="text-pink-300 flex items-center gap-1">
+                        <span>💃</span> 흥 게이지
+                    </span>
+                    <span id="hud-hype-text" class="text-yellow-300">0%</span>
+                </div>
+                <div class="w-full h-5 sm:h-6 bg-amber-950 rounded-full p-1 border border-amber-700 overflow-hidden relative">
+                    <div id="hud-hype-bar" class="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-yellow-400 rounded-full transition-all duration-75" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- 시간 및 유틸 버튼 -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="bg-amber-950 px-2.5 py-1 rounded-xl border border-amber-700 text-center min-w-[58px] sm:min-w-[64px]">
+                    <span class="text-[10px] sm:text-xs text-amber-300 block">TIME</span>
+                    <span id="hud-time" class="text-base sm:text-xl font-bold text-emerald-400">30.0</span>
+                </div>
+                <button id="btn-mute" title="소리 켜기/끄기" class="p-2 sm:p-2.5 bg-amber-800 hover:bg-amber-700 active:scale-95 rounded-xl border border-amber-600 transition text-base sm:text-lg">
+                    🔊
+                </button>
+                <button id="btn-pause" title="일시정지" class="p-2 sm:p-2.5 bg-amber-800 hover:bg-amber-700 active:scale-95 rounded-xl border border-amber-600 transition text-base sm:text-lg">
+                    ⏸️
+                </button>
+            </div>
+        </header>
+
+        <!-- 메인 캔버스 영역 -->
+        <main id="canvas-container" class="relative flex-1 w-full bg-orange-100 overflow-hidden cursor-pointer">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- 화면 중앙 플로팅 상태 메시지 (콤보, 페이크! 등) -->
+            <div id="floating-banner" class="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10">
+                <div id="fever-badge" class="hidden px-5 py-1 bg-gradient-to-r from-yellow-400 via-rose-500 to-indigo-500 text-white rounded-full text-xl sm:text-3xl font-black shadow-xl border-2 border-white animate-bounce">
+                    ⚡ FEVER TIME! x2 ⚡
+                </div>
+                <div id="combo-badge" class="hidden px-4 py-1 bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white rounded-full text-lg sm:text-2xl shadow-lg border-2 border-white animate-pulse-fast">
+                    🔥 0 COMBO!
+                </div>
+                <div id="status-toast" class="hidden px-4 py-1 bg-slate-900/85 text-yellow-300 rounded-full text-sm sm:text-lg shadow-md border border-yellow-400/50">
+                    휴~ 페이크였다!
+                </div>
+            </div>
+
+            <!-- 시작 화면 오버레이 -->
+            <div id="overlay-start" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+                <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-amber-400">
+                    <div class="text-5xl sm:text-6xl mb-3 animate-bounce">🕺💃</div>
+                    <h1 class="text-3xl sm:text-4xl font-black text-amber-900 mb-2 tracking-tight">선생님 몰래 춤추기!</h1>
+                    <p class="text-slate-600 text-sm sm:text-base mb-5 leading-relaxed">
+                        선생님이 칠판에 글씨를 쓸 때 <strong>꾹 눌러서</strong> 신나게 춤을 추세요!<br>
+                        머리 위에 <span class="text-amber-600 font-bold">느낌표(!)</span>가 뜨면 즉시 손을 떼야 합니다!
+                    </p>
+
+                    <div class="bg-amber-50 rounded-2xl p-3.5 mb-6 text-left text-xs sm:text-sm space-y-2 border border-amber-200">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">⌨️</span>
+                            <span><strong>PC 조작:</strong> <kbd class="px-2 py-0.5 bg-white border rounded shadow-sm font-mono">Space</kbd> 또는 마우스 클릭 홀드</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">📱</span>
+                            <span><strong>모바일 조작:</strong> 하단 <strong>[춤추기!]</strong> 버튼 또는 화면 터치 홀드</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-rose-600 font-bold">
+                            <span class="text-lg">🚨</span>
+                            <span>Stage 2부터 복도 <strong>선도부장</strong>, Stage 7부터 <strong>교장선생님 & 모범생 고자질</strong> 등장!</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-slate-500 mb-4 px-2">
+                        <span>🏆 최고 스테이지: <strong id="best-stage" class="text-amber-700">1</strong></span>
+                        <span>⭐ 최고 점수: <strong id="best-score" class="text-amber-700">0</strong></span>
+                    </div>
+
+                    <button id="btn-start" class="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xl sm:text-2xl rounded-2xl shadow-lg border-b-4 border-orange-700 active:scale-95 transition">
+                        수업 시작! (게임 시작)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 스테이지 클리어 & 학교 매점(상점) 오버레이 -->
+            <div id="overlay-clear" class="hidden absolute inset-0 bg-slate-900/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-20 overflow-y-auto">
+                <div class="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 text-center shadow-2xl border-4 border-emerald-400 my-auto">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pb-3 border-b-2 border-slate-100">
+                        <div class="text-left">
+                            <span class="inline-block bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full mb-1">
+                                🎉 수업 돌파 성공!
+                            </span>
+                            <h2 id="clear-title" class="text-2xl sm:text-3xl font-black text-slate-800">STAGE 1 클리어!</h2>
+                        </div>
+                        <div class="flex items-center gap-3 bg-amber-50 px-4 py-2 rounded-2xl border-2 border-amber-300">
+                            <div class="text-right">
+                                <span class="text-xs text-slate-500 block">남은 시간 보너스 <strong id="clear-time-bonus" class="text-emerald-600">+0</strong></span>
+                                <span class="text-sm sm:text-base font-bold text-slate-700">사용 가능 점수: <strong id="shop-currency" class="text-xl sm:text-2xl text-amber-600">0</strong> P</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 학교 매점 섹션 -->
+                    <div class="mt-3 mb-4 text-left">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                            <h3 class="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>🏪</span> 쉬는 시간 학교 매점
+                                <span id="shop-transcend-badge" class="hidden text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full animate-pulse">⚡ 7단계+ 초월 테크트리 개방!</span>
+                            </h3>
+                            <!-- 상점 탭 버튼 (업그레이드 / 1회용 아이템 / 초월 테크트리) -->
+                            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                <button id="tab-shop-upgrade" class="shop-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold transition bg-amber-500 text-white shadow-sm">
+                                    ⬆️ 업그레이드
+                                </button>
+                                <button id="tab-shop-consumable" class="shop-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-600 hover:bg-slate-200">
+                                    🎒 1회용 아이템
+                                </button>
+                                <button id="tab-shop-transcend" class="shop-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-600 hover:bg-slate-200">
+                                    ⚡ 초월 테크트리
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="shop-items-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[42vh] sm:max-h-[340px] overflow-y-auto pr-1">
+                            <!-- 자바스크립트로 상점 아이템 카드 동적 생성 -->
+                        </div>
+                    </div>
+
+                    <button id="btn-next-stage" class="w-full py-3.5 sm:py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-lg sm:text-xl font-bold rounded-2xl border-b-4 border-teal-800 shadow-lg active:scale-95 transition">
+                        다음 교시(Stage 2) 시작! ➡️
+                    </button>
+                </div>
+            </div>
+
+            <!-- 일시정지 오버레이 -->
+            <div id="overlay-pause" class="hidden absolute inset-0 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+                <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-amber-400">
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">⏸️ 일시정지</h2>
+                    <p class="text-slate-500 mb-6">잠시 숨을 고르는 중입니다...</p>
+                    <div class="space-y-3">
+                        <button id="btn-resume" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xl rounded-2xl border-b-4 border-emerald-700 active:scale-95 transition">
+                            계속하기
+                        </button>
+                        <button id="btn-restart-pause" class="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 text-lg rounded-2xl border-b-4 border-slate-400 active:scale-95 transition">
+                            처음부터 다시하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게임 오버 오버레이 -->
+            <div id="overlay-gameover" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+                <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 text-center shadow-2xl border-4 border-rose-500">
+                    <div class="text-5xl mb-2">💢</div>
+                    <h2 class="text-3xl font-black text-rose-600 mb-2">딱 걸렸다!!</h2>
+                    <p id="gameover-reason" class="text-slate-600 mb-5">선생님의 매서운 눈초리에 춤추는 걸 들켰습니다!</p>
+                    <div class="bg-rose-50 rounded-2xl p-4 mb-6 space-y-1.5 border border-rose-200 text-sm sm:text-base">
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">도달 스테이지</span>
+                            <span id="over-stage" class="font-bold text-slate-800">Stage 1</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">최종 점수</span>
+                            <span id="over-score" class="font-bold text-rose-600">0</span>
+                        </div>
+                        <div id="new-record-badge" class="hidden text-xs font-bold text-amber-600 pt-1">
+                            🏆 최고 기록을 경신했습니다!
+                        </div>
+                    </div>
+                    <button id="btn-retry" class="w-full py-4 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white text-xl rounded-2xl border-b-4 border-red-800 shadow-lg active:scale-95 transition">
+                        다시 도전하기 🔄
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 하단 컨트롤 바 (모바일 터치 & PC 클릭/스페이스바 안내) -->
+        <footer class="bg-amber-900/95 p-3 sm:p-4 flex items-center justify-center z-10 border-t-2 border-amber-800">
+            <button id="btn-dance" class="dance-btn w-full max-w-md py-3.5 sm:py-4 bg-gradient-to-b from-rose-500 to-red-600 text-white rounded-2xl text-xl sm:text-2xl font-bold tracking-wider flex items-center justify-center gap-3 border-2 border-rose-300">
+                <span class="text-2xl sm:text-3xl">🕺</span>
+                <span>꾹 눌러서 춤추기!</span>
+                <span class="hidden sm:inline-block text-xs bg-red-800/80 px-2.5 py-1 rounded-lg border border-rose-400/50 font-normal">SPACE / 홀드</span>
+            </button>
+        </footer>
+    </div>
+
+<script>
+/**
+ * ============================================================================
+ * Web Audio API 기반 사운드 엔진 (외부 파일 없이 실시간 신시사이저 오디오 생성)
+ * ============================================================================
+ */
+class SoundEngine {
+    constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        this.beatTimer = 0;
+        this.beatStep = 0;
+        this.chalkTimer = 0;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        return this.isMuted;
+    }
+
+    // 춤출 때 재생되는 신나는 펑키 신스 비트
+    updateDanceMusic(dt, isDancing, isFever = false) {
+        if (this.isMuted || !this.ctx || !isDancing) {
+            this.beatTimer = 0;
+            return;
+        }
+        const stepDuration = isFever ? 0.105 : 0.135; // 피버 타임 시 템포 가속
+        this.beatTimer += dt;
+        if (this.beatTimer >= stepDuration) {
+            this.beatTimer -= stepDuration;
+            this.playDanceStep(this.beatStep, isFever);
+            this.beatStep = (this.beatStep + 1) % 16;
+        }
+    }
+
+    playDanceStep(step, isFever = false) {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        // 1. 킥 드럼 (4박자 정박)
+        if (step % 4 === 0) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(42, now + 0.12);
+            gain.gain.setValueAtTime(0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.13);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.14);
+        }
+
+        // 2. 하이햇 (엇박)
+        if (step % 2 === 1) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1200 + (step % 4) * 300, now);
+            gain.gain.setValueAtTime(0.04, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        }
+
+        // 3. 펑키 베이스 & 멜로디 아르페지오
+        const scale = [261.63, 311.13, 349.23, 392.00, 466.16, 523.25, 622.25, 523.25]; // C 마이너 펜타토닉
+        const pattern = [0, 2, 4, 5, 4, 2, 6, 5, 0, 3, 5, 7, 5, 4, 2, 1];
+        const freq = scale[pattern[step]] * (isFever ? 1.5 : 1.0); // 피버 타임 시 한 옥타브 위 사운드
+
+        const synth = this.ctx.createOscillator();
+        const synthGain = this.ctx.createGain();
+        synth.type = step % 2 === 0 ? 'triangle' : 'sawtooth';
+        synth.frequency.setValueAtTime(freq, now);
+
+        synthGain.gain.setValueAtTime(isFever ? 0.14 : 0.11, now);
+        synthGain.gain.exponentialRampToValueAtTime(0.005, now + 0.12);
+
+        synth.connect(synthGain);
+        synthGain.connect(this.ctx.destination);
+        synth.start(now);
+        synth.stop(now + 0.13);
+    }
+
+    // 피버 타임 발동 화려한 신시사이저 스윕 효과음
+    playFeverStart() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+        notes.forEach((f, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(f, now + i * 0.045);
+            gain.gain.setValueAtTime(0.16, now + i * 0.045);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.045 + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.045);
+            osc.stop(now + i * 0.045 + 0.26);
+        });
+    }
+
+    // 선도부장 호루라기 경고음 (삐익-!)
+    playPrefectWhistle() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(2400, now);
+        osc.frequency.linearRampToValueAtTime(2850, now + 0.08);
+        osc.frequency.linearRampToValueAtTime(2550, now + 0.22);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+    }
+
+    // 교장선생님 기습 등장 묵직한 발소리 효과음 (쿵- 쿵-)
+    playPrincipalStep() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        [0, 0.16].forEach(offset => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(110, now + offset);
+            osc.frequency.exponentialRampToValueAtTime(38, now + offset + 0.12);
+            gain.gain.setValueAtTime(0.26, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.13);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.14);
+        });
+    }
+
+    // 선생님이 칠판에 판서할 때 나는 분필 소리 (톡톡톡)
+    updateChalkSound(dt, isWriting) {
+        if (this.isMuted || !this.ctx || !isWriting) return;
+        this.chalkTimer += dt;
+        if (this.chalkTimer >= 0.22) {
+            this.chalkTimer = 0;
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            const baseFreq = 750 + Math.random() * 450;
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.6, now + 0.03);
+            gain.gain.setValueAtTime(0.035, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.04);
+        }
+    }
+
+    // 경고음 (선생님 머리 위 느낌표 '!' 뜰 때)
+    playWarning() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        [0, 0.1].forEach((offset, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(idx === 0 ? 660 : 880, now + offset);
+            gain.gain.setValueAtTime(0.18, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.09);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.1);
+        });
+    }
+
+    // 페이크 안도 효과음 (휘유~)
+    playFakeRelief() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(360, now + 0.25);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.27);
+    }
+
+    // 상점 아이템 구매 코인 효과음 (띠링~!)
+    playBuy() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [987.77, 1318.51]; // 시(B5) -> 미(E6)
+        freqs.forEach((f, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + i * 0.08);
+            gain.gain.setValueAtTime(0.2, now + i * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.28);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.08);
+            osc.stop(now + i * 0.08 + 0.3);
+        });
+    }
+
+    // 구매 불가 경고 부저음
+    playError() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(130, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.17);
+    }
+
+    // 가짜 교과서 방어 아이템 발동 효과음 (슈웅~ 팅!)
+    playShieldDeflect() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(1150, now + 0.25);
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.33);
+    }
+
+    // 들켰을 때 호통/충격 효과음
+    playCaught() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [150, 110, 82];
+        freqs.forEach((f, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(f, now + i * 0.08);
+            osc.frequency.linearRampToValueAtTime(f * 0.5, now + i * 0.08 + 0.35);
+            gain.gain.setValueAtTime(0.28, now + i * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.36);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.08);
+            osc.stop(now + i * 0.08 + 0.38);
+        });
+    }
+
+    // 스테이지 클리어 팡파르
+    playClear() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // 도 미 솔 높은도
+        notes.forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.11);
+            gain.gain.setValueAtTime(0.22, now + i * 0.11);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.45);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.11);
+            osc.stop(now + i * 0.11 + 0.46);
+        });
+    }
+}
+
+/**
+ * ============================================================================
+ * 메인 게임 로직 및 2D 캔버스 렌더링
+ * ============================================================================
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const sound = new SoundEngine();
+
+// 게임 상태 상수
+const STATE = {
+    START: 'START',
+    PLAYING: 'PLAYING',
+    PAUSED: 'PAUSED',
+    CLEAR: 'CLEAR',
+    GAMEOVER: 'GAMEOVER'
+};
+
+// 선생님 AI 상태 상수
+const TEACHER_STATE = {
+    WRITING: 'WRITING',   // 판서 중 (안전)
+    WARNING: 'WARNING',   // 느낌표 경고 (주의)
+    WATCHING: 'WATCHING'  // 뒤돌아 감시 중 (위험)
+};
+
+// 복도 순찰 선도부장 상태 상수
+const PREFECT_STATE = {
+    AWAY: 'AWAY',         // 복도 순찰 중 (창문 밖 안 보임)
+    WARNING: 'WARNING',   // 창문 옆에서 발소리/그림자 접근 중 (!)
+    WATCHING: 'WATCHING'  // 창문으로 교실 안을 매섭게 감시 중
+};
+
+// Stage 7+ 교장선생님 기습 순찰 상태 상수
+const PRINCIPAL_STATE = {
+    AWAY: 'AWAY',
+    WARNING: 'WARNING',
+    WATCHING: 'WATCHING'
+};
+
+// 게임 데이터 및 상태 객체
+let game = {
+    state: STATE.START,
+    stage: 1,
+    score: 0,              // 현재 보유 점수 (상점 화폐 겸용)
+    totalEarnedScore: 0,   // 게임 오버 시 최종 누적 기록용
+    bestStage: parseInt(localStorage.getItem('sd_bestStage') || '1'),
+    bestScore: parseInt(localStorage.getItem('sd_bestScore') || '0'),
+    hype: 0,               // 0 ~ 100
+    hypeGoalSeconds: 4.2,  // 100% 달성에 필요한 기본 순수 댄스 시간
+    timeLeft: 30.0,
+    isHoldingDance: false, // 사용자 입력 홀드 여부
+    dancePoseTimer: 0,
+    dancePoseIndex: 0,
+    combo: 0,
+    feverTimer: 0,         // 피버 타임 남은 시간 (초)
+    feverTriggeredCount: 0,// 현재 콤보 사이클에서 피버 발동 횟수
+    shakeIntensity: 0,
+    discoAngle: 0,
+    particles: [],
+    chalkLines: [],        // 칠판 글씨 애니메이션용
+    caughtTimer: 0,
+    graceTimer: 0,         // 초인적 반사신경 판정 유예 타이머
+    shieldFlashTimer: 0,   // 가짜 교과서 방어 발동 이펙트 타이머
+    // 상점 업그레이드 및 소비 아이템 상태
+    upgrades: {
+        danceBooster: 0,   // Lv.0 ~ 5 (게이지 상승 속도 & 점수 배율 증가)
+        reflex: 0,         // Lv.0 ~ 5 (경고 시간 연장 & 손 뗄 때 유예 판정)
+        mirrorball: 0,     // Lv.0 ~ 3 (미러볼 화려함 & 콤보 보너스 점수 증가)
+        earphones: 0       // Lv.0 ~ 4 (무선 이어폰: 콤보 상승 가속 & 피버 지속시간 연장)
+    },
+    // 7단계 이상에서 해금되는 초월 테크트리 노드 상태
+    transcendNodes: {
+        coreOverdrive: false,   // [Tier 1] 초월 코어: 모든 점수/게이지 +25% & 한계 돌파 해금
+        stealthAura: false,     // [Tier 2 좌] 은신 파동: 고자질 게이지 상승 속도 45% 감소
+        principalRadar: false,  // [Tier 2 우] 교장 레이더: 교장선생님 경고 시간 +0.4초 연장
+        legendaryDancer: false  // [Tier 3 궁극] 전설의 댄서: 피버 35 COMBO마다 발동 + 1회 자동 부활
+    },
+    shopTab: 'upgrade',    // 'upgrade' | 'consumable' | 'transcend'
+    items: {
+        fakeBook: 0,       // 가짜 교과서 가림막 (최대 2개)
+        coffeeActive: false, // 다음 스테이지 선생님 커피 디버프 적용 여부
+        decoyDoll: false,  // 모범생 분신 인형 (다음 스테이지 선도부장 감시 무효화)
+        energyBar: 0,      // 초콜릿 에너지바 (다음 스테이지 시작 시 시간 +8초 보너스 개수)
+        snitchBribe: false,// 모범생 매점 뇌물 (다음 스테이지 고자질 게이지 완전 무효화)
+        principalSign: false, // 교실 앞 '청소 중' 팻말 (다음 스테이지 교장선생님 순찰 차단)
+        transcendReviveUsed: false // 초월 궁극기 1회 부활 사용 여부
+    }
+};
+
+// 선생님 AI 객체
+let teacher = {
+    state: TEACHER_STATE.WRITING,
+    timer: 2.5,
+    warningDuration: 1.1,
+    isFakeWarning: false,  // 페이크 패턴 여부
+    fakeChainLeft: 0,      // 연속 페이크 남은 횟수
+    armAngle: 0,
+    lookProgress: 0,       // 0(칠판 봄) ~ 1(뒤돌아봄)
+    laserProgress: 0
+};
+
+// 복도 순찰 선도부장 AI 객체 (Stage 2부터 등장)
+let prefect = {
+    active: false,
+    state: PREFECT_STATE.AWAY,
+    timer: 5.0,
+    warningDuration: 1.15,
+    peekProgress: 0        // 0(숨음) ~ 1(창문 꽉 채움)
+};
+
+// Stage 7+ 전용 신규 방해요소 1: 교실 뒷문/오른쪽 문 교장선생님 기습 순찰
+let principal = {
+    active: false,
+    state: PRINCIPAL_STATE.AWAY,
+    timer: 6.5,
+    warningDuration: 0.75,
+    peekProgress: 0        // 0(숨음) ~ 1(문 열고 불쑥 등장)
+};
+
+// Stage 7+ 전용 신규 방해요소 2: 모범생 친구 고자질 게이지 (0~100%, 춤추면 차오름)
+let snitch = {
+    active: false,
+    meter: 0               // 100 도달 시 선생님께 바로 일러바침!
+};
+
+// DOM 요소 캐싱
+const ui = {
+    stage: document.getElementById('hud-stage'),
+    diffBadge: document.getElementById('hud-diff-badge'),
+    score: document.getElementById('hud-score'),
+    shieldBadge: document.getElementById('hud-shield-badge'),
+    decoyBadge: document.getElementById('hud-decoy-badge'),
+    coffeeBadge: document.getElementById('hud-coffee-badge'),
+    bribeBadge: document.getElementById('hud-bribe-badge'),
+    signBadge: document.getElementById('hud-sign-badge'),
+    hypeText: document.getElementById('hud-hype-text'),
+    hypeBar: document.getElementById('hud-hype-bar'),
+    time: document.getElementById('hud-time'),
+    feverBadge: document.getElementById('fever-badge'),
+    comboBadge: document.getElementById('combo-badge'),
+    statusToast: document.getElementById('status-toast'),
+    btnDance: document.getElementById('btn-dance'),
+    btnMute: document.getElementById('btn-mute'),
+    btnPause: document.getElementById('btn-pause'),
+    overlayStart: document.getElementById('overlay-start'),
+    overlayPause: document.getElementById('overlay-pause'),
+    overlayClear: document.getElementById('overlay-clear'),
+    overlayGameover: document.getElementById('overlay-gameover'),
+    shopCurrency: document.getElementById('shop-currency'),
+    shopGrid: document.getElementById('shop-items-grid'),
+    bestStage: document.getElementById('best-stage'),
+    bestScore: document.getElementById('best-score')
+};
+
+// 초기 최고 기록 표시
+ui.bestStage.textContent = game.bestStage;
+ui.bestScore.textContent = game.bestScore.toLocaleString();
+
+/**
+ * 캔버스 해상도 반응형 조절
+ */
+function resizeCanvas() {
+    const container = document.getElementById('canvas-container');
+    const rect = container.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resizeCanvas);
+
+/**
+ * 스테이지 초기화 및 시작
+ */
+function initStage(stageNum) {
+    game.stage = stageNum;
+    game.hype = 0;
+    // 스테이지가 높아질수록 채워야 할 목표 댄스 요구량이 점진적으로 증가
+    game.hypeGoalSeconds = 4.2 + (stageNum - 1) * 0.55;
+    // 기본 제한 시간 + 초콜릿 에너지바 보너스 (+8초씩)
+    const energyBonusTime = game.items.energyBar * 8.0;
+    game.items.energyBar = 0;
+    // 7단계 이상부터는 선생님이 극도로 예민해지며 제한 시간이 대폭 줄어듦!
+    if (stageNum >= 7) {
+        game.timeLeft = Math.max(13.0, 21.0 - (stageNum - 7) * 1.3) + energyBonusTime;
+    } else {
+        game.timeLeft = Math.max(24.0, 34.0 - (stageNum - 1) * 1.0) + energyBonusTime;
+    }
+
+    game.isHoldingDance = false;
+    game.combo = 0;
+    game.feverTimer = 0;
+    game.feverTriggeredCount = 0;
+    game.shakeIntensity = 0;
+    game.particles = [];
+    game.caughtTimer = 0;
+    game.graceTimer = 0;
+    game.shieldFlashTimer = 0;
+    ui.btnDance.classList.remove('active');
+    ui.feverBadge.classList.add('hidden');
+    ui.comboBadge.classList.add('hidden');
+    ui.statusToast.classList.add('hidden');
+
+    // 칠판 글씨 초기화
+    generateChalkLines();
+
+    // 선생님 AI 난이도 세팅 (커피 아이템 적용 시 한결 느긋해짐)
+    const isSensitiveMode = stageNum >= 7;
+    const coffeeSlow = game.items.coffeeActive ? 1.35 : 1.0;
+    const reflexBonus = game.upgrades.reflex * 0.065; // 반사신경 레벨당 경고 시간 +0.065초
+
+    teacher.state = TEACHER_STATE.WRITING;
+    // 7단계 이상부터는 판서 시간도 짧아지고, 경고(!) 시간이 극도로 짧아짐
+    const baseWrite = isSensitiveMode
+        ? Math.max(0.75, 1.45 - (stageNum - 7) * 0.1)
+        : Math.max(1.2, 2.6 - (stageNum - 1) * 0.14);
+    teacher.timer = baseWrite * coffeeSlow;
+
+    const baseWarn = isSensitiveMode
+        ? Math.max(0.22, 0.42 - (stageNum - 7) * 0.03)
+        : Math.max(0.45, 1.1 - (stageNum - 1) * 0.085);
+    teacher.warningDuration = (baseWarn + reflexBonus) * (game.items.coffeeActive ? 1.25 : 1.0);
+    teacher.isFakeWarning = false;
+    teacher.fakeChainLeft = 0;
+    teacher.lookProgress = 0;
+    teacher.laserProgress = 0;
+
+    // 복도 순찰 선도부장 초기화 (Stage 2부터 등장, 7단계 이상은 순찰 주기 대폭 단축)
+    prefect.active = stageNum >= 2;
+    prefect.state = PREFECT_STATE.AWAY;
+    prefect.timer = isSensitiveMode
+        ? Math.max(1.8, 3.0 - (stageNum - 7) * 0.2)
+        : Math.max(2.6, 5.2 - (stageNum - 2) * 0.35);
+    prefect.warningDuration = (isSensitiveMode ? 0.52 : Math.max(0.6, 1.15 - (stageNum - 2) * 0.07)) + reflexBonus;
+    prefect.peekProgress = 0;
+
+    // Stage 7+ 전용 방해요소 초기화: 교장선생님 순찰 & 모범생 고자질 게이지
+    principal.active = isSensitiveMode && !game.items.principalSign;
+    principal.state = PRINCIPAL_STATE.AWAY;
+    const radarBonus = game.transcendNodes.principalRadar ? 0.4 : 0;
+    principal.timer = Math.max(3.5, 5.5 - (stageNum - 7) * 0.4);
+    principal.warningDuration = 0.65 + reflexBonus + radarBonus;
+    principal.peekProgress = 0;
+
+    snitch.active = isSensitiveMode && !game.items.snitchBribe;
+    snitch.meter = 0;
+    game.items.transcendReviveUsed = false;
+
+    if (game.items.principalSign && isSensitiveMode) {
+        showToast('🚧 "청소 중" 팻말 설치! 교장선생님이 그냥 지나갑니다!', 2100);
+    } else if (game.items.snitchBribe && isSensitiveMode) {
+        showToast('🍭 매점 뇌물 전달 완료! 모범생이 고자질을 안 합니다!', 2100);
+    } else if (isSensitiveMode) {
+        showToast(`🔥 WARNING: Stage ${stageNum} 초예민 모드 + 교장선생님 & 고자질 발동!`, 2500);
+    } else if (game.items.coffeeActive) {
+        showToast('☕ 선생님 커피 효과 발동! 선생님이 나른해집니다~', 2000);
+    } else if (energyBonusTime > 0) {
+        showToast(`🍫 초콜릿 에너지바 효과! 제한 시간 +${energyBonusTime}초 추가!`, 2000);
+    } else if (game.items.decoyDoll) {
+        showToast('🪆 모범생 분신 인형 배치 완료! 선도부장을 속입니다!', 2000);
+    }
+
+    updateHUD();
+}
+
+function generateChalkLines() {
+    const isSensitive = game.stage >= 7;
+    const coffeeMsg = game.items.coffeeActive
+        ? '하암~ 커피 향이 좋구나...'
+        : (isSensitive ? '⚠️ 경고: 조금만 부스럭거려도 바로 뒤돌아본다!' : '2. 절대 몰래 춤추지 말 것!');
+    game.chalkLines = [
+        { text: `제 ${game.stage}교시: 난이도 [${getDifficultyInfo(game.stage).label}]`, y: 0.25, progress: 0 },
+        { text: isSensitive ? '1. 지금 선생님 신경이 극도로 날카롭다!!' : '1. 수업 시간엔 얌전히 공부하기', y: 0.45, progress: 0 },
+        { text: coffeeMsg, y: 0.65, progress: 0 },
+        { text: 'f(x) = ∫ 춤추면_혼난다 dx', y: 0.82, progress: 0 }
+    ];
+}
+
+function getDifficultyInfo(stage) {
+    if (stage <= 2) return { label: '쉬움', color: 'bg-emerald-600' };
+    if (stage <= 4) return { label: '보통', color: 'bg-sky-600' };
+    if (stage <= 6) return { label: '어려움', color: 'bg-amber-600' };
+    if (stage <= 9) return { label: '초예민', color: 'bg-rose-600 animate-pulse' };
+    return { label: '극한지옥', color: 'bg-purple-700 animate-pulse' };
+}
+
+function startNewGame() {
+    sound.init();
+    game.score = 0;
+    game.totalEarnedScore = 0;
+    game.upgrades = { danceBooster: 0, reflex: 0, mirrorball: 0, earphones: 0 };
+    game.transcendNodes = {
+        coreOverdrive: false,
+        stealthAura: false,
+        principalRadar: false,
+        legendaryDancer: false
+    };
+    game.shopTab = 'upgrade';
+    game.items = {
+        fakeBook: 0,
+        coffeeActive: false,
+        decoyDoll: false,
+        energyBar: 0,
+        snitchBribe: false,
+        principalSign: false,
+        transcendReviveUsed: false
+    };
+    initStage(1);
+    hideAllOverlays();
+    game.state = STATE.PLAYING;
+}
+
+/**
+ * 게임 업데이트 (매 프레임 호출)
+ */
+function update(dt) {
+    if (game.state !== STATE.PLAYING) return;
+
+    // 1. 제한 시간 감소
+    game.timeLeft -= dt;
+    if (game.timeLeft <= 0) {
+        game.timeLeft = 0;
+        triggerGameOver('시간 초과! 종이 울릴 때까지 흥을 다 채우지 못했습니다.');
+        return;
+    }
+
+    // 2. 선생님 & 복도 순찰 선도부장 AI & Stage 7+ 방해요소 업데이트
+    updateTeacherAI(dt);
+    updatePrefectAI(dt);
+    updatePrincipalAI(dt);
+    updateSnitchAI(dt);
+
+    // 피버 타임 타이머 감소
+    if (game.feverTimer > 0) {
+        game.feverTimer = Math.max(0, game.feverTimer - dt);
+        if (game.feverTimer === 0) {
+            ui.feverBadge.classList.add('hidden');
+        }
+    }
+
+    // 3. 플레이어 행동 및 판정 처리
+    const container = document.getElementById('canvas-container');
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+
+    if (game.shieldFlashTimer > 0) {
+        game.shieldFlashTimer = Math.max(0, game.shieldFlashTimer - dt);
+    }
+
+    // 반사신경 유예 타이머 감소
+    if (!game.isHoldingDance && game.graceTimer > 0) {
+        game.graceTimer = Math.max(0, game.graceTimer - dt);
+    }
+
+    // 실제 춤 판정 여부 (홀드 중이거나, 반사신경 레벨이 낮아 자세 복귀 딜레이가 남은 경우)
+    const isEffectivelyDancing = game.isHoldingDance || game.graceTimer > 0;
+
+    if (isEffectivelyDancing) {
+        // 3-1. 선생님이 감시 중(WATCHING)일 때 춤추고 있으면 발각 판정!
+        if (teacher.state === TEACHER_STATE.WATCHING) {
+            if (game.items.fakeBook > 0) {
+                game.items.fakeBook--;
+                game.isHoldingDance = false;
+                game.graceTimer = 0;
+                game.shieldFlashTimer = 1.1;
+                ui.btnDance.classList.remove('active');
+                sound.playShieldDeflect();
+                showToast('🛡️ 가짜 교과서 가림막 발동! 위기를 모면했습니다!', 1800);
+                updateHUD();
+                return;
+            } else {
+                triggerGameOver('선생님이 쳐다보는데 신나게 춤추다가 딱 걸렸습니다!');
+                return;
+            }
+        }
+
+        // 3-2. 복도 순찰 선도부장이 창문 감시 중(WATCHING)일 때 발각 판정!
+        if (prefect.active && prefect.state === PREFECT_STATE.WATCHING) {
+            if (game.items.decoyDoll) {
+                // 모범생 분신 인형이 창문 쪽 시선을 완벽하게 속임!
+                if (Math.random() < dt * 2.5) {
+                    showToast('🪆 분신 인형 덕분에 선도부장이 속아 넘어갑니다!', 1000);
+                }
+            } else if (game.items.fakeBook > 0) {
+                game.items.fakeBook--;
+                game.isHoldingDance = false;
+                game.graceTimer = 0;
+                game.shieldFlashTimer = 1.1;
+                ui.btnDance.classList.remove('active');
+                sound.playShieldDeflect();
+                showToast('🛡️ 가짜 교과서 가림막으로 선도부장 눈을 피했습니다!', 1800);
+                updateHUD();
+                return;
+            } else {
+                triggerGameOver('복도 창문으로 훔쳐보던 선도부장에게 딱 걸렸습니다!');
+                return;
+            }
+        }
+
+        // 3-3. Stage 7+ 오른쪽 교실 문 교장선생님 감시 중(WATCHING)일 때 발각 판정!
+        if (principal.active && principal.state === PRINCIPAL_STATE.WATCHING) {
+            if (game.items.fakeBook > 0) {
+                game.items.fakeBook--;
+                game.isHoldingDance = false;
+                game.graceTimer = 0;
+                game.shieldFlashTimer = 1.1;
+                ui.btnDance.classList.remove('active');
+                sound.playShieldDeflect();
+                showToast('🛡️ 가짜 교과서 가림막으로 교장선생님의 매의 눈을 피했습니다!', 1800);
+                updateHUD();
+                return;
+            } else {
+                triggerGameOver('교실 문을 열고 불시 점검 온 교장선생님께 딱 걸렸습니다!');
+                return;
+            }
+        }
+    }
+
+    if (game.isHoldingDance) {
+        const isFever = game.feverTimer > 0;
+        const feverMult = isFever ? 2.0 : 1.0;
+        const coreMult = game.transcendNodes.coreOverdrive ? 1.25 : 1.0;
+
+        // 흥 게이지 및 점수 상승 (댄스 부스터 & 미러볼 & 피버 타임 2배 & 초월 코어 반영)
+        const boosterSpeedMult = 1 + game.upgrades.danceBooster * 0.18;
+        const hypeRate = (100 / game.hypeGoalSeconds) * boosterSpeedMult * feverMult * coreMult;
+        game.hype = Math.min(100, game.hype + hypeRate * dt);
+
+        // 무선 이어폰 업그레이드 반영 콤보 상승
+        const comboRate = 10 * (1 + game.upgrades.earphones * 0.18);
+        game.combo += dt * comboRate;
+
+        // 피버 타임 자동 발동 (기본 50 COMBO 단위, 초월 궁극기 해금 시 35 COMBO 단위!)
+        const feverStep = game.transcendNodes.legendaryDancer ? 35 : 50;
+        const nextFeverThreshold = (game.feverTriggeredCount + 1) * feverStep;
+        if (game.combo >= nextFeverThreshold) {
+            game.feverTriggeredCount++;
+            game.feverTimer = 4.0 + game.upgrades.earphones * 0.4;
+            ui.feverBadge.classList.remove('hidden');
+            sound.playFeverStart();
+            showToast(`⚡ ${feverStep} COMBO 돌파! 피버 타임(흥 & 점수 2배) 발동!`, 1600);
+        }
+
+        const comboBonus = 1 + Math.floor(game.combo / 15) * (0.2 + game.upgrades.mirrorball * 0.12);
+        const boosterScoreMult = 1 + game.upgrades.danceBooster * 0.25;
+        const earned = Math.round(120 * comboBonus * boosterScoreMult * feverMult * coreMult * dt);
+        game.score += earned;
+        game.totalEarnedScore += earned;
+
+        // 춤 모션 및 시각 효과 업데이트
+        game.dancePoseTimer += dt * (isFever ? 1.45 : 1.0);
+        if (game.dancePoseTimer >= 0.15) {
+            game.dancePoseTimer = 0;
+            // 업그레이드 총합에 따라 해금되는 춤 모션 풀 확장 (기본 4종 -> 최대 8종!)
+            const totalUpgradeLv = game.upgrades.danceBooster + game.upgrades.earphones + game.upgrades.mirrorball;
+            const availablePoses = Math.min(8, 4 + Math.floor(totalUpgradeLv / 2));
+            if (availablePoses > 4 && Math.random() < 0.65) {
+                game.dancePoseIndex = Math.floor(Math.random() * availablePoses);
+            } else {
+                game.dancePoseIndex = (game.dancePoseIndex + 1) % availablePoses;
+            }
+            // 음표 파티클 빈도를 대폭 줄여 시야 방해 최소화
+            if (Math.random() < 0.35) {
+                spawnDanceParticles(w * 0.5, h * 0.68);
+            }
+        }
+        game.shakeIntensity = (isFever ? 6.0 : 3.5) + game.upgrades.mirrorball * 0.6;
+        game.discoAngle += dt * ((isFever ? 6.5 : 3.5) + game.upgrades.mirrorball * 0.8);
+
+        // 콤보 배지 표시
+        const displayCombo = Math.floor(game.combo);
+        if (displayCombo >= 5) {
+            ui.comboBadge.textContent = `🔥 ${displayCombo} COMBO!`;
+            ui.comboBadge.classList.remove('hidden');
+        }
+
+        // 댄스 음악 재생 (피버 타임 반영)
+        sound.updateDanceMusic(dt, true, isFever);
+
+        // 목표 달성 시 스테이지 클리어
+        if (game.hype >= 100) {
+            triggerStageClear();
+            return;
+        }
+    } else {
+        // 춤을 멈춘 상태 (얌전히 공부하는 척)
+        game.shakeIntensity = Math.max(0, game.shakeIntensity - dt * 20);
+        sound.updateDanceMusic(dt, false, false);
+    }
+
+    // 4. 파티클 업데이트
+    for (let i = game.particles.length - 1; i >= 0; i--) {
+        const p = game.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.alpha -= dt * 1.1;
+        if (p.alpha <= 0) {
+            game.particles.splice(i, 1);
+        }
+    }
+
+    updateHUD();
+}
+
+/**
+ * 선생님 AI 상태 머신 (판서 -> 경고(!) / 페이크 -> 뒤돌아 감시)
+ */
+function updateTeacherAI(dt) {
+    teacher.timer -= dt;
+    const coffeeSlow = game.items.coffeeActive ? 1.35 : 1.0;
+
+    if (teacher.state === TEACHER_STATE.WRITING) {
+        teacher.lookProgress = Math.max(0, teacher.lookProgress - dt * 8);
+        teacher.armAngle = Math.sin(performance.now() * 0.025) * 0.22;
+        sound.updateChalkSound(dt, true);
+
+        // 칠판 글씨 점진적 채우기
+        for (let line of game.chalkLines) {
+            if (line.progress < 1) {
+                line.progress = Math.min(1, line.progress + dt * 0.45);
+                break;
+            }
+        }
+        if (game.chalkLines.every(l => l.progress >= 1)) {
+            generateChalkLines();
+        }
+
+        if (teacher.timer <= 0) {
+            teacher.state = TEACHER_STATE.WARNING;
+            teacher.timer = teacher.warningDuration;
+            const isSensitive = game.stage >= 7;
+            // Stage 2부터 페이크 확률 등장, Stage 7 이상은 예민해서 페이크와 연속 트리플 페이크 빈발!
+            const fakeChance = game.stage >= 2 ? Math.min(0.6, 0.18 + game.stage * 0.045) : 0;
+            teacher.isFakeWarning = Math.random() < fakeChance;
+            if (teacher.isFakeWarning && isSensitive && Math.random() < 0.5) {
+                teacher.fakeChainLeft = 2; // 7단계 이상에선 최대 2연속 페이크 후 기습 감시!
+            } else if (teacher.isFakeWarning && game.stage >= 4 && Math.random() < 0.35) {
+                teacher.fakeChainLeft = 1;
+            } else {
+                teacher.fakeChainLeft = 0;
+            }
+            sound.playWarning();
+        }
+    } else if (teacher.state === TEACHER_STATE.WARNING) {
+        teacher.lookProgress = Math.min(0.35, teacher.lookProgress + dt * 2.5);
+        if (teacher.timer <= 0) {
+            if (teacher.isFakeWarning) {
+                sound.playFakeRelief();
+                if (teacher.fakeChainLeft > 0) {
+                    // 연속 페이크: 잠시 멈칫하다 다시 느낌표 경고!
+                    teacher.fakeChainLeft--;
+                    if (teacher.fakeChainLeft === 0) teacher.isFakeWarning = false;
+                    teacher.timer = teacher.warningDuration * 0.85;
+                    sound.playWarning();
+                    showToast(game.stage >= 7 ? '💢 선생님이 신경질적으로 다시 뒤돌아본다!' : '😱 앗, 진짜 돌아본다!!', 850);
+                } else {
+                    teacher.state = TEACHER_STATE.WRITING;
+                    const baseWrite = game.stage >= 7 ? Math.max(0.7, 1.35 - (game.stage - 7) * 0.08) : Math.max(1.0, 1.9 - game.stage * 0.1);
+                    teacher.timer = baseWrite * coffeeSlow;
+                    showToast('휴~ 페이크였다!', 1000);
+                }
+            } else {
+                teacher.state = TEACHER_STATE.WATCHING;
+                const watchBase = game.stage >= 7 ? 1.85 : Math.max(0.95, 1.65 - game.stage * 0.04);
+                teacher.timer = (watchBase / coffeeSlow) + Math.random() * 0.65;
+            }
+        }
+    } else if (teacher.state === TEACHER_STATE.WATCHING) {
+        teacher.lookProgress = Math.min(1, teacher.lookProgress + dt * 12);
+        if (teacher.timer <= 0) {
+            teacher.state = TEACHER_STATE.WRITING;
+            const baseWrite = game.stage >= 7 ? Math.max(0.75, 1.45 - (game.stage - 7) * 0.1) : Math.max(1.1, 2.4 - game.stage * 0.13);
+            teacher.timer = baseWrite * coffeeSlow + Math.random() * 0.65;
+        }
+    }
+}
+
+/**
+ * 댄스 파티클 및 토스트/오버레이 헬퍼 함수
+ */
+function spawnDanceParticles(x, y) {
+    const icons = game.feverTimer > 0 ? ['⚡', '🎵', '✨'] : ['🎵', '🎶'];
+    const colors = ['#ec4899', '#f59e0b', '#3b82f6'];
+    // 한 번에 1개만 작고 은은하게 생성
+    game.particles.push({
+        x: x + (Math.random() - 0.5) * 80,
+        y: y - 35 + (Math.random() - 0.5) * 20,
+        vx: (Math.random() - 0.5) * 45,
+        vy: -55 - Math.random() * 35,
+        alpha: 0.78,
+        size: 13 + Math.random() * 5,
+        icon: icons[Math.floor(Math.random() * icons.length)],
+        color: colors[Math.floor(Math.random() * colors.length)]
+    });
+}
+
+let toastTimeout = null;
+function showToast(msg, duration = 1200) {
+    ui.statusToast.textContent = msg;
+    ui.statusToast.classList.remove('hidden');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        ui.statusToast.classList.add('hidden');
+    }, duration);
+}
+
+function hideAllOverlays() {
+    ui.overlayStart.classList.add('hidden');
+    ui.overlayPause.classList.add('hidden');
+    ui.overlayClear.classList.add('hidden');
+    ui.overlayGameover.classList.add('hidden');
+}
+
+/**
+ * 복도 순찰 선도부장 AI 패턴 로직 (Stage 2부터 왼쪽 창문에서 출몰)
+ */
+function updatePrefectAI(dt) {
+    if (!prefect.active) return;
+    prefect.timer -= dt;
+
+    if (prefect.state === PREFECT_STATE.AWAY) {
+        prefect.peekProgress = Math.max(0, prefect.peekProgress - dt * 6);
+        if (prefect.timer <= 0) {
+            prefect.state = PREFECT_STATE.WARNING;
+            prefect.timer = prefect.warningDuration;
+            sound.playPrefectWhistle();
+            showToast('🚨 저벅저벅... 복도 창문에 선도부장 접근 중!', 1100);
+        }
+    } else if (prefect.state === PREFECT_STATE.WARNING) {
+        prefect.peekProgress = Math.min(0.35, prefect.peekProgress + dt * 2.5);
+        if (prefect.timer <= 0) {
+            prefect.state = PREFECT_STATE.WATCHING;
+            prefect.timer = 1.2 + Math.random() * 0.8;
+        }
+    } else if (prefect.state === PREFECT_STATE.WATCHING) {
+        prefect.peekProgress = Math.min(1, prefect.peekProgress + dt * 10);
+        if (prefect.timer <= 0) {
+            prefect.state = PREFECT_STATE.AWAY;
+            prefect.timer = Math.max(3.2, 6.2 - game.stage * 0.35) + Math.random() * 2.0;
+        }
+    }
+}
+
+/**
+ * Stage 7+ 전용 신규 방해요소 1: 교장선생님 기습 순찰 AI (오른쪽 교실 문 출몰)
+ */
+function updatePrincipalAI(dt) {
+    if (!principal.active) return;
+    principal.timer -= dt;
+
+    if (principal.state === PRINCIPAL_STATE.AWAY) {
+        principal.peekProgress = Math.max(0, principal.peekProgress - dt * 6);
+        if (principal.timer <= 0) {
+            principal.state = PRINCIPAL_STATE.WARNING;
+            principal.timer = principal.warningDuration;
+            sound.playPrincipalStep();
+            showToast('👞 쿵, 쿵... 교장선생님이 교실 문 앞으로 다가옵니다!', 1100);
+        }
+    } else if (principal.state === PRINCIPAL_STATE.WARNING) {
+        principal.peekProgress = Math.min(0.35, principal.peekProgress + dt * 2.8);
+        if (principal.timer <= 0) {
+            principal.state = PRINCIPAL_STATE.WATCHING;
+            principal.timer = 1.15 + Math.random() * 0.65;
+        }
+    } else if (principal.state === PRINCIPAL_STATE.WATCHING) {
+        principal.peekProgress = Math.min(1, principal.peekProgress + dt * 11);
+        if (principal.timer <= 0) {
+            principal.state = PRINCIPAL_STATE.AWAY;
+            principal.timer = Math.max(3.8, 6.2 - (game.stage - 7) * 0.35) + Math.random() * 2.0;
+        }
+    }
+}
+
+/**
+ * Stage 7+ 전용 신규 방해요소 2: 모범생 친구 고자질 게이지 AI
+ * 오래 연속으로 춤추면 옆자리 모범생이 눈치채고 손을 들어 선생님께 일러바침!
+ */
+function updateSnitchAI(dt) {
+    if (!snitch.active) return;
+
+    if (game.isHoldingDance) {
+        // 춤추는 동안 고자질 게이지 상승 (초월 테크트리 '은신 파동' 해금 시 상승 속도 45% 감소)
+        const stealthMult = game.transcendNodes.stealthAura ? 0.55 : 1.0;
+        const riseRate = (36 + (game.stage - 7) * 3.5) * stealthMult;
+        snitch.meter = Math.min(100, snitch.meter + riseRate * dt);
+        if (snitch.meter >= 100) {
+            triggerGameOver('옆자리 모범생이 "선생님! 얘 춤춰요!" 하고 고자질했습니다!');
+        }
+    } else {
+        // 얌전히 공부하면 의심이 빠르게 풀림
+        snitch.meter = Math.max(0, snitch.meter - 48 * dt);
+    }
+}
+
+function triggerStageClear() {
+    game.state = STATE.CLEAR;
+    game.isHoldingDance = false;
+    game.graceTimer = 0;
+    game.feverTimer = 0;
+    ui.feverBadge.classList.add('hidden');
+    ui.btnDance.classList.remove('active');
+    sound.playClear();
+
+    // 스테이지 클리어 기본 보너스 + 남은 시간 보너스 지급
+    const stageClearBonus = game.stage * 250;
+    const timeBonus = Math.round(game.timeLeft * 60) + stageClearBonus;
+    game.score += timeBonus;
+    game.totalEarnedScore += timeBonus;
+
+    // 1회용 버프(커피, 분신 인형, 뇌물, 청소 중 팻말)는 해당 스테이지 종료 시 소진
+    game.items.coffeeActive = false;
+    game.items.decoyDoll = false;
+    game.items.snitchBribe = false;
+    game.items.principalSign = false;
+
+    saveBestRecords();
+    updateHUD();
+
+    document.getElementById('clear-title').textContent = `STAGE ${game.stage} 클리어!`;
+    document.getElementById('clear-time-bonus').textContent = `+${timeBonus.toLocaleString()} P`;
+    document.getElementById('btn-next-stage').textContent = `다음 교시(Stage ${game.stage + 1}) 시작! ➡️`;
+
+    // 7단계 이상 진입 시 처음 한 번 초월 테크트리 탭으로 자동 안내
+    if (game.stage + 1 === 7) {
+        game.shopTab = 'transcend';
+    }
+    renderShop();
+    ui.overlayClear.classList.remove('hidden');
+}
+
+/**
+ * ============================================================================
+ * 학교 매점(상점) 시스템 렌더링 및 구매 처리 (업그레이드 / 1회용 / 초월 테크트리)
+ * ============================================================================
+ */
+const SHOP_CATALOG = [
+    {
+        id: 'danceBooster',
+        type: 'upgrade',
+        icon: '⚡',
+        name: '댄스 부스터',
+        baseMaxLevel: 5,
+        transcendMaxLevel: 9,
+        baseCost: 850,
+        costStep: 650,
+        getLevel: () => game.upgrades.danceBooster,
+        getDesc: (lv) => `게이지 상승 +${(lv + 1) * 18}%, 점수 배율 +${(lv + 1) * 25}%`
+    },
+    {
+        id: 'reflex',
+        type: 'upgrade',
+        icon: '👁️',
+        name: '초인적 반사신경',
+        baseMaxLevel: 5,
+        transcendMaxLevel: 9,
+        baseCost: 900,
+        costStep: 700,
+        getLevel: () => game.upgrades.reflex,
+        getDesc: (lv) => `경고(!) 시간 +${((lv + 1) * 0.065).toFixed(2)}초 연장 & 초고속 착석`
+    },
+    {
+        id: 'mirrorball',
+        type: 'upgrade',
+        icon: '🪩',
+        name: '화려한 미러볼 & 조명',
+        baseMaxLevel: 3,
+        transcendMaxLevel: 6,
+        baseCost: 1200,
+        costStep: 900,
+        getLevel: () => game.upgrades.mirrorball,
+        getDesc: (lv) => `천장 미러볼 소환 & 콤보 보너스 점수 대폭 증가`
+    },
+    {
+        id: 'earphones',
+        type: 'upgrade',
+        icon: '🎧',
+        name: '무선 이어폰',
+        baseMaxLevel: 4,
+        transcendMaxLevel: 8,
+        baseCost: 1000,
+        costStep: 800,
+        getLevel: () => game.upgrades.earphones,
+        getDesc: (lv) => `콤보 상승 +${(lv + 1) * 18}% 가속 & 피버 타임 +${((lv + 1) * 0.4).toFixed(1)}초 연장`
+    },
+    {
+        id: 'fakeBook',
+        type: 'consumable',
+        icon: '🛡️',
+        name: '가짜 교과서 가림막',
+        maxCount: 2,
+        cost: 1100,
+        getCount: () => game.items.fakeBook,
+        getDesc: () => `발각 시 1회 자동 방어! (현재 ${game.items.fakeBook}/2개 보유)`
+    },
+    {
+        id: 'coffee',
+        type: 'consumable',
+        icon: '☕',
+        name: '선생님 커피 대접',
+        maxCount: 1,
+        cost: 950,
+        getCount: () => (game.items.coffeeActive ? 1 : 0),
+        getDesc: () => `다음 교시 선생님이 나른해져 돌아보는 속도/빈도 감소`
+    },
+    {
+        id: 'decoyDoll',
+        type: 'consumable',
+        icon: '🪆',
+        name: '모범생 분신 인형',
+        maxCount: 1,
+        cost: 1150,
+        getCount: () => (game.items.decoyDoll ? 1 : 0),
+        getDesc: () => `다음 교시 책상에 분신을 세워 복도 선도부장 감시 완벽 무효화!`
+    },
+    {
+        id: 'energyBar',
+        type: 'consumable',
+        icon: '🍫',
+        name: '초콜릿 에너지바',
+        maxCount: 2,
+        cost: 750,
+        getCount: () => game.items.energyBar,
+        getDesc: () => `다음 교시 제한 시간 +8초 연장! (현재 ${game.items.energyBar}/2개 예약)`
+    },
+    {
+        id: 'snitchBribe',
+        type: 'consumable',
+        icon: '🍭',
+        name: '모범생 매점 뇌물',
+        maxCount: 1,
+        cost: 1300,
+        getCount: () => (game.items.snitchBribe ? 1 : 0),
+        getDesc: () => `[Stage 7+ 대항] 다음 교시 옆자리 모범생의 고자질 게이지를 완전 차단!`
+    },
+    {
+        id: 'principalSign',
+        type: 'consumable',
+        icon: '🚧',
+        name: '교실 앞 "청소 중" 팻말',
+        maxCount: 1,
+        cost: 1450,
+        getCount: () => (game.items.principalSign ? 1 : 0),
+        getDesc: () => `[Stage 7+ 대항] 다음 교시 교장선생님이 교실 앞을 그냥 지나가게 만듦!`
+    }
+];
+
+// 초월 테크트리 노드 정의 (Tier 1 -> Tier 2 좌/우 분기 -> Tier 3 궁극)
+const TRANSCEND_TREE = [
+    {
+        id: 'coreOverdrive',
+        tier: 'TIER 1 · 각성 코어',
+        icon: '🔮',
+        name: '초월 리듬 코어',
+        cost: 2200,
+        requires: [],
+        desc: '모든 기본 업그레이드 한계 돌파 개방 + 댄스 게이지 & 점수 획득량 +25% 영구 증가!'
+    },
+    {
+        id: 'stealthAura',
+        tier: 'TIER 2-A · 은신 특화',
+        icon: '🥷',
+        name: '무음 스텝 파동',
+        cost: 2800,
+        requires: ['coreOverdrive'],
+        desc: '춤출 때 옆자리 모범생의 고자질 게이지 상승 속도를 영구적으로 45% 감소시킵니다.'
+    },
+    {
+        id: 'principalRadar',
+        tier: 'TIER 2-B · 감지 특화',
+        icon: '📡',
+        name: '교장 발소리 레이더',
+        cost: 2800,
+        requires: ['coreOverdrive'],
+        desc: '교장선생님의 기습 순찰 경고(!) 시간을 영구적으로 +0.40초 연장합니다.'
+    },
+    {
+        id: 'legendaryDancer',
+        tier: 'TIER 3 · 초월 궁극기',
+        icon: '👑',
+        name: '전설의 무대 지배자',
+        cost: 4200,
+        requires: ['stealthAura', 'principalRadar'],
+        desc: '피버 타임 발동 조건이 35 COMBO로 단축되며, 매 교시 1회 발각 시 시간을 되돌려 자동 부활!'
+    }
+];
+
+function getItemEffectiveMaxLevel(item) {
+    // 7단계 이상 & 초월 코어(coreOverdrive) 각성 시 한계 돌파 상한 해금!
+    return (game.stage + 1 >= 7 && game.transcendNodes.coreOverdrive) ? item.transcendMaxLevel : item.baseMaxLevel;
+}
+
+function updateShopTabStyles() {
+    const tabs = {
+        upgrade: document.getElementById('tab-shop-upgrade'),
+        consumable: document.getElementById('tab-shop-consumable'),
+        transcend: document.getElementById('tab-shop-transcend')
+    };
+    Object.entries(tabs).forEach(([key, el]) => {
+        if (!el) return;
+        if (game.shopTab === key) {
+            el.className = `shop-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-sm ${
+                key === 'transcend' ? 'bg-purple-600 text-white' : 'bg-amber-500 text-white'
+            }`;
+        } else {
+            el.className = 'shop-tab-btn px-2.5 py-1 rounded-lg text-xs font-bold transition text-slate-600 hover:bg-slate-200';
+        }
+    });
+}
+
+function renderShop() {
+    ui.shopCurrency.textContent = game.score.toLocaleString();
+    ui.shopGrid.innerHTML = '';
+    updateShopTabStyles();
+
+    const isTranscendUnlocked = (game.stage + 1) >= 7;
+    const transcendBadge = document.getElementById('shop-transcend-badge');
+    if (transcendBadge) {
+        if (isTranscendUnlocked) transcendBadge.classList.remove('hidden');
+        else transcendBadge.classList.add('hidden');
+    }
+
+    // 1. 초월 테크트리 탭 렌더링
+    if (game.shopTab === 'transcend') {
+        if (!isTranscendUnlocked) {
+            ui.shopGrid.className = 'block max-h-[42vh] sm:max-h-[340px] overflow-y-auto pr-1';
+            ui.shopGrid.innerHTML = `
+                <div class="bg-purple-50 border-2 border-purple-200 rounded-2xl p-6 text-center">
+                    <div class="text-4xl mb-2">🔒</div>
+                    <h4 class="text-lg font-black text-purple-900 mb-1">Stage 7(초예민 모드) 진입 시 개방!</h4>
+                    <p class="text-xs sm:text-sm text-purple-700">
+                        현재 다음 교시는 <strong>Stage ${game.stage + 1}</strong>입니다.<br>
+                        Stage 7부터 개방되는 초월 테크트리에서 한계 돌파와 고자질·교장선생님 대응 패시브를 연구할 수 있습니다!
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        ui.shopGrid.className = 'flex flex-col gap-2.5 max-h-[42vh] sm:max-h-[340px] overflow-y-auto pr-1';
+        TRANSCEND_TREE.forEach((node) => {
+            const unlocked = game.transcendNodes[node.id];
+            const prereqsMet = node.requires.every(reqId => game.transcendNodes[reqId]);
+            const canAfford = !unlocked && prereqsMet && game.score >= node.cost;
+
+            const reqNames = node.requires
+                .map(r => TRANSCEND_TREE.find(t => t.id === r)?.name)
+                .filter(Boolean)
+                .join(' + ');
+
+            const card = document.createElement('div');
+            card.className = `p-3 rounded-2xl border-2 transition ${
+                unlocked
+                    ? 'bg-purple-100/80 border-purple-500'
+                    : prereqsMet
+                        ? 'bg-white border-purple-300 shadow-sm'
+                        : 'bg-slate-100 border-slate-300 opacity-75'
+            }`;
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-lg">${node.icon}</span>
+                        <div>
+                            <span class="text-[10px] font-bold text-purple-600 block leading-none">${node.tier}</span>
+                            <span class="font-black text-slate-800 text-sm sm:text-base">${node.name}</span>
+                        </div>
+                    </div>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        unlocked
+                            ? 'bg-purple-600 text-white'
+                            : prereqsMet
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-200 text-slate-600'
+                    }">
+                        ${unlocked ? '✨ 각성 완료' : prereqsMet ? '연구 가능' : `선행 필요: ${reqNames}`}
+                    </span>
+                </div>
+                <p class="text-xs text-slate-600 leading-snug mb-2">${node.desc}</p>
+                <button data-node-id="${node.id}" ${unlocked || !canAfford ? 'disabled' : ''} class="transcend-buy-btn w-full py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+                    unlocked
+                        ? 'bg-purple-600 text-white cursor-default'
+                        : canAfford
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white border-b-2 border-indigo-900 active:scale-95 cursor-pointer'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }">
+                    ${unlocked ? '✅ 테크트리 활성화됨' : !prereqsMet ? `🔒 선행 노드(${reqNames}) 필요` : `⚡ 초월 연구 ${node.cost.toLocaleString()} P`}
+                </button>
+            `;
+            ui.shopGrid.appendChild(card);
+        });
+
+        ui.shopGrid.querySelectorAll('.transcend-buy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                purchaseTranscendNode(btn.getAttribute('data-node-id'));
+            });
+        });
+        return;
+    }
+
+    // 2. 업그레이드 탭 / 1회용 아이템 탭 분리 렌더링
+    ui.shopGrid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[42vh] sm:max-h-[340px] overflow-y-auto pr-1';
+    const filteredItems = SHOP_CATALOG.filter(item => item.type === game.shopTab);
+
+    filteredItems.forEach(item => {
+        let isMaxed = false;
+        let isLockedBeforeCore = false;
+        let isTranscendTier = false;
+        let cost = 0;
+        let badgeText = '';
+        let descText = '';
+
+        if (item.type === 'upgrade') {
+            const lv = item.getLevel();
+            const currentMax = getItemEffectiveMaxLevel(item);
+            isMaxed = lv >= currentMax;
+            isLockedBeforeCore = isMaxed && lv < item.transcendMaxLevel;
+            isTranscendTier = game.transcendNodes.coreOverdrive && lv >= item.baseMaxLevel && !isMaxed;
+
+            const extraSteps = Math.max(0, lv - item.baseMaxLevel + 1);
+            cost = item.baseCost + lv * item.costStep + extraSteps * 450;
+
+            if (isLockedBeforeCore) {
+                badgeText = isTranscendUnlocked ? '초월 코어 연구 필요' : 'MAX (7단계 이후 초월)';
+                descText = isTranscendUnlocked
+                    ? '[⚡ 초월 테크트리] 탭에서 "초월 리듬 코어"를 연구하면 한계 돌파 개방!'
+                    : '7단계 진입 후 초월 테크트리 연구 시 한계 돌파가 개방됩니다!';
+            } else if (isMaxed) {
+                badgeText = `초월 MAX (Lv.${lv})`;
+                descText = '모든 한계 돌파 업그레이드 완료!';
+            } else if (isTranscendTier) {
+                badgeText = `⚡초월 Lv.${lv} → Lv.${lv + 1}`;
+                descText = item.getDesc(lv);
+            } else {
+                badgeText = `Lv.${lv} → Lv.${lv + 1}`;
+                descText = item.getDesc(lv);
+            }
+        } else {
+            const cnt = item.getCount();
+            isMaxed = cnt >= item.maxCount;
+            cost = isTranscendUnlocked ? Math.round(item.cost * 1.25) : item.cost;
+            const singleUseIds = ['coffee', 'decoyDoll', 'snitchBribe', 'principalSign'];
+            badgeText = singleUseIds.includes(item.id)
+                ? (isMaxed ? '적용 예약됨' : '1회용 아이템')
+                : `보유: ${cnt}/${item.maxCount}`;
+            descText = item.getDesc();
+        }
+
+        const canAfford = !isMaxed && game.score >= cost;
+
+        const card = document.createElement('div');
+        card.className = `flex flex-col justify-between p-3 rounded-2xl border-2 transition ${
+            isMaxed
+                ? 'bg-slate-100 border-slate-300 opacity-85'
+                : isTranscendTier
+                    ? 'bg-purple-50/80 border-purple-400 hover:border-purple-600 shadow-sm'
+                    : canAfford
+                        ? 'bg-amber-50/70 border-amber-300 hover:border-amber-500 shadow-sm'
+                        : 'bg-slate-50 border-slate-200'
+        }`;
+
+        card.innerHTML = `
+            <div>
+                <div class="flex items-center justify-between gap-1 mb-1">
+                    <span class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-1">
+                        <span>${item.icon}</span> ${item.name}
+                    </span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        isLockedBeforeCore
+                            ? 'bg-purple-100 text-purple-700'
+                            : isMaxed
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : isTranscendTier
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-amber-200 text-amber-900'
+                    }">${badgeText}</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-snug mb-2.5">${descText}</p>
+            </div>
+            <button data-item-id="${item.id}" ${isMaxed || !canAfford ? 'disabled' : ''} class="shop-buy-btn w-full py-2 rounded-xl text-xs sm:text-sm font-bold transition ${
+                isMaxed
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : isTranscendTier && canAfford
+                        ? 'bg-purple-600 hover:bg-purple-700 text-white border-b-2 border-purple-900 active:scale-95 cursor-pointer'
+                        : canAfford
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white border-b-2 border-amber-700 active:scale-95 cursor-pointer'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }">
+                ${isLockedBeforeCore ? '⚡ 초월 테크트리 필요' : isMaxed ? '구매 완료' : `${isTranscendTier ? '⚡ 초월 강화' : '💰 구매'} ${cost.toLocaleString()} P`}
+            </button>
+        `;
+
+        ui.shopGrid.appendChild(card);
+    });
+
+    ui.shopGrid.querySelectorAll('.shop-buy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            purchaseShopItem(btn.getAttribute('data-item-id'));
+        });
+    });
+}
+
+function purchaseTranscendNode(nodeId) {
+    const node = TRANSCEND_TREE.find(n => n.id === nodeId);
+    if (!node || game.transcendNodes[nodeId]) return;
+    if ((game.stage + 1) < 7) return;
+    if (!node.requires.every(r => game.transcendNodes[r])) return;
+
+    if (game.score < node.cost) {
+        sound.playError();
+        return;
+    }
+
+    game.score -= node.cost;
+    game.transcendNodes[nodeId] = true;
+    sound.playFeverStart();
+    updateHUD();
+    renderShop();
+}
+
+function purchaseShopItem(id) {
+    const item = SHOP_CATALOG.find(i => i.id === id);
+    if (!item) return;
+
+    const isTranscendUnlocked = (game.stage + 1) >= 7;
+
+    if (item.type === 'upgrade') {
+        const lv = item.getLevel();
+        const currentMax = getItemEffectiveMaxLevel(item);
+        if (lv >= currentMax) return;
+        const extraSteps = Math.max(0, lv - item.baseMaxLevel + 1);
+        const cost = item.baseCost + lv * item.costStep + extraSteps * 450;
+        if (game.score < cost) {
+            sound.playError();
+            return;
+        }
+        game.score -= cost;
+        game.upgrades[id]++;
+    } else {
+        const cnt = item.getCount();
+        if (cnt >= item.maxCount) return;
+        const cost = isTranscendUnlocked ? Math.round(item.cost * 1.25) : item.cost;
+        if (game.score < cost) {
+            sound.playError();
+            return;
+        }
+        game.score -= cost;
+        if (id === 'fakeBook') game.items.fakeBook++;
+        if (id === 'coffee') game.items.coffeeActive = true;
+        if (id === 'decoyDoll') game.items.decoyDoll = true;
+        if (id === 'energyBar') game.items.energyBar++;
+        if (id === 'snitchBribe') game.items.snitchBribe = true;
+        if (id === 'principalSign') game.items.principalSign = true;
+    }
+
+    sound.playBuy();
+    updateHUD();
+    renderShop();
+}
+
+function triggerGameOver(reason) {
+    // 초월 궁극기(전설의 무대 지배자) 보유 시 스테이지당 1회 시간 역행 부활!
+    if (game.transcendNodes.legendaryDancer && !game.items.transcendReviveUsed && game.timeLeft > 1.5) {
+        game.items.transcendReviveUsed = true;
+        game.isHoldingDance = false;
+        game.graceTimer = 0;
+        game.shieldFlashTimer = 1.4;
+        ui.btnDance.classList.remove('active');
+        teacher.state = TEACHER_STATE.WRITING;
+        teacher.timer = 1.6;
+        teacher.lookProgress = 0;
+        prefect.state = PREFECT_STATE.AWAY;
+        prefect.peekProgress = 0;
+        principal.state = PRINCIPAL_STATE.AWAY;
+        principal.peekProgress = 0;
+        snitch.meter = 0;
+        sound.playShieldDeflect();
+        showToast('👑 초월 궁극기 발동! 시간을 되돌려 위기에서 부활했습니다!', 2200);
+        return;
+    }
+
+    game.state = STATE.GAMEOVER;
+    game.isHoldingDance = false;
+    teacher.lookProgress = 1;
+    teacher.laserProgress = 1;
+    ui.btnDance.classList.remove('active');
+    sound.playCaught();
+
+    const isNewRecord = saveBestRecords();
+    updateHUD();
+
+    document.getElementById('gameover-reason').textContent = reason;
+    document.getElementById('over-stage').textContent = `Stage ${game.stage}`;
+    document.getElementById('over-score').textContent = `${game.totalEarnedScore.toLocaleString()}점 (보유 ${game.score.toLocaleString()} P)`;
+    if (isNewRecord) {
+        document.getElementById('new-record-badge').classList.remove('hidden');
+    } else {
+        document.getElementById('new-record-badge').classList.add('hidden');
+    }
+    ui.overlayGameover.classList.remove('hidden');
+}
+
+function saveBestRecords() {
+    let isNew = false;
+    if (game.stage > game.bestStage) {
+        game.bestStage = game.stage;
+        localStorage.setItem('sd_bestStage', game.bestStage);
+        isNew = true;
+    }
+    if (game.totalEarnedScore > game.bestScore) {
+        game.bestScore = game.totalEarnedScore;
+        localStorage.setItem('sd_bestScore', game.bestScore);
+        isNew = true;
+    }
+    ui.bestStage.textContent = game.bestStage;
+    ui.bestScore.textContent = game.bestScore.toLocaleString();
+    return isNew;
+}
+
+function updateHUD() {
+    ui.stage.textContent = game.stage;
+    const diff = getDifficultyInfo(game.stage);
+    ui.diffBadge.textContent = diff.label;
+    ui.diffBadge.className = `text-[10px] px-1.5 py-0.5 rounded text-white font-bold ${diff.color}`;
+
+    ui.score.textContent = `${game.score.toLocaleString()} P`;
+    ui.shieldBadge.textContent = `🛡️ ${game.items.fakeBook}`;
+    if (game.items.decoyDoll) {
+        ui.decoyBadge.classList.remove('hidden');
+    } else {
+        ui.decoyBadge.classList.add('hidden');
+    }
+    if (game.items.coffeeActive) {
+        ui.coffeeBadge.classList.remove('hidden');
+    } else {
+        ui.coffeeBadge.classList.add('hidden');
+    }
+    if (game.items.snitchBribe) {
+        ui.bribeBadge.classList.remove('hidden');
+    } else {
+        ui.bribeBadge.classList.add('hidden');
+    }
+    if (game.items.principalSign) {
+        ui.signBadge.classList.remove('hidden');
+    } else {
+        ui.signBadge.classList.add('hidden');
+    }
+
+    const hypePct = Math.floor(game.hype);
+    ui.hypeText.textContent = `${hypePct}%`;
+    ui.hypeBar.style.width = `${hypePct}%`;
+    ui.time.textContent = game.timeLeft.toFixed(1);
+
+    if (game.timeLeft <= 5.0) {
+        ui.time.classList.remove('text-emerald-400');
+        ui.time.classList.add('text-rose-400', 'animate-pulse');
+    } else {
+        ui.time.classList.add('text-emerald-400');
+        ui.time.classList.remove('text-rose-400', 'animate-pulse');
+    }
+}
+
+/**
+ * ============================================================================
+ * 2D 캔버스 그래픽 렌더링 (교실, 칠판, 선생님, 친구들, 플레이어, 이펙트)
+ * ============================================================================
+ */
+function draw() {
+    const container = document.getElementById('canvas-container');
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+
+    ctx.save();
+
+    // 춤출 때 화면 미세 흔들림 (비트감 연출)
+    if (game.shakeIntensity > 0) {
+        const dx = (Math.random() - 0.5) * game.shakeIntensity * 2;
+        const dy = (Math.random() - 0.5) * game.shakeIntensity * 2;
+        ctx.translate(dx, dy);
+    }
+
+    // 1. 교실 배경 (벽면, 창문, 바닥)
+    drawClassroomBackground(w, h);
+
+    // 2. 춤출 때 나타나는 화려한 디스코 조명 & 미러볼
+    if (game.isHoldingDance && game.state === STATE.PLAYING) {
+        drawDiscoEffects(w, h);
+    }
+
+    // 3. 칠판 및 분필 판서
+    drawChalkboard(w, h);
+
+    // 4. 선생님 캐릭터 (칠판 앞 교탁)
+    drawTeacher(w, h);
+
+    // 5. 옆자리 친구들 (열심히 공부하는 모범생 친구들)
+    drawClassmates(w, h);
+
+    // 6. 플레이어 학생 캐릭터 (책상 뒤에서 춤추기 / 공부하는 척)
+    drawPlayer(w, h);
+
+    // 7. 들켰을 때 선생님 눈 레이저 이펙트
+    if (game.state === STATE.GAMEOVER && teacher.laserProgress > 0) {
+        drawCaughtLaser(w, h);
+    }
+
+    // 8. 음표/별 파티클
+    drawParticles();
+
+    ctx.restore();
+}
+
+function drawClassroomBackground(w, h) {
+    // 따뜻한 크림색 교실 벽
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, h * 0.65);
+    wallGrad.addColorStop(0, '#fef3c7');
+    wallGrad.addColorStop(1, '#fde68a');
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, w, h * 0.65);
+
+    // 왼쪽 복도 창문 (선도부장 출몰 위치!)
+    const winX = w * 0.03;
+    const winY = h * 0.09;
+    const winW = Math.min(105, w * 0.16);
+    const winH = h * 0.34;
+
+    ctx.fillStyle = prefect.state === PREFECT_STATE.WATCHING ? '#fecaca' : '#e0f2fe';
+    ctx.fillRect(winX, winY, winW, winH);
+
+    // 창문 안쪽에 복도 순찰 선도부장 렌더링
+    if (prefect.active && prefect.peekProgress > 0.02) {
+        drawPrefectInWindow(winX, winY, winW, winH);
+    }
+
+    // 창문 틀
+    ctx.strokeStyle = prefect.state === PREFECT_STATE.WATCHING ? '#dc2626' : '#92400e';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(winX, winY, winW, winH);
+    ctx.beginPath();
+    ctx.moveTo(winX + winW / 2, winY);
+    ctx.lineTo(winX + winW / 2, winY + winH);
+    ctx.moveTo(winX, winY + winH / 2);
+    ctx.lineTo(winX + winW, winY + winH / 2);
+    ctx.stroke();
+
+    // 선도부장 상태 말풍선 (창문 위)
+    if (prefect.active && prefect.state === PREFECT_STATE.WARNING) {
+        const bounce = Math.sin(performance.now() * 0.035) * 4;
+        ctx.fillStyle = '#f97316';
+        roundRect(ctx, winX + winW * 0.1, winY - 26 + bounce, winW * 0.8, 22, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Jua, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('발소리 !', winX + winW / 2, winY - 11 + bounce);
+    } else if (prefect.active && prefect.state === PREFECT_STATE.WATCHING) {
+        ctx.fillStyle = '#dc2626';
+        roundRect(ctx, winX + winW * 0.05, winY - 26, winW * 0.9, 22, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Jua, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('창문 감시!', winX + winW / 2, winY - 11);
+    }
+
+    // 나무 마룻바닥
+    const floorGrad = ctx.createLinearGradient(0, h * 0.65, 0, h);
+    floorGrad.addColorStop(0, '#d97706');
+    floorGrad.addColorStop(1, '#92400e');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, h * 0.65, w, h * 0.35);
+
+    // 걸레받이 몰딩
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(0, h * 0.64, w, 10);
+
+    // Stage 7+ 오른쪽 교실 출입문 (교장선생님 기습 순찰 위치!)
+    if (principal.active) {
+        const doorW = Math.min(95, w * 0.14);
+        const doorH = h * 0.44;
+        const doorX = w - doorW - w * 0.03;
+        const doorY = h * 0.20;
+
+        // 문틀
+        ctx.fillStyle = '#78350f';
+        roundRect(ctx, doorX - 5, doorY - 5, doorW + 10, doorH + 5, 6, true, false);
+
+        // 열린 문 안쪽 복도 배경
+        ctx.fillStyle = principal.state === PRINCIPAL_STATE.WATCHING ? '#fee2e2' : '#fef9c3';
+        ctx.fillRect(doorX, doorY, doorW, doorH);
+
+        // 교장선생님 렌더링
+        if (principal.peekProgress > 0.02) {
+            drawPrincipalInDoor(doorX, doorY, doorW, doorH);
+        }
+
+        // 반쯤 열린 나무 문짝
+        const openOffset = principal.peekProgress * (doorW * 0.72);
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(doorX + openOffset, doorY, doorW - openOffset, doorH);
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(doorX + openOffset, doorY, doorW - openOffset, doorH);
+
+        // 교장선생님 상태 말풍선
+        if (principal.state === PRINCIPAL_STATE.WARNING) {
+            const bounce = Math.sin(performance.now() * 0.04) * 4;
+            ctx.fillStyle = '#d97706';
+            roundRect(ctx, doorX - 8, doorY - 28 + bounce, doorW + 16, 22, 8, true, false);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('교장 발소리!', doorX + doorW / 2, doorY - 13 + bounce);
+        } else if (principal.state === PRINCIPAL_STATE.WATCHING) {
+            ctx.fillStyle = '#991b1b';
+            roundRect(ctx, doorX - 10, doorY - 28, doorW + 20, 22, 8, true, false);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('교장 불시점검!', doorX + doorW / 2, doorY - 13);
+        }
+    }
+}
+
+function drawPrincipalInDoor(doorX, doorY, doorW, doorH) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(doorX, doorY, doorW, doorH);
+    ctx.clip();
+
+    const cx = doorX + doorW * 0.42;
+    const cy = doorY + doorH * 0.48;
+
+    // 짙은 남색 양복
+    ctx.fillStyle = '#1e1b4b';
+    roundRect(ctx, cx - 26, cy + 12, 52, 70, 12, true, false);
+
+    // 얼굴
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 10, 21, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 교장선생님 특징: 반짝이는 대머리 + 양옆 하얀 머리숱 + 콧수염
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(cx - 19, cy - 12, 7, 0, Math.PI * 2);
+    ctx.arc(cx + 19, cy - 12, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 콧수염
+    ctx.fillStyle = '#cbd5e1';
+    roundRect(ctx, cx - 10, cy - 3, 20, 5, 2, true, false);
+
+    // 감시 중일 때 매서운 눈빛
+    if (principal.state === PRINCIPAL_STATE.WATCHING) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx - 7, cy - 12, 2.8, 0, Math.PI * 2);
+        ctx.arc(cx + 7, cy - 12, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+function drawPrefectInWindow(winX, winY, winW, winH) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(winX, winY, winW, winH);
+    ctx.clip();
+
+    const cx = winX + winW * 0.5;
+    const baseY = winY + winH + 45 - prefect.peekProgress * (winH * 0.62);
+
+    // 선도부장 교복 몸통 & 빨간 선도 완장
+    ctx.fillStyle = '#1e293b';
+    roundRect(ctx, cx - 24, baseY - 15, 48, 55, 10, true, false);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(cx + 12, baseY - 5, 12, 16);
+
+    // 얼굴
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(cx, baseY - 34, 19, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 단정한 학생 머리
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(cx, baseY - 38, 20, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // 매서운 눈 & 입에 문 호루라기
+    if (prefect.state === PREFECT_STATE.WATCHING) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx - 7, baseY - 34, 2.5, 0, Math.PI * 2);
+        ctx.arc(cx + 7, baseY - 34, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 호루라기
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(cx - 2, baseY - 24, 14, 6);
+    }
+
+    ctx.restore();
+}
+
+function drawDiscoEffects(w, h) {
+    ctx.save();
+    const isFever = game.feverTimer > 0;
+    const mbLevel = game.upgrades.mirrorball + (isFever ? 2 : 0); // 피버 타임 시 화려함 부스트!
+    // 화면 전체 클럽 틴트 오버레이
+    const hue = (performance.now() * (0.2 + mbLevel * 0.09)) % 360;
+    ctx.fillStyle = `hsla(${hue}, 90%, 52%, ${0.14 + mbLevel * 0.04})`;
+    ctx.fillRect(0, 0, w, h);
+
+    // 상단 중앙 미러볼
+    const ballX = w * 0.5;
+    const ballY = 26 + mbLevel * 4;
+    const ballRadius = 18 + mbLevel * 5;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(ballX, 0);
+    ctx.lineTo(ballX, ballY);
+    ctx.stroke();
+
+    // 회전하는 스포트라이트 광선 (미러볼 레벨에 따라 광선 수 증가)
+    const beamCount = 4 + mbLevel * 2;
+    for (let i = 0; i < beamCount; i++) {
+        const angle = game.discoAngle + (i * Math.PI * 2) / beamCount;
+        const beamHue = (hue + i * 55) % 360;
+        ctx.fillStyle = `hsla(${beamHue}, 100%, 60%, ${0.15 + mbLevel * 0.03})`;
+        ctx.beginPath();
+        ctx.moveTo(ballX, ballY);
+        ctx.lineTo(ballX + Math.cos(angle - 0.14) * w, ballY + Math.sin(angle - 0.14) * h);
+        ctx.lineTo(ballX + Math.cos(angle + 0.14) * w, ballY + Math.sin(angle + 0.14) * h);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 미러볼 본체
+    const ballGrad = ctx.createRadialGradient(ballX - 5, ballY - 5, 2, ballX, ballY, ballRadius);
+    ballGrad.addColorStop(0, '#ffffff');
+    ballGrad.addColorStop(0.5, '#cbd5e1');
+    ballGrad.addColorStop(1, '#475569');
+    ctx.fillStyle = ballGrad;
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 미러볼 반사 타일 격자
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ballX - ballRadius, ballY);
+    ctx.lineTo(ballX + ballRadius, ballY);
+    ctx.moveTo(ballX, ballY - ballRadius);
+    ctx.lineTo(ballX, ballY + ballRadius);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawChalkboard(w, h) {
+    const boardW = Math.min(460, w * 0.56);
+    const boardH = h * 0.30;
+    const boardX = (w - boardW) * 0.5;
+    const boardY = h * 0.08;
+
+    // 나무 칠판 테두리
+    ctx.fillStyle = '#78350f';
+    roundRect(ctx, boardX - 8, boardY - 8, boardW + 16, boardH + 16, 12, true, false);
+
+    // 짙은 녹색 칠판 면
+    ctx.fillStyle = '#064e3b';
+    roundRect(ctx, boardX, boardY, boardW, boardH, 6, true, false);
+
+    // 분필 판서 텍스트
+    ctx.font = `bold ${Math.max(12, Math.min(16, boardW * 0.036))}px 'Jua', sans-serif`;
+    ctx.textAlign = 'left';
+
+    game.chalkLines.forEach((line, idx) => {
+        if (line.progress <= 0) return;
+        const visibleLen = Math.floor(line.text.length * line.progress);
+        const shownText = line.text.slice(0, visibleLen);
+        ctx.fillStyle = idx === 0 ? '#fde047' : 'rgba(255, 255, 255, 0.92)';
+        ctx.fillText(shownText, boardX + 18, boardY + boardH * line.y);
+    });
+
+    // 하단 분필 받침대
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(boardX - 4, boardY + boardH + 2, boardW + 8, 8);
+}
+
+function drawTeacher(w, h) {
+    const tx = w * 0.52;
+    const ty = h * 0.48;
+    const scale = Math.min(1.08, Math.max(0.75, w / 680));
+
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.scale(scale, scale);
+
+    // 7단계 이상 초예민 모드 붉은 긴장 오라
+    if (game.stage >= 7) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.16)';
+        ctx.beginPath();
+        ctx.arc(0, -35, 64 + Math.sin(performance.now() * 0.025) * 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    const isWatching = teacher.lookProgress > 0.55;
+
+    // 선생님 몸통 (단정한 정장 재킷)
+    ctx.fillStyle = '#334155';
+    roundRect(ctx, -32, -34, 64, 66, 16, true, false);
+
+    // 셔츠 & 넥타이 (정면 볼 때)
+    if (isWatching) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(-10, -34);
+        ctx.lineTo(0, -8);
+        ctx.lineTo(10, -34);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.moveTo(-3, -30);
+        ctx.lineTo(3, -30);
+        ctx.lineTo(0, -10);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // 팔 애니메이션 (판서할 때 분필 든 팔 흔들기)
+    ctx.save();
+    if (!isWatching) {
+        ctx.translate(28, -24);
+        ctx.rotate(teacher.armAngle - 0.8);
+        ctx.fillStyle = '#334155';
+        roundRect(ctx, -6, -6, 12, 34, 6, true, false);
+        // 손 & 분필
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, 30, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-2, 32, 4, 10);
+    }
+    ctx.restore();
+
+    // 머리
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.arc(0, -58, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!isWatching) {
+        // 뒷모습 머리카락 (칠판 보는 중)
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(0, -58, 26, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        // 앞모습 머리카락 + 매서운 안경 & 눈빛
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(0, -64, 26, Math.PI * 0.95, Math.PI * 2.05);
+        ctx.fill();
+
+        // 뿔테 안경
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-18, -64, 14, 10);
+        ctx.strokeRect(4, -64, 14, 10);
+        ctx.beginPath();
+        ctx.moveTo(-4, -59);
+        ctx.lineTo(4, -59);
+        ctx.stroke();
+
+        // 붉게 빛나는 감시 눈동자
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(-11, -59, 2.8, 0, Math.PI * 2);
+        ctx.arc(11, -59, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 찌푸린 눈썹
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-18, -68);
+        ctx.lineTo(-5, -64);
+        ctx.moveTo(18, -68);
+        ctx.lineTo(5, -64);
+        ctx.stroke();
+    }
+
+    // 교탁 (선생님 앞)
+    ctx.fillStyle = '#b45309';
+    roundRect(ctx, -58, 12, 116, 44, 8, true, false);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-52, 18, 104, 8);
+
+    // 커피 버프 적용 시 교탁 위 김이 모락모락 나는 커피잔
+    if (game.items.coffeeActive) {
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, 26, -2, 16, 14, 3, true, false);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(31, -6);
+        ctx.quadraticCurveTo(28, -13, 33, -18);
+        ctx.moveTo(37, -6);
+        ctx.quadraticCurveTo(40, -13, 36, -18);
+        ctx.stroke();
+    }
+
+    // 머리 위 경고 느낌표(!) 또는 감시 중 표시
+    if (teacher.state === TEACHER_STATE.WARNING) {
+        const bounce = Math.sin(performance.now() * 0.04) * 5;
+        ctx.fillStyle = '#f59e0b';
+        roundRect(ctx, -18, -124 + bounce, 36, 34, 10, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px Jua, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('!', 0, -99 + bounce);
+    } else if (teacher.state === TEACHER_STATE.WATCHING) {
+        ctx.fillStyle = '#dc2626';
+        roundRect(ctx, -38, -122, 76, 26, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px Jua, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('👀 감시 중!', 0, -104);
+    }
+
+    ctx.restore();
+}
+
+function drawClassmates(w, h) {
+    const peers = [
+        { x: w * 0.22, y: h * 0.72, shirt: '#3b82f6', hair: '#1e293b', isSnitch: false },
+        { x: w * 0.78, y: h * 0.72, shirt: '#10b981', hair: '#451a03', isSnitch: true }
+    ];
+
+    peers.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        const scale = Math.min(1.0, Math.max(0.72, w / 720));
+        ctx.scale(scale, scale);
+
+        // 몸통
+        ctx.fillStyle = p.shirt;
+        roundRect(ctx, -24, -24, 48, 42, 12, true, false);
+
+        // 얼굴
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, -45, 21, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 머리 (고개 숙임)
+        ctx.fillStyle = p.hair;
+        ctx.beginPath();
+        ctx.arc(0, -48, 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 책상
+        ctx.fillStyle = '#d97706';
+        roundRect(ctx, -45, 15, 90, 14, 5, true, false);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(-38, 29, 8, 35);
+        ctx.fillRect(30, 29, 8, 35);
+
+        // Stage 7+ 모범생 고자질 경고 게이지 바 표시
+        if (p.isSnitch && snitch.active && snitch.meter > 2) {
+            const barW = 76;
+            const barH = 10;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            roundRect(ctx, -barW / 2, -88, barW, barH, 5, true, false);
+
+            const fillPct = Math.min(1, snitch.meter / 100);
+            ctx.fillStyle = fillPct > 0.7 ? '#ef4444' : '#f59e0b';
+            roundRect(ctx, -barW / 2 + 2, -86, (barW - 4) * fillPct, barH - 4, 3, true, false);
+
+            ctx.fillStyle = fillPct > 0.7 ? '#fecaca' : '#fef08a';
+            ctx.font = 'bold 11px Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(fillPct > 0.7 ? '🚨 이른다!!' : '👀 고자질 주의', 0, -93);
+        }
+
+        ctx.restore();
+    });
+}
+
+function drawPlayer(w, h) {
+    const px = w * 0.5;
+    const py = h * 0.76;
+    const scale = Math.min(1.15, Math.max(0.8, w / 620));
+
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(scale, scale);
+
+    const isDancing = game.isHoldingDance && game.state === STATE.PLAYING;
+    const isCaught = game.state === STATE.GAMEOVER;
+
+    if (isDancing) {
+        // 모범생 분신 인형 보유 시: 책상에 엎드려 열공하는 분신 인형을 먼저 그림!
+        if (game.items.decoyDoll) {
+            ctx.save();
+            ctx.globalAlpha = 0.85;
+            ctx.fillStyle = '#64748b';
+            roundRect(ctx, -34, -22, 44, 38, 12, true, false);
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.arc(-12, -40, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 11px Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🪆 분신 열공중', -12, -62);
+            ctx.restore();
+        }
+
+        // === 신나게 춤추는 모션 (업그레이드별 8가지 포즈 & 진화하는 외형!) ===
+        const pose = game.dancePoseIndex;
+        const boosterLv = game.upgrades.danceBooster;
+        const earphoneLv = game.upgrades.earphones;
+        const mirrorballLv = game.upgrades.mirrorball;
+        const isLegendary = game.transcendNodes.legendaryDancer;
+
+        // 포즈별 특화 바운스/회전/좌우 슬라이드 계산
+        let bounceY = Math.abs(Math.sin(performance.now() * 0.02)) * -14;
+        let tilt = (pose % 2 === 0 ? -1 : 1) * 0.14;
+        let offsetX = 0;
+
+        if (pose === 4) {
+            // [포즈 4] 문워크 좌우 슬라이드
+            offsetX = Math.sin(performance.now() * 0.015) * 24;
+            tilt = offsetX > 0 ? -0.18 : 0.18;
+        } else if (pose === 5) {
+            // [포즈 5] 하이 점프 스타 포즈
+            bounceY = -26 - Math.abs(Math.sin(performance.now() * 0.025)) * 10;
+            tilt = 0;
+        } else if (pose === 6) {
+            // [포즈 6] 브레이크 댄스 헤드스핀 & 역동적 기울기
+            bounceY = -18;
+            tilt = Math.sin(performance.now() * 0.035) * 0.48;
+        } else if (pose === 7) {
+            // [포즈 7] 로보트 팝핀 & 웨이브
+            bounceY = (Math.floor(performance.now() / 90) % 2 === 0) ? -16 : -4;
+            tilt = (Math.floor(performance.now() / 120) % 3 - 1) * 0.22;
+        }
+
+        ctx.save();
+        ctx.translate(offsetX, bounceY);
+        ctx.rotate(tilt);
+
+        // [외형 진화 1] 댄스 부스터 Lv.3+ 또는 초월 궁극기 보유 시 뒤쪽 에너지 오라 이펙트
+        if (boosterLv >= 3 || isLegendary) {
+            const auraHue = (performance.now() * 0.35) % 360;
+            ctx.save();
+            ctx.fillStyle = isLegendary
+                ? 'rgba(250, 204, 21, 0.28)'
+                : `hsla(${auraHue}, 95%, 60%, 0.22)`;
+            ctx.beginPath();
+            ctx.arc(0, -25, 58 + Math.sin(performance.now() * 0.03) * 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // [외형 진화 2] 의상 컬러 & 스타일 진화
+        let outfitColor = '#ec4899';
+        let accentColor = '#fbcfe8';
+        if (isLegendary) {
+            outfitColor = '#f59e0b';
+            accentColor = '#fef08a';
+        } else if (boosterLv >= 5) {
+            outfitColor = '#7c3aed';
+            accentColor = '#38bdf8';
+        } else if (boosterLv >= 2) {
+            outfitColor = '#e11d48';
+            accentColor = '#fde047';
+        }
+
+        // 다리 (리듬 타기 + 고급 댄스 스텝)
+        ctx.strokeStyle = boosterLv >= 4 ? '#312e81' : '#1e293b';
+        ctx.lineWidth = 11;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (pose === 4) {
+            ctx.moveTo(-12, 15);
+            ctx.lineTo(14, 48);
+            ctx.moveTo(12, 15);
+            ctx.lineTo(-22, 46);
+        } else if (pose === 5) {
+            ctx.moveTo(-14, 15);
+            ctx.lineTo(-34, 44);
+            ctx.moveTo(14, 15);
+            ctx.lineTo(34, 44);
+        } else if (pose === 6) {
+            ctx.moveTo(-14, 15);
+            ctx.lineTo(-38, 22);
+            ctx.moveTo(14, 15);
+            ctx.lineTo(22, 48);
+        } else {
+            ctx.moveTo(-14, 15);
+            ctx.lineTo(pose === 0 || pose === 7 ? -28 : -16, 48);
+            ctx.moveTo(14, 15);
+            ctx.lineTo(pose === 2 || pose === 7 ? 28 : 16, 48);
+        }
+        ctx.stroke();
+
+        // 화려한 무대 의상 몸통
+        ctx.fillStyle = outfitColor;
+        roundRect(ctx, -30, -38, 60, 58, 16, true, false);
+
+        // 의상 디테일 (Lv.2+ 스타 V넥 자켓 & 골드 체인 목걸이)
+        if (boosterLv >= 2 || isLegendary) {
+            ctx.fillStyle = accentColor;
+            ctx.beginPath();
+            ctx.moveTo(-14, -38);
+            ctx.lineTo(0, -8);
+            ctx.lineTo(14, -38);
+            ctx.closePath();
+            ctx.fill();
+
+            if (mirrorballLv >= 1 || isLegendary) {
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, -32, 14, 0.15 * Math.PI, 0.85 * Math.PI);
+                ctx.stroke();
+                ctx.fillStyle = '#fef08a';
+                ctx.beginPath();
+                ctx.arc(0, -16, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 양팔 다채로운 댄스 동작 (8가지 포즈별 팔 각도 변화)
+        ctx.strokeStyle = outfitColor;
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        let leftHand = { x: -48, y: -64 };
+        let rightHand = { x: 48, y: -64 };
+
+        if (pose === 0 || pose === 2) {
+            leftHand = { x: -48, y: -62 };
+            rightHand = { x: 48, y: -62 };
+        } else if (pose === 1 || pose === 3) {
+            leftHand = { x: -52, y: -10 };
+            rightHand = { x: 46, y: -68 };
+        } else if (pose === 4) {
+            leftHand = { x: -54, y: -32 };
+            rightHand = { x: 52, y: -44 };
+        } else if (pose === 5) {
+            leftHand = { x: -56, y: -56 };
+            rightHand = { x: 56, y: -56 };
+        } else if (pose === 6) {
+            leftHand = { x: -42, y: 12 };
+            rightHand = { x: 44, y: -74 };
+        } else {
+            leftHand = { x: -48, y: -42 };
+            rightHand = { x: 48, y: -22 };
+        }
+
+        ctx.moveTo(-28, -28);
+        ctx.lineTo(leftHand.x, leftHand.y);
+        ctx.moveTo(28, -28);
+        ctx.lineTo(rightHand.x, rightHand.y);
+        ctx.stroke();
+
+        // 손
+        ctx.fillStyle = boosterLv >= 4 || isLegendary ? '#fef08a' : '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(leftHand.x, leftHand.y - 2, 7, 0, Math.PI * 2);
+        ctx.arc(rightHand.x, rightHand.y - 2, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 얼굴
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, -64, 25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 머리카락 (업그레이드 레벨에 따라 염색 컬러 진화)
+        ctx.fillStyle = isLegendary ? '#facc15' : (boosterLv >= 4 ? '#38bdf8' : '#1e293b');
+        ctx.beginPath();
+        ctx.arc(0, -70, 26, Math.PI * 0.95, Math.PI * 2.05);
+        ctx.fill();
+
+        // 무선 이어폰 업그레이드 시 네온 헤드폰 착용
+        if (earphoneLv >= 1) {
+            ctx.strokeStyle = earphoneLv >= 3 ? '#f43f5e' : '#06b6d4';
+            ctx.lineWidth = 4.5;
+            ctx.beginPath();
+            ctx.arc(0, -68, 28, Math.PI * 1.05, Math.PI * 1.95);
+            ctx.stroke();
+
+            ctx.fillStyle = earphoneLv >= 3 ? '#fb7185' : '#22d3ee';
+            roundRect(ctx, -32, -73, 8, 16, 4, true, false);
+            roundRect(ctx, 24, -73, 8, 16, 4, true, false);
+        }
+
+        // 초월 궁극기 보유 시 머리 위 황금 왕관
+        if (isLegendary) {
+            ctx.fillStyle = '#facc15';
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(-14, -93);
+            ctx.lineTo(-17, -108);
+            ctx.lineTo(-6, -99);
+            ctx.lineTo(0, -112);
+            ctx.lineTo(6, -99);
+            ctx.lineTo(17, -108);
+            ctx.lineTo(14, -93);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // 선글라스 / 홀로그램 바이저
+        if (mirrorballLv >= 2 || isLegendary) {
+            ctx.fillStyle = '#4c1d95';
+            roundRect(ctx, -22, -71, 44, 12, 5, true, false);
+            ctx.fillStyle = '#f472b6';
+            ctx.fillRect(-18, -68, 36, 4);
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-14, -67, 10, 2);
+        } else {
+            ctx.fillStyle = '#0f172a';
+            roundRect(ctx, -20, -70, 17, 11, 3, true, false);
+            roundRect(ctx, 3, -70, 17, 11, 3, true, false);
+            ctx.fillRect(-4, -67, 8, 3);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(-17, -68, 5, 3);
+            ctx.fillRect(6, -68, 5, 3);
+        }
+
+        // 신난 입
+        ctx.fillStyle = '#e11d48';
+        ctx.beginPath();
+        ctx.arc(0, -52, 8, 0, Math.PI);
+        ctx.fill();
+
+        ctx.restore();
+
+        // 책상 (춤출 땐 책상 뒤에서 점프)
+        drawPlayerDesk(true);
+    } else {
+        // === 얌전하게 공부하는 척 (또는 들켜서 식은땀 흘리는 자세) ===
+        drawPlayerDesk(false);
+
+        const boosterLv = game.upgrades.danceBooster;
+        const earphoneLv = game.upgrades.earphones;
+        const isLegendary = game.transcendNodes.legendaryDancer;
+
+        // 몸통 (단정한 교복/니트 - 업그레이드 의상 컬러 반영)
+        ctx.fillStyle = isLegendary ? '#f59e0b' : (boosterLv >= 5 ? '#7c3aed' : (boosterLv >= 2 ? '#e11d48' : '#ec4899'));
+        roundRect(ctx, -28, -28, 56, 46, 14, true, false);
+
+        // 머리 (고개 숙이고 책 보는 척)
+        ctx.fillStyle = '#fed7aa';
+        ctx.beginPath();
+        ctx.arc(0, -50, 23, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = isLegendary ? '#facc15' : (boosterLv >= 4 ? '#38bdf8' : '#1e293b');
+        ctx.beginPath();
+        ctx.arc(0, -54, 24, Math.PI * 0.85, Math.PI * 2.15);
+        ctx.fill();
+
+        // 공부할 때도 착용 중인 헤드폰 & 왕관 표시
+        if (earphoneLv >= 1) {
+            ctx.fillStyle = earphoneLv >= 3 ? '#fb7185' : '#22d3ee';
+            roundRect(ctx, -28, -56, 7, 14, 3, true, false);
+            roundRect(ctx, 21, -56, 7, 14, 3, true, false);
+        }
+        if (isLegendary) {
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.moveTo(-11, -76);
+            ctx.lineTo(-13, -87);
+            ctx.lineTo(0, -90);
+            ctx.lineTo(13, -87);
+            ctx.lineTo(11, -76);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        if (isCaught) {
+            // 들켜서 충격받은 표정
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-9, -48, 5, 0, Math.PI * 2);
+            ctx.arc(9, -48, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(-9, -48, 2, 0, Math.PI * 2);
+            ctx.arc(9, -48, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 식은땀
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(22, -55, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 당황한 입
+            ctx.strokeStyle = '#7f1d1d';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-7, -36);
+            ctx.lineTo(7, -36);
+            ctx.stroke();
+        } else {
+            // 열심히 공부하는 평온한 눈
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(-9, -46, 4, 0, Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(9, -46, 4, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        // 책상 위 펼쳐진 교과서 (가짜 교과서 가림막 보유 시 두꺼운 황금 방패 교과서로 표시)
+        if (game.items.fakeBook > 0) {
+            ctx.fillStyle = '#fef08a';
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 2.5;
+            roundRect(ctx, -30, -4, 60, 22, 4, true, true);
+            ctx.fillStyle = '#b45309';
+            ctx.font = 'bold 10px Jua, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`가림막 x${game.items.fakeBook}`, 0, 10);
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            roundRect(ctx, -26, 2, 52, 16, 3, true, true);
+            ctx.beginPath();
+            ctx.moveTo(0, 2);
+            ctx.lineTo(0, 18);
+            ctx.stroke();
+        }
+    }
+
+    // 가짜 교과서 방어 발동 시 충격파 쉴드 이펙트
+    if (game.shieldFlashTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(56, 189, 248, ${game.shieldFlashTimer})`;
+        ctx.fillStyle = `rgba(56, 189, 248, ${game.shieldFlashTimer * 0.25})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, -25, 68 + (1 - game.shieldFlashTimer) * 25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+function drawPlayerDesk(behind) {
+    ctx.save();
+    if (behind) ctx.globalAlpha = 0.92;
+    // 책상 상판
+    ctx.fillStyle = '#f59e0b';
+    roundRect(ctx, -56, 16, 112, 16, 6, true, false);
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 2;
+    roundRect(ctx, -56, 16, 112, 16, 6, false, true);
+
+    // 책상 다리
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-46, 32, 10, 42);
+    ctx.fillRect(36, 32, 10, 42);
+    ctx.restore();
+}
+
+function drawCaughtLaser(w, h) {
+    const tx = w * 0.52;
+    const ty = h * 0.48 - 58;
+    const px = w * 0.5;
+    const py = h * 0.76 - 50;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+    ctx.lineWidth = 8;
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 18;
+
+    ctx.beginPath();
+    ctx.moveTo(tx - 11, ty);
+    ctx.lineTo(px - 10, py);
+    ctx.moveTo(tx + 11, ty);
+    ctx.lineTo(px + 10, py);
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawParticles() {
+    game.particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.font = `bold ${p.size}px 'Jua', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(p.icon, p.x, p.y);
+        ctx.restore();
+    });
+}
+
+// 둥근 사각형 헬퍼 함수
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, radius);
+    ctx.arcTo(x + width, y + height, x, y + height, radius);
+    ctx.arcTo(x, y + height, x, y, radius);
+    ctx.arcTo(x, y, x + width, y, radius);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+/**
+ * ============================================================================
+ * 메인 애니메이션 루프
+ * ============================================================================
+ */
+let lastTime = 0;
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+    lastTime = timestamp;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+/**
+ * ============================================================================
+ * 사용자 입력 이벤트 바인딩 (키보드 스페이스바, 마우스 홀드, 모바일 터치 홀드)
+ * ============================================================================
+ */
+function setDanceHold(active) {
+    if (game.state !== STATE.PLAYING) return;
+    sound.init();
+    // 손을 뗄 때: 반사신경 레벨이 낮으면 짧은 자세 복귀 딜레이(최대 0.14초) 발생, 레벨이 높을수록 즉시 착석!
+    if (game.isHoldingDance && !active) {
+        const delay = Math.max(0, 0.14 - game.upgrades.reflex * 0.028);
+        game.graceTimer = delay;
+    }
+    game.isHoldingDance = active;
+    if (active) {
+        game.graceTimer = 0;
+        ui.btnDance.classList.add('active');
+    } else {
+        ui.btnDance.classList.remove('active');
+    }
+}
+
+// 키보드 스페이스바
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (game.state === STATE.START) {
+            startNewGame();
+            return;
+        }
+        if (!e.repeat) {
+            setDanceHold(true);
+        }
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        setDanceHold(false);
+    }
+});
+
+// 하단 '춤추기!' 버튼 & 캔버스 영역 마우스/터치 홀드
+const holdTargets = [ui.btnDance, canvas];
+holdTargets.forEach(el => {
+    el.addEventListener('mousedown', (e) => {
+        if (e.button === 0) setDanceHold(true);
+    });
+    el.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        setDanceHold(true);
+    }, { passive: false });
+});
+
+window.addEventListener('mouseup', () => setDanceHold(false));
+window.addEventListener('touchend', () => setDanceHold(false));
+window.addEventListener('touchcancel', () => setDanceHold(false));
+window.addEventListener('blur', () => setDanceHold(false));
+
+// UI 버튼 이벤트
+document.getElementById('btn-start').addEventListener('click', startNewGame);
+document.getElementById('btn-retry').addEventListener('click', startNewGame);
+document.getElementById('btn-restart-pause').addEventListener('click', startNewGame);
+
+document.getElementById('btn-next-stage').addEventListener('click', () => {
+    sound.init();
+    initStage(game.stage + 1);
+    hideAllOverlays();
+    game.state = STATE.PLAYING;
+});
+
+document.getElementById('tab-shop-upgrade').addEventListener('click', () => {
+    game.shopTab = 'upgrade';
+    renderShop();
+});
+document.getElementById('tab-shop-consumable').addEventListener('click', () => {
+    game.shopTab = 'consumable';
+    renderShop();
+});
+document.getElementById('tab-shop-transcend').addEventListener('click', () => {
+    game.shopTab = 'transcend';
+    renderShop();
+});
+
+ui.btnPause.addEventListener('click', () => {
+    if (game.state === STATE.PLAYING) {
+        game.state = STATE.PAUSED;
+        game.isHoldingDance = false;
+        ui.btnDance.classList.remove('active');
+        ui.overlayPause.classList.remove('hidden');
+    } else if (game.state === STATE.PAUSED) {
+        hideAllOverlays();
+        game.state = STATE.PLAYING;
+    }
+});
+
+document.getElementById('btn-resume').addEventListener('click', () => {
+    hideAllOverlays();
+    game.state = STATE.PLAYING;
+});
+
+ui.btnMute.addEventListener('click', () => {
+    sound.init();
+    const muted = sound.toggleMute();
+    ui.btnMute.textContent = muted ? '🔇' : '🔊';
+});
+
+// 초기 실행
+window.onload = function () {
+    resizeCanvas();
+    generateChalkLines();
+    requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>
