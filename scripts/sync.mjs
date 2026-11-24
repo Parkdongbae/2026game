@@ -18,6 +18,7 @@ const ID_RE = /^\d{4}(-\d+)?$/;
 const AI_CHAT_HOSTS = ["gemini.google.com", "chatgpt.com", "chat.openai.com", "claude.ai"];
 const REASON_AI = "AI 대화 화면 저장본 (게임 파일 아님)";
 const REASON_DUP = "같은 파일을 두 번 올림 (한 번만 게시)";
+const REASON_OLD = "새 버전으로 교체됨 (옛 파일)";
 const FIXES = {
   [REASON_AI]: "AI와 대화한 화면을 저장한 파일이에요. AI가 만들어 준 게임 코드를 HTML 파일로 내려받아(또는 복사해서 .html로 저장해) 다시 올려 주세요.",
   "파일명에서 학번·이름을 찾지 못함": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
@@ -47,15 +48,52 @@ function decodeEntities(s) {
     .replace(/&amp;/g, "&");
 }
 
+// 목록의 "수정 시각" 글자를 분 단위 숫자로. 오늘 수정한 파일만 시각(16:04, 4:04 pm, 오후 4:04)으로 나오고
+// 그 전 파일은 날짜로 나오므로, 읽지 못하면 -1(더 오래된 것으로 취급).
+function parseClock(text) {
+  const m = /(\d{1,2}):(\d{2})/.exec(text ?? "");
+  if (!m) return -1;
+  let h = Number(m[1]);
+  if (/pm|오후/i.test(text) && h < 12) h += 12;
+  if (/am|오전/i.test(text) && h === 12) h = 0;
+  return h * 60 + Number(m[2]);
+}
+
+// 두 게임 파일이 "같은 게임의 다른 버전"인지 판단하기 위한 줄 단위 유사도 (0~1)
+const lineCache = new WeakMap();
+function linesOf(buf) {
+  if (!lineCache.has(buf)) {
+    lineCache.set(buf, new Set(buf.toString("utf8").split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length >= 12)));
+  }
+  return lineCache.get(buf);
+}
+function similarity(bufA, bufB) {
+  const a = linesOf(bufA), b = linesOf(bufB);
+  if (a.size === 0 || b.size === 0) return 0;
+  let n = 0;
+  for (const x of a) if (b.has(x)) n++;
+  return n / (a.size + b.size - n);
+}
+const normTitle = (t) => String(t).replace(/\s+/g, "").toLowerCase();
+// 서로 다른 게임끼리는 실측 최대 0.13. 제목까지 같으면 0.15, 제목이 달라도 0.4 이상이면 같은 게임의 수정본으로 본다.
+function sameGameScore(a, b) {
+  if (!a.buf || !b.buf) return 0;
+  const s = similarity(a.buf, b.buf);
+  if (s >= 0.4) return s;
+  if (s >= 0.15 && normTitle(a.title) === normTitle(b.title)) return s;
+  return 0;
+}
+const copyNo = (name) => Number(/\((\d+)\)/.exec(name)?.[1] ?? 0);
+
 // ---------- 1단계: 목록 ----------
 async function listFolder(folderId) {
   const res = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}`, { headers: HEADERS });
   if (!res.ok) throw new Error(`폴더 목록 응답 ${res.status}`);
   const html = await res.text();
   const entries = [];
-  const re = /id="entry-([\w-]+)"[\s\S]*?class="flip-entry-title">([^<]*)</g;
+  const re = /id="entry-([\w-]+)"[\s\S]*?class="flip-entry-title">([^<]*)<(?:(?!id="entry-)[\s\S])*?flip-entry-last-modified"><div>([^<]*)</g;
   let m;
-  while ((m = re.exec(html))) entries.push({ driveId: m[1], sourceName: decodeEntities(m[2]).trim() });
+  while ((m = re.exec(html))) entries.push({ driveId: m[1], sourceName: decodeEntities(m[2]).trim(), mtime: parseClock(m[3]) });
   if (entries.length === 0) throw new Error("폴더에서 항목을 하나도 찾지 못함 (공유 설정 또는 화면 구조 변경 가능성)");
   return entries.filter((e) => /\.html$/i.test(e.sourceName));
 }
@@ -206,6 +244,8 @@ async function main() {
       buf: c.buf,
       isNew: !old,
       isChanged: Boolean(old) && old.hash !== c.hash,
+      // 이 게임의 옛 버전 파일들(폴더에 아직 남아 있는 것만 기억)
+      replaced: (old?.replaced ?? []).filter((d) => d !== c.driveId && presentDriveIds.has(d)),
     });
   };
 
@@ -215,7 +255,40 @@ async function main() {
     if (old && ID_RE.test(old.id)) finish(c, old.id, old.addedAt, old);
     else fresh.push(c);
   }
+  // 이미 새 버전으로 교체된 옛 파일 (그 게임의 현재 파일이 폴더에 있는 동안만 유효)
+  const retired = new Set(results.flatMap((r) => r.replaced));
+  // 오래된 파일부터 처리해서, 같은 게임이면 나중 파일이 앞 파일을 대체하게 한다
+  // (최신 파일이 폴더에서 지워져 옛 버전들이 되살아나는 경우에는, 기억해 둔 교체 순서를 그대로 따른다)
+  const pastOrder = new Map();
+  for (const g of prev) (g.replaced ?? []).forEach((d, i) => pastOrder.set(d, i));
+  const rank = (c) => (pastOrder.has(c.driveId) ? pastOrder.get(c.driveId) : Infinity);
+  fresh.sort(
+    (a, b) =>
+      (rank(a) === rank(b) ? 0 : rank(a) < rank(b) ? -1 : 1) ||
+      (a.mtime ?? -1) - (b.mtime ?? -1) ||
+      copyNo(a.sourceName) - copyNo(b.sourceName) ||
+      (a.sourceName < b.sourceName ? -1 : 1)
+  );
   for (const c of fresh) {
+    if (retired.has(c.driveId)) {
+      skipped.push({ sourceName: c.sourceName, driveId: c.driveId, reason: REASON_OLD, studentNo: c.studentNo, name: c.name });
+      continue;
+    }
+    // 같은 학생의 같은 게임을 고쳐서 또 올린 경우: 새 파일만 보이고, ID(=좋아요)는 그대로 이어받는다
+    if (!results.some((r) => r.studentNo === c.studentNo && r.hash === c.hash)) {
+      const match = results
+        .filter((r) => r.studentNo === c.studentNo)
+        .map((r) => ({ r, score: sameGameScore(r, c) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)[0]?.r;
+      if (match) {
+        skipped.push({ sourceName: match.sourceName, driveId: match.driveId, reason: REASON_OLD, studentNo: match.studentNo, name: match.name });
+        match.replaced = [...match.replaced.filter((d) => d !== c.driveId), match.driveId];
+        retired.add(match.driveId);
+        Object.assign(match, { driveId: c.driveId, sourceName: c.sourceName, title: c.title, hash: c.hash, size: c.size, buf: c.buf, updatedAt: now, isChanged: !match.isNew });
+        continue;
+      }
+    }
     // 같은 학생이 똑같은 파일을 두 번 올린 경우: 한 번만 게시 (서로 다른 게임은 몇 개든 허용)
     if (results.some((r) => r.studentNo === c.studentNo && r.hash === c.hash)) {
       skipped.push({ sourceName: c.sourceName, driveId: c.driveId, reason: REASON_DUP, studentNo: c.studentNo, name: c.name });
@@ -274,10 +347,10 @@ async function main() {
     }
   }
 
-  const clean = games.map(({ buf, isNew, isChanged, ...g }) => g);
+  const clean = games.map(({ buf, isNew, isChanged, replaced, ...g }) => (replaced?.length ? { ...g, replaced } : g));
   // 갤러리에 보여 줄 "다시 제출이 필요해요" 목록 (교사가 숨긴 게임은 제외)
   const rejected = skipped
-    .filter((s) => s.reason !== "교사가 숨김" && s.reason !== REASON_DUP)
+    .filter((s) => ![ "교사가 숨김", REASON_DUP, REASON_OLD ].includes(s.reason))
     .map((s) => ({
       who: s.studentNo ? `${s.studentNo} ${s.name}` : s.sourceName,
       reason: s.reason,

@@ -308,7 +308,29 @@ const NEW_MS = 72 * 60 * 60 * 1000;
 const FILE_RE = /^[0-9A-Za-z_-]+\.html$/;
 
 const $ = (id) => document.getElementById(id);
-const COVERS = 6; // assets/cover1~6.jpg (캔바에서 만든 표지 그림)
+const COVERS = 19; // assets/cover1~19.jpg (캔바에서 만든 표지 그림)
+// 제목(소문자)에 이 낱말이 있으면 그 표지를 쓴다. 숫자는 0부터 세는 표지 번호(cover{번호+1}.jpg)
+const COVER_KEYWORDS = [
+  [/축구|soccer|football|\bfc\b|fifa|골키퍼/, 7],
+  [/농구|basket|덩크/, 14],
+  [/레이싱|레이스|race|racing|자동차|드리프트|\bcar\b/, 6],
+  [/닌자|ninja|고양이|캣|\bcat\b/, 13],
+  [/드래곤|dragon|용사|공룡/, 9],
+  [/유령|귀신|ghost|호러|horror|좀비|zombie|뱀파이어|vampire|survivor|서바이/, 10],
+  [/보물|treasure|타이쿤|tycoon|클리커|clicker|코인|coin|해적/, 11],
+  [/리듬|rhythm|춤|댄스|dance|음악|music|피아노/, 12],
+  [/요리|cook|버거|burger|피자|pizza|식당|카페|치킨/, 15],
+  [/미로|maze|snake|스네이크|지렁이|팩맨/, 16],
+  [/탱크|tank|슈팅|shoot|전쟁|디펜스|defen[cs]e|총|대포/, 17],
+  [/점프|jump|플랫폼|platform|마리오|런|\brun/, 18],
+  [/검|sword|rpg|모험|어드벤처|adventure|격투|fight|fist|대전|철권|배틀|battle|기사/, 8],
+  [/블록|block|벽돌|breaker|테트리스|tetris|퍼즐|puzzle|2048|매치/, 3],
+  [/우주|space|로켓|rocket|행성|갤러그|galaga|비행/, 1],
+  [/로봇|robot|번개|전기/, 4],
+  [/우승|챔피언|토너먼트|tournament|올림픽|볼링|포켓볼|당구|8-ball|골프|야구/, 2],
+  [/한자|퀴즈|quiz|주사위|dice|보드|마법|magic|하트|러브/, 5],
+  [/아케이드|arcade|피하기|dodge|오락/, 0],
+];
 const grid = $("grid"), loginBtn = $("login"), toastEl = $("toast"), searchEl = $("search");
 
 const state = {
@@ -452,7 +474,10 @@ function render() {
     card.append(link);
 
     if (medals.has(g.id)) { const m = el("span", "medal", medals.get(g.id)); m.setAttribute("aria-hidden", "true"); card.append(m); }
-    if (now - time(g) < NEW_MS) card.append(el("span", "new", "NEW"));
+    // 새 버전으로 고쳐 올린 게임은 UPDATE, 처음 올라온 게임은 NEW (둘 다 72시간 동안)
+    const upd = Date.parse(g.updatedAt) || 0;
+    if (upd - time(g) > 60000 && now - upd < NEW_MS) card.append(el("span", "new", "UPDATE"));
+    else if (now - time(g) < NEW_MS) card.append(el("span", "new", "NEW"));
 
     const btn = el("button", "like");
     btn.type = "button";
@@ -638,9 +663,28 @@ try {
   state.games = (Array.isArray(data.games) ? data.games : [])
     .filter((g) => g && typeof g.id === "string" && typeof g.file === "string" && FILE_RE.test(g.file))
     .map((g) => ({ ...g, title: String(g.title || ""), name: String(g.name || ""), studentNo: String(g.studentNo || "") }));
-  [...state.games]
-    .sort((a, b) => time(a) - time(b) || a.id.localeCompare(b.id))
-    .forEach((g, i) => state.coverOf.set(g.id, i));
+  // 표지 고르기: 제목에 어울리는 그림이 있으면 그것, 없으면 아직 덜 쓰인 그림을 등록 순서대로 돌려 쓴다
+  const used = new Array(COVERS).fill(0);
+  let next = 0;
+  const ordered = [...state.games].sort((a, b) => time(a) - time(b) || a.id.localeCompare(b.id));
+  // 1차: 제목에 어울리는 그림을 먼저 준다 (그 그림을 아직 아무도 안 썼을 때만 — 같은 그림이 몰리지 않게)
+  for (const g of ordered) {
+    const t = g.title.toLowerCase();
+    const c = COVER_KEYWORDS.find(([re, i]) => re.test(t) && used[i] === 0)?.[1];
+    if (c != null) { used[c]++; state.coverOf.set(g.id, c); }
+  }
+  // 2차: 나머지는 가장 덜 쓰인 그림을 차례로
+  for (const g of ordered) {
+    if (state.coverOf.has(g.id)) continue;
+    const least = Math.min(...used);
+    let c = 0;
+    for (let k = 0; k < COVERS; k++) {
+      const i = (next + k) % COVERS;
+      if (used[i] === least) { c = i; next = i + 1; break; }
+    }
+    used[c]++;
+    state.coverOf.set(g.id, c);
+  }
   state.rejected = (Array.isArray(data.rejected) ? data.rejected : [])
     .filter((r) => r && r.who)
     .map((r) => ({ who: String(r.who), reason: String(r.reason || ""), fix: String(r.fix || "") }));
