@@ -1,0 +1,2540 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>심연의 저택 - 1인칭 3D 생존 공포 게임</title>
+    <!-- Three.js 3D 렌더링 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050507;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #e5e5e5;
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 공포 근접 시 화면 가장자리 붉은 비네팅 효과 */
+        #fear-vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 45%, rgba(160, 0, 0, 0.78) 100%);
+            opacity: 0;
+            transition: opacity 0.15s ease-out;
+            z-index: 5;
+        }
+
+        /* 점프스케어 오버레이 (귀신에게 잡혔을 때) */
+        #jumpscare-container {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 0, 0, 0.94);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 25;
+            pointer-events: none;
+        }
+
+        #jumpscare-face {
+            width: min(85vw, 680px);
+            height: min(85vh, 680px);
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            animation: scareShake 0.08s infinite;
+            filter: contrast(1.4) saturate(1.3);
+        }
+
+        /* 옷장 은신 시 문틈(루버) 시야 오버레이 */
+        #hiding-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 6;
+            display: none;
+            background:
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(5, 5, 8, 0.92) 0px,
+                    rgba(5, 5, 8, 0.92) 18px,
+                    transparent 18px,
+                    transparent 34px
+                ),
+                radial-gradient(circle at center, transparent 25%, rgba(0, 0, 0, 0.96) 85%);
+        }
+
+        @keyframes scareShake {
+            0% { transform: translate(0, 0) scale(1.06) rotate(0deg); }
+            25% { transform: translate(-14px, 10px) scale(1.12) rotate(-2deg); }
+            50% { transform: translate(12px, -12px) scale(1.09) rotate(2deg); }
+            75% { transform: translate(-10px, -8px) scale(1.14) rotate(-1.5deg); }
+            100% { transform: translate(14px, 8px) scale(1.08) rotate(1.5deg); }
+        }
+
+        /* 중앙 조준점 */
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* 상단 및 하단 HUD */
+        #hud {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 24px;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .mission-box {
+            background: rgba(10, 10, 14, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            padding: 12px 18px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+        }
+
+        .mission-title {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+
+        .mission-text {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f3f4f6;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(15, 15, 20, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge.has-key {
+            border-color: rgba(250, 204, 21, 0.65);
+            color: #fde047;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.25);
+        }
+
+        /* 중앙 하단 상호작용 안내 메시지 */
+        #interact-prompt {
+            position: fixed;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fef08a;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: none;
+            z-index: 12;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 스태미나 게이지 및 조작 안내 */
+        .hud-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stamina-wrap {
+            width: min(320px, 80vw);
+            height: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        #stamina-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #60a5fa, #e0f2fe);
+            transition: width 0.08s linear;
+        }
+
+        .controls-hint {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        /* 오버레이 화면 (시작, 일시정지, 게임오버, 승리) */
+        .overlay-screen {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(18, 12, 16, 0.92), rgba(4, 4, 6, 0.98));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            z-index: 20;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .game-title {
+            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-weight: 900;
+            color: #dc2626;
+            text-shadow: 0 0 28px rgba(220, 38, 38, 0.65);
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+        }
+
+        .game-subtitle {
+            max-width: 540px;
+            font-size: 1.02rem;
+            line-height: 1.65;
+            color: #d1d5db;
+            margin-bottom: 24px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(150px, 1fr));
+            gap: 10px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            padding: 16px 22px;
+            margin-bottom: 28px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .control-item span.key-cap {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.14);
+            color: #fff;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-right: 6px;
+            font-size: 0.82rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+            color: #fff;
+            border: 1px solid rgba(252, 165, 165, 0.35);
+            padding: 15px 38px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(185, 28, 28, 0.45);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 36px rgba(220, 38, 38, 0.65);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .btn-win {
+            background: linear-gradient(135deg, #059669, #065f46);
+            border-color: rgba(110, 231, 183, 0.4);
+            box-shadow: 0 10px 30px rgba(5, 150, 105, 0.45);
+        }
+
+        /* 모바일 터치 조작 버튼 */
+        #mobile-controls {
+            position: fixed;
+            bottom: 24px;
+            left: 20px;
+            right: 20px;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        @media (pointer: coarse) {
+            #mobile-controls {
+                display: flex;
+            }
+            .controls-hint {
+                display: none;
+            }
+        }
+
+        .touch-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 52px);
+            grid-template-rows: repeat(2, 52px);
+            gap: 6px;
+            pointer-events: auto;
+        }
+
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .touch-btn:active {
+            background: rgba(220, 38, 38, 0.55);
+        }
+
+        .touch-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- 3D 캔버스 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 공포 비네팅 -->
+    <div id="fear-vignette"></div>
+
+    <!-- 점프스케어 오버레이 (귀신에게 잡혔을 때) -->
+    <div id="jumpscare-container">
+        <div id="jumpscare-face"></div>
+    </div>
+
+    <!-- 옷장 은신 문틈 시야 오버레이 -->
+    <div id="hiding-overlay"></div>
+
+    <!-- 중앙 조준점 -->
+    <div id="crosshair"></div>
+
+    <!-- 상호작용 안내 -->
+    <div id="interact-prompt">[E] 열쇠 줍기</div>
+
+    <!-- 게임 HUD -->
+    <div id="hud">
+        <div class="hud-top">
+            <div class="mission-box">
+                <div class="mission-title">현재 목표</div>
+                <div class="mission-text" id="objective-text">바닥에 떨어진 열쇠를 찾아 잠긴 출구 문을 여세요</div>
+            </div>
+            <div class="status-badges">
+                <div class="badge" id="key-badge">🔑 열쇠: 미획득</div>
+                <div class="badge" id="flashlight-badge">🔦 손전등: 켜짐</div>
+                <div class="badge hidden" id="hiding-badge" style="border-color: rgba(96, 165, 250, 0.7); color: #93c5fd;">🚪 옷장 은신 중</div>
+            </div>
+        </div>
+
+        <div class="hud-bottom">
+            <div class="stamina-wrap">
+                <div id="stamina-bar"></div>
+            </div>
+            <div class="controls-hint">
+                [WASD] 이동 · [←→↑↓ / Q·R] 시점 회전 · [Shift] 달리기 · [F] 손전등 · [E] 열쇠/문/옷장 숨기 · [P] 일시정지
+            </div>
+        </div>
+    </div>
+
+    <!-- 모바일 터치 조작 UI -->
+    <div id="mobile-controls">
+        <div class="touch-pad">
+            <div></div>
+            <button class="touch-btn" data-key="KeyW">▲</button>
+            <div></div>
+            <button class="touch-btn" data-key="KeyA">◀</button>
+            <button class="touch-btn" data-key="KeyS">▼</button>
+            <button class="touch-btn" data-key="KeyD">▶</button>
+        </div>
+        <div class="touch-actions">
+            <button class="touch-btn" style="padding: 12px 18px;" id="mobile-interact">손/상호작용 [E]</button>
+            <button class="touch-btn" style="padding: 12px 18px;" id="mobile-flash">손전등 [F]</button>
+        </div>
+    </div>
+
+    <!-- 시작 화면 -->
+    <div class="overlay-screen" id="start-screen">
+        <h1 class="game-title">심연의 저택</h1>
+        <p class="game-subtitle">
+            어둠 속에 갇혔습니다. 복도 어딘가에 떨어진 <strong>녹슨 열쇠</strong>를 찾아 잠긴 출구 문을 여세요.<br>
+            피눈물을 흘리는 원혼과 <strong>거구의 뚱보 귀신</strong>이 배회하고 있습니다. 위기 시 <strong>옷장</strong>에 숨으세요.
+        </p>
+        <div class="controls-grid">
+            <div class="control-item"><span class="key-cap">W A S D</span> 이동</div>
+            <div class="control-item"><span class="key-cap">← → ↑ ↓</span> 시점 회전 (마우스 불필요)</div>
+            <div class="control-item"><span class="key-cap">Shift</span> 전력 질주</div>
+            <div class="control-item"><span class="key-cap">E</span> 열쇠 줍기 / 문 열기 / 옷장 숨기</div>
+            <div class="control-item"><span class="key-cap">F</span> 손전등 켜기/끄기</div>
+            <div class="control-item"><span class="key-cap">Enter / Space</span> 게임 시작 / 재시작</div>
+        </div>
+        <button class="btn-primary" id="start-btn">저택으로 들어가기 (Enter)</button>
+    </div>
+
+    <!-- 일시정지 화면 -->
+    <div class="overlay-screen hidden" id="pause-screen">
+        <h2 class="game-title" style="font-size: 2.4rem; color: #f3f4f6;">일시 정지</h2>
+        <p class="game-subtitle">방향키(←→↑↓)로 시점을 돌리고 Enter 또는 버튼으로 계속할 수 있습니다.</p>
+        <button class="btn-primary" id="resume-btn">계속하기 (Enter)</button>
+    </div>
+
+    <!-- 게임 오버 화면 -->
+    <div class="overlay-screen hidden" id="gameover-screen">
+        <h2 class="game-title">원혼에게 붙잡혔습니다</h2>
+        <p class="game-subtitle">기괴한 소리와 함께 어둠 속으로 끌려갔습니다...</p>
+        <button class="btn-primary" id="retry-btn">다시 도전하기 (Enter)</button>
+    </div>
+
+    <!-- 승리 화면 -->
+    <div class="overlay-screen hidden" id="win-screen">
+        <h2 class="game-title" style="color: #10b981; text-shadow: 0 0 28px rgba(16, 185, 129, 0.6);">탈출 성공!</h2>
+        <p class="game-subtitle" id="win-stats">열쇠로 출구 문을 열고 무사히 저택을 빠져나왔습니다!</p>
+        <button class="btn-primary btn-win" id="play-again-btn">새 게임 시작 (Enter)</button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. Web Audio API 공포 사운드 신디사이저 엔진
+        // ==========================================
+        class HorrorSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.isInitialized = false;
+            }
+
+            init() {
+                if (this.isInitialized) {
+                    if (this.ctx && this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                    return;
+                }
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.14;
+                this.masterGain.connect(this.ctx.destination);
+                this.isInitialized = true;
+                this.startAmbience();
+            }
+
+            // 음산한 저주파 앰비언스 및 뒤틀린 자장가 멜로디 공포 BGM
+            startAmbience() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // 1. 심연의 불협화음 드론 패드 (트라이톤 악마의 음정: F1 + B1 + C2)
+                const droneFreqs = [43.65, 61.74, 65.41, 87.31];
+                droneFreqs.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const lfo = this.ctx.createOscillator();
+                    const lfoGain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = i % 2 === 0 ? 'sawtooth' : 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    lfo.type = 'sine';
+                    lfo.frequency.setValueAtTime(0.11 + i * 0.06, now);
+                    lfoGain.gain.setValueAtTime(1.6, now);
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(osc.frequency);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(130 + i * 30, now);
+
+                    gain.gain.setValueAtTime(0.055, now);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+
+                    osc.start();
+                    lfo.start();
+                });
+
+                // 2. 저택 전체를 울리는 어두운 바람/신음 노이즈 루프
+                const bufferSize = this.ctx.sampleRate * 4;
+                const windBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = windBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const windNoise = this.ctx.createBufferSource();
+                windNoise.buffer = windBuffer;
+                windNoise.loop = true;
+
+                const windFilter = this.ctx.createBiquadFilter();
+                windFilter.type = 'bandpass';
+                windFilter.frequency.setValueAtTime(220, now);
+                windFilter.Q.value = 7.0;
+
+                const windLfo = this.ctx.createOscillator();
+                const windLfoGain = this.ctx.createGain();
+                windLfo.frequency.setValueAtTime(0.08, now);
+                windLfoGain.gain.setValueAtTime(130, now);
+                windLfo.connect(windLfoGain);
+                windLfoGain.connect(windFilter.frequency);
+
+                const windGain = this.ctx.createGain();
+                windGain.gain.setValueAtTime(0.075, now);
+
+                windNoise.connect(windFilter);
+                windFilter.connect(windGain);
+                windGain.connect(this.masterGain);
+                windNoise.start();
+                windLfo.start();
+
+                // 3. 저주받은 오르골 공포 멜로디 시퀀스 (음정이 녹아내리듯 기괴하게 뒤틀리는 단조 선율)
+                // D4, F4, A4, Bb4, E4, C#4, D4, G#3 (불안하고 서늘한 단조+증4도 선율)
+                const melodyPattern = [
+                    { freq: 293.66, dur: 1.1 }, // D4
+                    { freq: 349.23, dur: 1.1 }, // F4
+                    { freq: 440.00, dur: 1.3 }, // A4
+                    { freq: 466.16, dur: 1.6 }, // Bb4 (긴장감)
+                    { freq: 329.63, dur: 1.1 }, // E4
+                    { freq: 277.18, dur: 1.3 }, // C#4
+                    { freq: 293.66, dur: 1.8 }, // D4
+                    { freq: 207.65, dur: 2.2 }  // G#3 (불협화음 종지)
+                ];
+                let stepIndex = 0;
+
+                const playMelodyStep = () => {
+                    if (!this.ctx) return;
+                    const t = this.ctx.currentTime;
+                    const step = melodyPattern[stepIndex % melodyPattern.length];
+                    stepIndex++;
+
+                    // 메인 오르골 음 + 미세하게 어긋난 고스트 하모니
+                    const osc1 = this.ctx.createOscillator();
+                    const osc2 = this.ctx.createOscillator();
+                    const noteGain = this.ctx.createGain();
+                    const noteFilter = this.ctx.createBiquadFilter();
+
+                    osc1.type = 'sine';
+                    osc2.type = 'triangle';
+
+                    // 테이프가 늘어지듯 음정이 서서히 아래로 휘어짐
+                    const detuneDrop = 0.94 + Math.random() * 0.03;
+                    osc1.frequency.setValueAtTime(step.freq, t);
+                    osc1.frequency.exponentialRampToValueAtTime(step.freq * detuneDrop, t + step.dur * 1.3);
+
+                    osc2.frequency.setValueAtTime(step.freq * 2.008, t);
+                    osc2.frequency.exponentialRampToValueAtTime(step.freq * 2.008 * detuneDrop, t + step.dur * 1.3);
+
+                    noteFilter.type = 'lowpass';
+                    noteFilter.frequency.setValueAtTime(1400, t);
+
+                    noteGain.gain.setValueAtTime(0.001, t);
+                    noteGain.gain.linearRampToValueAtTime(0.085, t + 0.04);
+                    noteGain.gain.exponentialRampToValueAtTime(0.0008, t + step.dur * 1.45);
+
+                    osc1.connect(noteFilter);
+                    osc2.connect(noteFilter);
+                    noteFilter.connect(noteGain);
+                    noteGain.connect(this.masterGain);
+
+                    osc1.start(t);
+                    osc2.start(t);
+                    osc1.stop(t + step.dur * 1.5);
+                    osc2.stop(t + step.dur * 1.5);
+
+                    // 멜로디 한 바퀴가 끝날 때마다 멀리서 심연의 쇳소리 울림 추가
+                    if (stepIndex % melodyPattern.length === 0) {
+                        const thud = this.ctx.createOscillator();
+                        const thudGain = this.ctx.createGain();
+                        thud.type = 'sawtooth';
+                        thud.frequency.setValueAtTime(52, t);
+                        thud.frequency.exponentialRampToValueAtTime(21, t + 1.8);
+
+                        const thudFilter = this.ctx.createBiquadFilter();
+                        thudFilter.type = 'lowpass';
+                        thudFilter.frequency.setValueAtTime(95, t);
+
+                        thudGain.gain.setValueAtTime(0.18, t);
+                        thudGain.gain.exponentialRampToValueAtTime(0.001, t + 1.9);
+
+                        thud.connect(thudFilter);
+                        thudFilter.connect(thudGain);
+                        thudGain.connect(this.masterGain);
+
+                        thud.start(t);
+                        thud.stop(t + 1.95);
+                    }
+
+                    const nextBeatMs = (step.dur * 1000) + (stepIndex % melodyPattern.length === 0 ? 1800 : 120);
+                    setTimeout(playMelodyStep, nextBeatMs);
+                };
+
+                setTimeout(playMelodyStep, 900);
+            }
+
+            // 악마처럼 점점 하강하며 끊어지는 사악한 여자의 웃음소리 + 서늘한 에코 리버브 (주변에 있을 때 연속 재생)
+            playWomanScream(isJumpscare = false) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+
+                // 웃음 마디("하-하-하-하-하...") 구성: 높은 음에서 시작해 계단식으로 점점 낮아지며 길어짐
+                const laughSyllables = isJumpscare
+                    ? [
+                        { offset: 0.00, pitch: 660, dur: 0.14, vol: 0.34 },
+                        { offset: 0.16, pitch: 610, dur: 0.14, vol: 0.34 },
+                        { offset: 0.33, pitch: 540, dur: 0.15, vol: 0.32 },
+                        { offset: 0.51, pitch: 470, dur: 0.16, vol: 0.30 },
+                        { offset: 0.70, pitch: 400, dur: 0.18, vol: 0.28 },
+                        { offset: 0.91, pitch: 330, dur: 0.22, vol: 0.26 },
+                        { offset: 1.16, pitch: 265, dur: 0.36, vol: 0.24 }
+                      ]
+                    : [
+                        { offset: 0.00, pitch: 560 + Math.random() * 40, dur: 0.13, vol: 0.21 },
+                        { offset: 0.17, pitch: 505 + Math.random() * 30, dur: 0.14, vol: 0.21 },
+                        { offset: 0.35, pitch: 445 + Math.random() * 25, dur: 0.15, vol: 0.19 },
+                        { offset: 0.54, pitch: 385 + Math.random() * 20, dur: 0.17, vol: 0.18 },
+                        { offset: 0.74, pitch: 330 + Math.random() * 15, dur: 0.21, vol: 0.16 },
+                        { offset: 0.98, pitch: 275, dur: 0.32, vol: 0.14 }
+                      ];
+
+                // 서늘한 복도 잔향(에코 딜레이) 버스 생성
+                const delay = this.ctx.createDelay();
+                delay.delayTime.setValueAtTime(0.19, now);
+                const feedback = this.ctx.createGain();
+                feedback.gain.setValueAtTime(0.42, now);
+                const delayFilter = this.ctx.createBiquadFilter();
+                delayFilter.type = 'bandpass';
+                delayFilter.frequency.setValueAtTime(1100, now);
+                delayFilter.Q.value = 1.8;
+
+                delay.connect(delayFilter);
+                delayFilter.connect(feedback);
+                feedback.connect(delay);
+                delayFilter.connect(this.masterGain);
+
+                laughSyllables.forEach((syl) => {
+                    const t = now + syl.offset;
+
+                    // 여성 성대 배음 (기본음 + 1옥타브 위 배음)
+                    const osc1 = this.ctx.createOscillator();
+                    const osc2 = this.ctx.createOscillator();
+                    const vibrato = this.ctx.createOscillator();
+                    const vibGain = this.ctx.createGain();
+
+                    osc1.type = 'sawtooth';
+                    osc2.type = 'triangle';
+
+                    // 사악하게 떨리는 웃음 비브라토
+                    vibrato.type = 'sine';
+                    vibrato.frequency.setValueAtTime(13, t);
+                    vibGain.gain.setValueAtTime(14, t);
+                    vibrato.connect(vibGain);
+                    vibGain.connect(osc1.frequency);
+                    vibGain.connect(osc2.frequency);
+
+                    // 각 음절마다 "하!" 하고 살짝 올라갔다 아래로 떨어지는 웃음 억양
+                    osc1.frequency.setValueAtTime(syl.pitch * 0.94, t);
+                    osc1.frequency.linearRampToValueAtTime(syl.pitch * 1.06, t + syl.dur * 0.25);
+                    osc1.frequency.exponentialRampToValueAtTime(syl.pitch * 0.78, t + syl.dur);
+
+                    osc2.frequency.setValueAtTime(syl.pitch * 1.98, t);
+                    osc2.frequency.linearRampToValueAtTime(syl.pitch * 2.12, t + syl.dur * 0.25);
+                    osc2.frequency.exponentialRampToValueAtTime(syl.pitch * 1.56, t + syl.dur);
+
+                    // '아(Ah)' 모음 성대 포먼트 필터 (750Hz & 1450Hz)
+                    const formant1 = this.ctx.createBiquadFilter();
+                    formant1.type = 'bandpass';
+                    formant1.frequency.setValueAtTime(760, t);
+                    formant1.Q.value = 5.5;
+
+                    const formant2 = this.ctx.createBiquadFilter();
+                    formant2.type = 'bandpass';
+                    formant2.frequency.setValueAtTime(1480, t);
+                    formant2.Q.value = 6.5;
+
+                    // 숨이 섞인 기괴한 웃음 숨소리 ("흐하-흐하-")
+                    const breathLen = Math.floor(this.ctx.sampleRate * syl.dur);
+                    const breathBuf = this.ctx.createBuffer(1, breathLen, this.ctx.sampleRate);
+                    const bData = breathBuf.getChannelData(0);
+                    for (let i = 0; i < breathLen; i++) {
+                        bData[i] = Math.random() * 2 - 1;
+                    }
+                    const breathSrc = this.ctx.createBufferSource();
+                    breathSrc.buffer = breathBuf;
+
+                    const breathFilter = this.ctx.createBiquadFilter();
+                    breathFilter.type = 'bandpass';
+                    breathFilter.frequency.setValueAtTime(1600, t);
+                    breathFilter.Q.value = 3.0;
+
+                    const breathGain = this.ctx.createGain();
+                    breathGain.gain.setValueAtTime(syl.vol * 0.35, t);
+
+                    // 스타카토 웃음 볼륨 엔벨로프
+                    const sylGain = this.ctx.createGain();
+                    sylGain.gain.setValueAtTime(0.001, t);
+                    sylGain.gain.linearRampToValueAtTime(syl.vol, t + 0.025);
+                    sylGain.gain.exponentialRampToValueAtTime(0.001, t + syl.dur);
+
+                    osc1.connect(formant1);
+                    osc2.connect(formant2);
+                    breathSrc.connect(breathFilter);
+                    breathFilter.connect(breathGain);
+
+                    formant1.connect(sylGain);
+                    formant2.connect(sylGain);
+                    breathGain.connect(sylGain);
+
+                    sylGain.connect(this.masterGain);
+                    sylGain.connect(delay);
+
+                    vibrato.start(t);
+                    osc1.start(t);
+                    osc2.start(t);
+                    breathSrc.start(t);
+
+                    vibrato.stop(t + syl.dur + 0.02);
+                    osc1.stop(t + syl.dur + 0.02);
+                    osc2.stop(t + syl.dur + 0.02);
+                    breathSrc.stop(t + syl.dur + 0.02);
+                });
+            }
+
+            // 심장 박동 소리
+            playHeartbeat(intensity = 0.5) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const playThump = (offset, vol) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(68, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(28, now + offset + 0.14);
+
+                    gain.gain.setValueAtTime(0.001, now + offset);
+                    gain.gain.linearRampToValueAtTime(vol * intensity, now + offset + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.16);
+
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.17);
+                };
+                playThump(0, 0.55);
+                playThump(0.18, 0.35);
+            }
+
+            // 열쇠 획득 효과음
+            playKeyPickup() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [880, 1320, 1760].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.36);
+                });
+            }
+
+            // 손전등 / 잠긴 문 클릭음
+            playClick() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.05);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            }
+
+            // 귀신 추격 시 기괴한 쇳소리/숨소리
+            playGhostGroan() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, now);
+                osc.frequency.linearRampToValueAtTime(75, now + 0.6);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.07, now + 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.65);
+            }
+
+            // 뚱보 귀신 전용 묵직한 저음 굉음/발소리
+            playFatGhostRoar() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(62, now);
+                osc.frequency.exponentialRampToValueAtTime(34, now + 0.75);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.14, now + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.78);
+            }
+
+            // 옷장 문 여닫는 삐걱 소리
+            playClosetSound() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.linearRampToValueAtTime(140, now + 0.25);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.28);
+            }
+        }
+
+        const soundEngine = new HorrorSoundEngine();
+
+        // ==========================================
+        // 2. Three.js 3D 씬 및 맵 데이터 설정
+        // ==========================================
+        const CELL_SIZE = 4; // 타일 1칸 크기 (4m)
+        const WALL_HEIGHT = 4.2;
+
+        // 15x15 미로형 저택 구조 (1: 벽, 0: 복도, 2: 출구 문 위치)
+        const MAP_GRID = [
+            [1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+            [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+
+        // 열쇠 스폰 후보 좌표 (그리드 인덱스 [row, col])
+        const KEY_SPAWN_CANDIDATES = [
+            [1, 1], [1, 13], [3, 13], [5, 1], [7, 13], [11, 1], [11, 11], [13, 1], [13, 13]
+        ];
+
+        // 숨을 수 있는 옷장(은신처) 배치 목록 (그리드 좌표 및 바라보는 방향 각도)
+        const CLOSET_SPOTS = [
+            { r: 1, c: 3, rotY: Math.PI },
+            { r: 3, c: 7, rotY: -Math.PI / 2 },
+            { r: 5, c: 11, rotY: Math.PI },
+            { r: 9, c: 3, rotY: 0 },
+            { r: 11, c: 9, rotY: Math.PI / 2 },
+            { r: 13, c: 5, rotY: 0 }
+        ];
+
+        let scene, camera, renderer;
+        let flashlight, flashlightTarget;
+        let ghostGroup, ghostHead, ghostLeftArm, ghostRightArm, ghostAuraLight;
+        let ghostFaceDataUrl = '';
+        let fatGhostGroup, fatGhostHead, fatGhostLeftArm, fatGhostRightArm, fatGhostAuraLight;
+        let fatGhostFaceDataUrl = '';
+        let keyGroup, keyLight;
+        let exitDoorMesh, exitSignLight;
+        let flickeringLights = [];
+        let closets = [];
+
+        // 게임 상태 변수
+        let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER, WIN
+        let hasKey = false;
+        let isFlashlightOn = true;
+        let isHiding = false;
+        let currentCloset = null;
+        let preHidePos = new THREE.Vector3();
+        let preHideYaw = 0;
+        let elapsedTime = 0;
+        let lastFrameTime = performance.now();
+        let nextHeartbeatTime = 0;
+        let lastScreamTime = 0;
+        let lastFatRoarTime = 0;
+
+        // 플레이어 상태
+        const player = {
+            pos: new THREE.Vector3(7 * CELL_SIZE, 1.7, 13 * CELL_SIZE),
+            yaw: 0,
+            pitch: 0,
+            speed: 4.5,
+            sprintSpeed: 7.4,
+            stamina: 100,
+            radius: 0.45,
+            bobTimer: 0
+        };
+
+        // 여자 원혼 AI 상태
+        const ghost = {
+            pos: new THREE.Vector3(7 * CELL_SIZE, 0, 3 * CELL_SIZE),
+            patrolSpeed: 3.1,
+            chaseSpeed: 4.85,
+            detectRadius: 24.0,
+            catchRadius: 1.5,
+            targetCell: { r: 3, c: 7 },
+            state: 'PATROL', // PATROL, CHASE
+            teleportCooldown: 14.0
+        };
+
+        // 뚱보 귀신 AI 상태 (거구의 육중한 추적자)
+        const fatGhost = {
+            pos: new THREE.Vector3(1 * CELL_SIZE, 0, 5 * CELL_SIZE),
+            patrolSpeed: 2.5,
+            chaseSpeed: 4.1,
+            detectRadius: 22.0,
+            catchRadius: 1.85,
+            targetCell: { r: 5, c: 1 },
+            state: 'PATROL',
+            teleportCooldown: 18.0
+        };
+
+        // 입력 상태
+        const keysPressed = {};
+        let touchLookId = null;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+
+        // DOM 요소 참조
+        const canvas = document.getElementById('game-canvas');
+        const hud = document.getElementById('hud');
+        const startScreen = document.getElementById('start-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const winScreen = document.getElementById('win-screen');
+        const keyBadge = document.getElementById('key-badge');
+        const flashlightBadge = document.getElementById('flashlight-badge');
+        const hidingBadge = document.getElementById('hiding-badge');
+        const hidingOverlay = document.getElementById('hiding-overlay');
+        const objectiveText = document.getElementById('objective-text');
+        const interactPrompt = document.getElementById('interact-prompt');
+        const staminaBar = document.getElementById('stamina-bar');
+        const fearVignette = document.getElementById('fear-vignette');
+        const jumpscareContainer = document.getElementById('jumpscare-container');
+        const jumpscareFace = document.getElementById('jumpscare-face');
+
+        // ==========================================
+        // 3. 프로시저럴 텍스처 생성 (벽, 바닥, 문)
+        // ==========================================
+        function createWallTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            ctx.fillStyle = '#252629';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 얼룩과 곰팡이 노이즈
+            for (let i = 0; i < 4500; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                const size = Math.random() * 6 + 1;
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(10,10,12,0.22)' : 'rgba(60,62,66,0.14)';
+                ctx.fillRect(x, y, size, size);
+            }
+
+            // 벽돌/타일 줄눈
+            ctx.strokeStyle = 'rgba(12, 12, 14, 0.65)';
+            ctx.lineWidth = 3;
+            for (let y = 0; y < 512; y += 64) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(512, y);
+                ctx.stroke();
+
+                const offset = (y / 64) % 2 === 0 ? 0 : 64;
+                for (let x = offset; x < 512; x += 128) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x, y + 64);
+                    ctx.stroke();
+                }
+            }
+
+            // 붉은 핏자국/녹 자국
+            ctx.fillStyle = 'rgba(75, 12, 12, 0.25)';
+            ctx.beginPath();
+            ctx.arc(180, 320, 45, 0, Math.PI * 2);
+            ctx.fill();
+
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        function createFloorTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            ctx.fillStyle = '#18191b';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 체크무늬 낡은 병원 타일
+            const tileSize = 64;
+            for (let y = 0; y < 512; y += tileSize) {
+                for (let x = 0; x < 512; x += tileSize) {
+                    const isEven = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+                    ctx.fillStyle = isEven ? '#1c1d21' : '#131417';
+                    ctx.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+                }
+            }
+
+            // 먼지 및 균열
+            for (let i = 0; i < 3000; i++) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, 4, 4);
+            }
+
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(15, 15);
+            return tex;
+        }
+
+        function createDoorTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            // 낡은 철문
+            ctx.fillStyle = '#331c1c';
+            ctx.fillRect(0, 0, 512, 512);
+
+            ctx.strokeStyle = '#1a0d0d';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(16, 16, 480, 480);
+            ctx.strokeRect(48, 48, 416, 180);
+            ctx.strokeRect(48, 260, 416, 200);
+
+            // 녹슨 문손잡이 및 자물쇠 표시
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.arc(410, 260, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // EXIT 표지판
+            ctx.fillStyle = '#7f1d1d';
+            ctx.fillRect(156, 70, 200, 55);
+            ctx.fillStyle = '#fca5a5';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('EXIT', 256, 110);
+
+            return new THREE.CanvasTexture(c);
+        }
+
+        // ==========================================
+        // 4. 3D 월드 & 오브젝트(귀신, 열쇠, 문) 구축
+        // ==========================================
+        function initThree() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x030305);
+            scene.fog = new THREE.FogExp2(0x030305, 0.088);
+
+            camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 60);
+            camera.rotation.order = 'YXZ';
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // 은은한 환경광 (완전 암흑 방지용 극소량)
+            const ambientLight = new THREE.AmbientLight(0x161822, 0.35);
+            scene.add(ambientLight);
+
+            // 플레이어 손전등 (SpotLight)
+            flashlight = new THREE.SpotLight(0xfff6e0, 2.8, 28, Math.PI / 5.2, 0.48, 1.3);
+            flashlight.castShadow = true;
+            flashlight.shadow.mapSize.width = 1024;
+            flashlight.shadow.mapSize.height = 1024;
+            flashlightTarget = new THREE.Object3D();
+            scene.add(flashlight);
+            scene.add(flashlightTarget);
+            flashlight.target = flashlightTarget;
+
+            buildMaze();
+            createClosets();
+            createGhost();
+            createFatGhost();
+            createKey();
+            resetGame();
+        }
+
+        function buildMaze() {
+            const wallTex = createWallTexture();
+            const floorTex = createFloorTexture();
+
+            const wallMat = new THREE.MeshStandardMaterial({
+                map: wallTex,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+
+            const floorMat = new THREE.MeshStandardMaterial({
+                map: floorTex,
+                roughness: 0.85
+            });
+
+            const ceilingMat = new THREE.MeshStandardMaterial({
+                color: 0x0c0d10,
+                roughness: 0.95
+            });
+
+            const mapWidth = MAP_GRID[0].length * CELL_SIZE;
+            const mapDepth = MAP_GRID.length * CELL_SIZE;
+
+            // 바닥 및 천장
+            const floorGeo = new THREE.PlaneGeometry(mapWidth, mapDepth);
+            const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set((mapWidth - CELL_SIZE) / 2, 0, (mapDepth - CELL_SIZE) / 2);
+            floorMesh.receiveShadow = true;
+            scene.add(floorMesh);
+
+            const ceilingMesh = new THREE.Mesh(floorGeo, ceilingMat);
+            ceilingMesh.rotation.x = Math.PI / 2;
+            ceilingMesh.position.set((mapWidth - CELL_SIZE) / 2, WALL_HEIGHT, (mapDepth - CELL_SIZE) / 2);
+            scene.add(ceilingMesh);
+
+            const wallGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, CELL_SIZE);
+
+            for (let r = 0; r < MAP_GRID.length; r++) {
+                for (let c = 0; c < MAP_GRID[r].length; c++) {
+                    const cell = MAP_GRID[r][c];
+                    const wx = c * CELL_SIZE;
+                    const wz = r * CELL_SIZE;
+
+                    if (cell === 1) {
+                        const wall = new THREE.Mesh(wallGeo, wallMat);
+                        wall.position.set(wx, WALL_HEIGHT / 2, wz);
+                        wall.castShadow = true;
+                        wall.receiveShadow = true;
+                        scene.add(wall);
+                    } else if (cell === 2) {
+                        createExitDoor(wx, wz);
+                    }
+                }
+            }
+
+            // 복도 곳곳에 희미하게 깜빡이는 천장 전등 배치
+            const lightCoords = [
+                [3, 5], [7, 7], [11, 3], [5, 11], [11, 11]
+            ];
+            lightCoords.forEach(([r, c]) => {
+                const pl = new THREE.PointLight(0x8fa4bf, 0.55, 12);
+                pl.position.set(c * CELL_SIZE, WALL_HEIGHT - 0.3, r * CELL_SIZE);
+                scene.add(pl);
+                flickeringLights.push({
+                    light: pl,
+                    baseIntensity: 0.55,
+                    timer: Math.random() * 10
+                });
+            });
+        }
+
+        // 숨을 수 있는 낡은 나무 옷장 생성
+        function createClosetTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            // 짙은 마호가니 나무 재질
+            ctx.fillStyle = '#2d1a10';
+            ctx.fillRect(0, 0, 256, 512);
+
+            // 나뭇결
+            ctx.fillStyle = 'rgba(15, 8, 4, 0.35)';
+            for (let i = 0; i < 60; i++) {
+                ctx.fillRect(Math.random() * 256, 0, Math.random() * 4 + 1, 512);
+            }
+
+            // 양문형 옷장 테두리 및 중앙 틈
+            ctx.strokeStyle = '#140a05';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(8, 8, 240, 496);
+            ctx.beginPath();
+            ctx.moveTo(128, 8);
+            ctx.lineTo(128, 504);
+            ctx.stroke();
+
+            // 문틈(루버) 슬릿 그리기 (숨을 수 있는 옷장임을 직관적으로 표시)
+            ctx.fillStyle = '#090503';
+            for (let y = 50; y < 220; y += 16) {
+                ctx.fillRect(28, y, 80, 7);
+                ctx.fillRect(148, y, 80, 7);
+            }
+
+            // 황동 손잡이 2개
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.arc(112, 260, 7, 0, Math.PI * 2);
+            ctx.arc(144, 260, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            return new THREE.CanvasTexture(c);
+        }
+
+        function createClosets() {
+            const closetTex = createClosetTexture();
+            const frontMat = new THREE.MeshStandardMaterial({ map: closetTex, roughness: 0.85 });
+            const sideMat = new THREE.MeshStandardMaterial({ color: 0x22130b, roughness: 0.9 });
+            const materials = [sideMat, sideMat, sideMat, sideMat, frontMat, sideMat];
+
+            const geo = new THREE.BoxGeometry(1.5, 2.6, 1.0);
+
+            CLOSET_SPOTS.forEach((spot) => {
+                const mesh = new THREE.Mesh(geo, materials);
+                const wx = spot.c * CELL_SIZE;
+                const wz = spot.r * CELL_SIZE;
+                mesh.position.set(wx, 1.3, wz);
+                mesh.rotation.y = spot.rotY;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+
+                closets.push({
+                    mesh: mesh,
+                    pos: new THREE.Vector3(wx, 1.7, wz),
+                    rotY: spot.rotY
+                });
+            });
+        }
+
+        function createExitDoor(x, z) {
+            const doorTex = createDoorTexture();
+            const doorMat = new THREE.MeshStandardMaterial({
+                map: doorTex,
+                roughness: 0.6,
+                metalness: 0.3
+            });
+
+            const doorGeo = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, 0.5);
+            exitDoorMesh = new THREE.Mesh(doorGeo, doorMat);
+            exitDoorMesh.position.set(x, WALL_HEIGHT / 2, z);
+            scene.add(exitDoorMesh);
+
+            // 문 위 붉은 비상등
+            exitSignLight = new THREE.PointLight(0xff2222, 1.4, 9);
+            exitSignLight.position.set(x, WALL_HEIGHT - 0.5, z + 1.2);
+            scene.add(exitSignLight);
+        }
+
+        // 기괴한 펜선 + 거대 픽셀 충혈 눈 + 피눈물 + 기괴한 미소 귀신 얼굴 텍스처 생성
+        function createHorrorGhostFaceTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            // 1. 어두운 그림자 배경
+            ctx.fillStyle = '#0e0e10';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 2. 창백하고 거친 스케치풍 얼굴 윤곽
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(92, 60);
+            ctx.quadraticCurveTo(75, 240, 118, 360);
+            ctx.quadraticCurveTo(175, 455, 256, 488);
+            ctx.quadraticCurveTo(337, 455, 394, 360);
+            ctx.quadraticCurveTo(437, 240, 420, 60);
+            ctx.closePath();
+            ctx.fillStyle = '#e6e6e8';
+            ctx.fill();
+
+            // 얼굴 좌우측 거친 회색 그림자 음영
+            ctx.fillStyle = 'rgba(130, 132, 138, 0.55)';
+            ctx.beginPath();
+            ctx.moveTo(92, 140);
+            ctx.lineTo(155, 320);
+            ctx.lineTo(235, 475);
+            ctx.lineTo(130, 400);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(420, 140);
+            ctx.lineTo(365, 320);
+            ctx.lineTo(275, 475);
+            ctx.lineTo(385, 400);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. 거친 펜선 해칭(빗금) 스트로크
+            ctx.strokeStyle = '#111114';
+            ctx.lineCap = 'round';
+            for (let i = 0; i < 260; i++) {
+                const hx = 95 + Math.random() * 322;
+                const hy = 260 + Math.random() * 215;
+                const distFromCenter = Math.abs(hx - 256);
+                if (distFromCenter > 35 || hy > 395) {
+                    ctx.lineWidth = Math.random() * 2.2 + 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(hx, hy);
+                    ctx.lineTo(hx + (Math.random() - 0.5) * 26, hy + 14 + Math.random() * 22);
+                    ctx.stroke();
+                }
+            }
+
+            // 윤곽선 거친 펜 덧칠
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#09090b';
+            for (let s = 0; s < 4; s++) {
+                const jx = (Math.random() - 0.5) * 6;
+                const jy = (Math.random() - 0.5) * 6;
+                ctx.beginPath();
+                ctx.moveTo(95 + jx, 80 + jy);
+                ctx.quadraticCurveTo(82 + jx, 240, 120 + jx, 360);
+                ctx.quadraticCurveTo(175, 455 + jy, 256, 486 + jy);
+                ctx.quadraticCurveTo(337, 455 + jy, 392 + jx, 360);
+                ctx.quadraticCurveTo(430 + jx, 240, 417 + jx, 80 + jy);
+                ctx.stroke();
+            }
+
+            // 4. 이마를 덮는 삐죽삐죽한 직선 펜선 앞머리
+            for (let i = 0; i < 95; i++) {
+                const x = 90 + (i / 95) * 332 + (Math.random() - 0.5) * 6;
+                const topY = 10 + Math.random() * 25;
+                const botY = 95 + Math.sin((i / 95) * Math.PI) * 32 + Math.random() * 35;
+                ctx.lineWidth = Math.random() * 3 + 1.2;
+                ctx.strokeStyle = '#0a0a0d';
+                ctx.beginPath();
+                ctx.moveTo(x, topY);
+                ctx.lineTo(x + (Math.random() - 0.5) * 14, botY);
+                ctx.stroke();
+            }
+
+            // 5. 거대하고 붉게 충혈된 픽셀/글리치 양 눈
+            const drawPixelBloodEye = (cx, cy, rx, ry) => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.clip();
+
+                const pixelSize = 7;
+                for (let py = cy - ry; py < cy + ry; py += pixelSize) {
+                    for (let px = cx - rx; px < cx + rx; px += pixelSize) {
+                        const dx = (px - cx) / rx;
+                        const dy = (py - cy) / ry;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 0.36) {
+                            const v = Math.floor(Math.random() * 14);
+                            ctx.fillStyle = `rgb(${v + 6}, ${v}, ${v})`;
+                        } else if (dist < 0.78) {
+                            const r = 45 + Math.floor(Math.random() * 65);
+                            const g = 22 + Math.floor(Math.random() * 32);
+                            const b = 24 + Math.floor(Math.random() * 32);
+                            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                        } else {
+                            const r = 115 + Math.floor(Math.random() * 85);
+                            const g = 8 + Math.floor(Math.random() * 22);
+                            const b = 8 + Math.floor(Math.random() * 22);
+                            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                        }
+                        ctx.fillRect(px, py, pixelSize, pixelSize);
+                    }
+                }
+                ctx.restore();
+
+                ctx.strokeStyle = '#09090b';
+                ctx.lineWidth = 4.5;
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.lineWidth = 2.2;
+                for (let w = 1; w <= 3; w++) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy + w * 4, rx + w * 3, 0.18 * Math.PI, 0.82 * Math.PI);
+                    ctx.stroke();
+                }
+            };
+
+            drawPixelBloodEye(184, 198, 74, 82);
+            drawPixelBloodEye(334, 198, 72, 80);
+
+            // 6. 기괴한 코와 팔자주름 스케치
+            ctx.strokeStyle = '#111114';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(256, 232);
+            ctx.lineTo(240, 294);
+            ctx.quadraticCurveTo(256, 306, 274, 294);
+            ctx.stroke();
+
+            for (let i = 0; i < 16; i++) {
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(238 + i * 2.2, 294);
+                ctx.lineTo(234 + i * 2.2, 308);
+                ctx.stroke();
+            }
+
+            // 7. 찢어질 듯 올라간 기괴한 미소와 촘촘한 이빨
+            ctx.fillStyle = '#0d0d10';
+            ctx.beginPath();
+            ctx.moveTo(156, 342);
+            ctx.quadraticCurveTo(256, 368, 356, 340);
+            ctx.quadraticCurveTo(256, 405, 156, 342);
+            ctx.fill();
+
+            ctx.fillStyle = '#dcdce0';
+            ctx.beginPath();
+            ctx.moveTo(175, 348);
+            ctx.quadraticCurveTo(256, 368, 338, 346);
+            ctx.quadraticCurveTo(256, 386, 175, 348);
+            ctx.fill();
+
+            ctx.strokeStyle = '#0a0a0c';
+            ctx.lineWidth = 2.2;
+            for (let tx = 182; tx <= 332; tx += 11) {
+                ctx.beginPath();
+                ctx.moveTo(tx, 347);
+                ctx.lineTo(tx + (Math.random() - 0.5) * 3, 376);
+                ctx.stroke();
+            }
+
+            ctx.lineWidth = 3.8;
+            ctx.beginPath();
+            ctx.moveTo(148, 336);
+            ctx.quadraticCurveTo(256, 372, 364, 334);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(168, 354);
+            ctx.quadraticCurveTo(256, 408, 346, 352);
+            ctx.stroke();
+
+            // 8. 눈에서 턱선까지 흘러내리는 검붉은 피눈물 핏줄기
+            ctx.fillStyle = 'rgba(138, 8, 8, 0.88)';
+            ctx.beginPath();
+            ctx.arc(184, 248, 56, 0.08 * Math.PI, 0.92 * Math.PI);
+            ctx.fill();
+
+            const leftDrips = [
+                { x: 138, y: 265, w: 9, len: 135 },
+                { x: 158, y: 278, w: 12, len: 155 },
+                { x: 184, y: 284, w: 8, len: 95 },
+                { x: 205, y: 275, w: 7, len: 70 }
+            ];
+            leftDrips.forEach(d => {
+                ctx.beginPath();
+                ctx.moveTo(d.x - d.w / 2, d.y);
+                ctx.quadraticCurveTo(d.x - d.w, d.y + d.len * 0.5, d.x, d.y + d.len);
+                ctx.quadraticCurveTo(d.x + d.w, d.y + d.len * 0.5, d.x + d.w / 2, d.y);
+                ctx.fill();
+            });
+
+            ctx.beginPath();
+            ctx.arc(334, 248, 54, 0.08 * Math.PI, 0.92 * Math.PI);
+            ctx.fill();
+
+            const rightDrips = [
+                { x: 305, y: 274, w: 8, len: 85 },
+                { x: 334, y: 282, w: 11, len: 145 },
+                { x: 362, y: 272, w: 10, len: 165 },
+                { x: 382, y: 258, w: 7, len: 110 }
+            ];
+            rightDrips.forEach(d => {
+                ctx.beginPath();
+                ctx.moveTo(d.x - d.w / 2, d.y);
+                ctx.quadraticCurveTo(d.x - d.w, d.y + d.len * 0.5, d.x, d.y + d.len);
+                ctx.quadraticCurveTo(d.x + d.w, d.y + d.len * 0.5, d.x + d.w / 2, d.y);
+                ctx.fill();
+            });
+
+            ctx.strokeStyle = 'rgba(135, 6, 6, 0.85)';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(148, 385);
+            ctx.quadraticCurveTo(210, 468, 256, 488);
+            ctx.quadraticCurveTo(315, 465, 372, 378);
+            ctx.stroke();
+
+            ctx.restore();
+
+            ghostFaceDataUrl = c.toDataURL('image/png');
+            jumpscareFace.style.backgroundImage = `url(${ghostFaceDataUrl})`;
+
+            return new THREE.CanvasTexture(c);
+        }
+
+        // 뚱보 귀신 전용 기괴하고 퉁퉁 부은 도살자/원혼 얼굴 텍스처 생성
+        function createFatGhostFaceTexture() {
+            const c = document.createElement('canvas');
+            c.width = 512;
+            c.height = 512;
+            const ctx = c.getContext('2d');
+
+            ctx.fillStyle = '#181414';
+            ctx.fillRect(0, 0, 512, 512);
+
+            // 비대하고 퉁퉁 부은 잿빛 살색 얼굴 & 이중턱
+            ctx.fillStyle = '#c8bfb8';
+            ctx.beginPath();
+            ctx.ellipse(256, 260, 215, 225, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 겹겹이 접힌 턱살과 목주름
+            ctx.strokeStyle = '#2d1c1c';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(256, 355, 155, 0.12 * Math.PI, 0.88 * Math.PI);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(256, 395, 175, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.stroke();
+
+            // 붉게 짓무른 눈두덩이와 작고 사악하게 빛나는 눈
+            const drawBulgingEye = (cx, cy) => {
+                ctx.fillStyle = '#4a0d0d';
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, 52, 34, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ff1e1e';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.fill();
+            };
+            drawBulgingEye(172, 195);
+            drawBulgingEye(340, 195);
+
+            // 넓적한 코와 콧구멍
+            ctx.fillStyle = '#756862';
+            ctx.beginPath();
+            ctx.ellipse(256, 268, 44, 28, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#140c0c';
+            ctx.beginPath();
+            ctx.arc(238, 275, 11, 0, Math.PI * 2);
+            ctx.arc(274, 275, 11, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 피가 줄줄 흐르는 찢어진 큰 입과 듬성듬성한 이빨
+            ctx.fillStyle = '#1a0404';
+            ctx.beginPath();
+            ctx.ellipse(256, 348, 118, 46, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#dcd4c0';
+            for (let tx = 165; tx <= 345; tx += 22) {
+                ctx.fillRect(tx, 306, 12, 18);
+                ctx.fillRect(tx + 5, 370, 12, 18);
+            }
+
+            // 입가와 턱으로 흐르는 선혈
+            ctx.fillStyle = 'rgba(145, 8, 8, 0.88)';
+            for (let i = 0; i < 9; i++) {
+                const bx = 175 + i * 20;
+                const bh = 45 + Math.random() * 85;
+                ctx.fillRect(bx, 378, 9, bh);
+            }
+
+            fatGhostFaceDataUrl = c.toDataURL('image/png');
+            return new THREE.CanvasTexture(c);
+        }
+
+        // 거구의 뚱보 귀신 3D 모델 생성
+        function createFatGhost() {
+            fatGhostGroup = new THREE.Group();
+
+            const faceTex = createFatGhostFaceTexture();
+
+            const headGeo = new THREE.SphereGeometry(0.56, 24, 24);
+            headGeo.scale(1.15, 1.05, 0.95);
+            const headMat = new THREE.MeshStandardMaterial({
+                map: faceTex,
+                roughness: 0.75,
+                emissive: 0x1a0303,
+                emissiveIntensity: 0.35
+            });
+            fatGhostHead = new THREE.Mesh(headGeo, headMat);
+            fatGhostHead.rotation.y = -Math.PI / 2;
+            fatGhostHead.position.y = 2.15;
+            fatGhostGroup.add(fatGhostHead);
+
+            const bodyGeo = new THREE.CylinderGeometry(0.75, 1.05, 1.95, 20);
+            bodyGeo.scale(1.2, 1.0, 0.95);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x291818,
+                roughness: 0.9
+            });
+            const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+            bodyMesh.position.y = 1.05;
+            fatGhostGroup.add(bodyMesh);
+
+            const bellyGeo = new THREE.SphereGeometry(0.86, 18, 18);
+            bellyGeo.scale(1.15, 1.0, 0.85);
+            const bellyMat = new THREE.MeshStandardMaterial({
+                color: 0x450a0a,
+                roughness: 0.8
+            });
+            const bellyMesh = new THREE.Mesh(bellyGeo, bellyMat);
+            bellyMesh.position.set(0, 1.05, 0.25);
+            fatGhostGroup.add(bellyMesh);
+
+            const armGeo = new THREE.CylinderGeometry(0.22, 0.16, 1.35, 12);
+            const armMat = new THREE.MeshStandardMaterial({ color: 0x9c8e88, roughness: 0.8 });
+
+            fatGhostLeftArm = new THREE.Mesh(armGeo, armMat);
+            fatGhostLeftArm.position.set(-0.98, 1.45, 0.35);
+            fatGhostLeftArm.rotation.x = Math.PI / 3.2;
+            fatGhostLeftArm.rotation.z = -0.18;
+            fatGhostGroup.add(fatGhostLeftArm);
+
+            fatGhostRightArm = new THREE.Mesh(armGeo, armMat);
+            fatGhostRightArm.position.set(0.98, 1.45, 0.35);
+            fatGhostRightArm.rotation.x = Math.PI / 3.2;
+            fatGhostRightArm.rotation.z = 0.18;
+            fatGhostGroup.add(fatGhostRightArm);
+
+            fatGhostAuraLight = new THREE.PointLight(0x991b1b, 1.3, 8.5);
+            fatGhostAuraLight.position.set(0, 1.6, 0.5);
+            fatGhostGroup.add(fatGhostAuraLight);
+
+            scene.add(fatGhostGroup);
+        }
+
+        // 기괴한 공포의 원혼 3D 모델 생성
+        function createGhost() {
+            ghostGroup = new THREE.Group();
+
+            const faceTex = createHorrorGhostFaceTexture();
+
+            const headGeo = new THREE.SphereGeometry(0.46, 32, 32);
+            headGeo.scale(0.92, 1.12, 0.92);
+            const headMat = new THREE.MeshStandardMaterial({
+                map: faceTex,
+                roughness: 0.7,
+                emissive: 0x220404,
+                emissiveIntensity: 0.45
+            });
+            ghostHead = new THREE.Mesh(headGeo, headMat);
+            ghostHead.rotation.y = -Math.PI / 2;
+            ghostHead.position.y = 1.92;
+            ghostGroup.add(ghostHead);
+
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x050507, roughness: 1.0 });
+            const backHairGeo = new THREE.CylinderGeometry(0.44, 0.55, 1.45, 16, 1, true, Math.PI * 0.65, Math.PI * 1.7);
+            const backHair = new THREE.Mesh(backHairGeo, hairMat);
+            backHair.position.set(0, 1.45, -0.04);
+            ghostGroup.add(backHair);
+
+            const robeGeo = new THREE.ConeGeometry(0.62, 1.85, 20, 1, true);
+            const robeMat = new THREE.MeshStandardMaterial({
+                color: 0x16161a,
+                side: THREE.DoubleSide,
+                roughness: 0.95
+            });
+            const robeMesh = new THREE.Mesh(robeGeo, robeMat);
+            robeMesh.position.y = 0.92;
+            ghostGroup.add(robeMesh);
+
+            const armGeo = new THREE.CylinderGeometry(0.055, 0.035, 1.25, 10);
+            const armMat = new THREE.MeshStandardMaterial({ color: 0xc8c8ce, roughness: 0.8 });
+
+            ghostLeftArm = new THREE.Mesh(armGeo, armMat);
+            ghostLeftArm.position.set(-0.44, 1.38, 0.35);
+            ghostLeftArm.rotation.x = Math.PI / 2.6;
+            ghostLeftArm.rotation.z = -0.15;
+            ghostGroup.add(ghostLeftArm);
+
+            ghostRightArm = new THREE.Mesh(armGeo, armMat);
+            ghostRightArm.position.set(0.44, 1.38, 0.35);
+            ghostRightArm.rotation.x = Math.PI / 2.6;
+            ghostRightArm.rotation.z = 0.15;
+            ghostGroup.add(ghostRightArm);
+
+            ghostAuraLight = new THREE.PointLight(0xb91c1c, 1.4, 8.5);
+            ghostAuraLight.position.set(0, 1.8, 0.45);
+            ghostGroup.add(ghostAuraLight);
+
+            scene.add(ghostGroup);
+        }
+
+        // 바닥에 떨어진 황금 열쇠 생성
+        function createKey() {
+            keyGroup = new THREE.Group();
+
+            const goldMat = new THREE.MeshStandardMaterial({
+                color: 0xfbbf24,
+                emissive: 0x78350f,
+                emissiveIntensity: 0.6,
+                metalness: 0.85,
+                roughness: 0.2
+            });
+
+            const ringGeo = new THREE.TorusGeometry(0.16, 0.04, 12, 24);
+            const ringMesh = new THREE.Mesh(ringGeo, goldMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            ringMesh.position.x = -0.22;
+            keyGroup.add(ringMesh);
+
+            const shaftGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.45, 10);
+            const shaftMesh = new THREE.Mesh(shaftGeo, goldMat);
+            shaftMesh.rotation.z = Math.PI / 2;
+            shaftMesh.position.x = 0.1;
+            keyGroup.add(shaftMesh);
+
+            const toothGeo = new THREE.BoxGeometry(0.05, 0.03, 0.12);
+            const tooth1 = new THREE.Mesh(toothGeo, goldMat);
+            tooth1.position.set(0.22, 0, 0.06);
+            keyGroup.add(tooth1);
+
+            const tooth2 = new THREE.Mesh(toothGeo, goldMat);
+            tooth2.position.set(0.30, 0, 0.06);
+            keyGroup.add(tooth2);
+
+            keyLight = new THREE.PointLight(0xfde047, 1.1, 5.5);
+            keyLight.position.set(0, 0.4, 0);
+            keyGroup.add(keyLight);
+
+            scene.add(keyGroup);
+        }
+
+        // ==========================================
+        // 5. 게임 초기화 및 충돌/경로 로직
+        // ==========================================
+        function resetGame() {
+            hasKey = false;
+            isFlashlightOn = true;
+            isHiding = false;
+            currentCloset = null;
+            flashlight.visible = true;
+            elapsedTime = 0;
+            lastScreamTime = 0;
+            lastFatRoarTime = 0;
+
+            hidingOverlay.style.display = 'none';
+            hidingBadge.classList.add('hidden');
+            keyBadge.textContent = '🔑 열쇠: 미획득';
+            keyBadge.classList.remove('has-key');
+            flashlightBadge.textContent = '🔦 손전등: 켜짐';
+            objectiveText.textContent = '목표: 바닥에 떨어진 열쇠를 찾아 잠긴 출구 문을 여세요';
+            fearVignette.style.opacity = '0';
+
+            player.pos.set(7 * CELL_SIZE, 1.7, 13 * CELL_SIZE);
+            player.yaw = 0;
+            player.pitch = 0;
+            player.stamina = 100;
+
+            const randomSpot = KEY_SPAWN_CANDIDATES[Math.floor(Math.random() * KEY_SPAWN_CANDIDATES.length)];
+            keyGroup.position.set(randomSpot[1] * CELL_SIZE, 0.18, randomSpot[0] * CELL_SIZE);
+            keyGroup.visible = true;
+
+            ghost.pos.set(7 * CELL_SIZE, 0, 1 * CELL_SIZE);
+            ghost.state = 'PATROL';
+            ghost.targetCell = pickRandomWalkableCell();
+            ghostGroup.position.copy(ghost.pos);
+
+            fatGhost.pos.set(1 * CELL_SIZE, 0, 5 * CELL_SIZE);
+            fatGhost.state = 'PATROL';
+            fatGhost.targetCell = pickRandomWalkableCell();
+            fatGhostGroup.position.copy(fatGhost.pos);
+        }
+
+        function isWallAt(x, z, radius = 0.4) {
+            const offsets = [
+                [-radius, -radius],
+                [radius, -radius],
+                [-radius, radius],
+                [radius, radius]
+            ];
+            for (const [ox, oz] of offsets) {
+                const col = Math.round((x + ox) / CELL_SIZE);
+                const row = Math.round((z + oz) / CELL_SIZE);
+                if (row < 0 || row >= MAP_GRID.length || col < 0 || col >= MAP_GRID[0].length) {
+                    return true;
+                }
+                if (MAP_GRID[row][col] !== 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function pickRandomWalkableCell() {
+            while (true) {
+                const r = Math.floor(Math.random() * MAP_GRID.length);
+                const c = Math.floor(Math.random() * MAP_GRID[0].length);
+                if (MAP_GRID[r][c] === 0) {
+                    return { r, c };
+                }
+            }
+        }
+
+        function hasLineOfSight(posA, posB) {
+            const dist = posA.distanceTo(posB);
+            const steps = Math.ceil(dist / 0.8);
+            for (let i = 1; i < steps; i++) {
+                const t = i / steps;
+                const ix = posA.x + (posB.x - posA.x) * t;
+                const iz = posA.z + (posB.z - posA.z) * t;
+                const col = Math.round(ix / CELL_SIZE);
+                const row = Math.round(iz / CELL_SIZE);
+                if (MAP_GRID[row]?.[col] !== 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // ==========================================
+        // 6. 프레임 업데이트 (플레이어, 귀신 AI, 사운드)
+        // ==========================================
+        function updatePlayer(dt) {
+            const keyTurnSpeed = 2.25;
+            if (keysPressed['ArrowLeft'] || keysPressed['KeyQ']) player.yaw += keyTurnSpeed * dt;
+            if (keysPressed['ArrowRight'] || keysPressed['KeyR']) player.yaw -= keyTurnSpeed * dt;
+            if (keysPressed['ArrowUp']) player.pitch += keyTurnSpeed * 0.65 * dt;
+            if (keysPressed['ArrowDown']) player.pitch -= keyTurnSpeed * 0.65 * dt;
+            player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+
+            // 옷장에 숨어 있는 동안에는 이동을 멈추고 문틈 시야만 좌우로 살짝 살필 수 있음
+            if (isHiding && currentCloset) {
+                const maxLookOffset = 0.65;
+                const diff = Math.atan2(Math.sin(player.yaw - currentCloset.rotY), Math.cos(player.yaw - currentCloset.rotY));
+                if (diff > maxLookOffset) player.yaw = currentCloset.rotY + maxLookOffset;
+                if (diff < -maxLookOffset) player.yaw = currentCloset.rotY - maxLookOffset;
+
+                player.stamina = Math.min(100, player.stamina + 25 * dt);
+                staminaBar.style.width = `${player.stamina}%`;
+
+                camera.position.set(
+                    currentCloset.pos.x + Math.sin(currentCloset.rotY) * 0.35,
+                    1.75,
+                    currentCloset.pos.z + Math.cos(currentCloset.rotY) * 0.35
+                );
+                camera.rotation.y = player.yaw;
+                camera.rotation.x = player.pitch * 0.5;
+
+                flashlight.position.copy(camera.position);
+                const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+                flashlightTarget.position.copy(camera.position).add(forward.multiplyScalar(10));
+                return;
+            }
+
+            let moveForward = 0;
+            let moveRight = 0;
+            if (keysPressed['KeyW']) moveForward += 1;
+            if (keysPressed['KeyS']) moveForward -= 1;
+            if (keysPressed['KeyD']) moveRight += 1;
+            if (keysPressed['KeyA']) moveRight -= 1;
+
+            const isMoving = moveForward !== 0 || moveRight !== 0;
+            const wantsSprint = (keysPressed['ShiftLeft'] || keysPressed['ShiftRight']) && isMoving && player.stamina > 5;
+
+            let currentSpeed = player.speed;
+            if (wantsSprint) {
+                currentSpeed = player.sprintSpeed;
+                player.stamina = Math.max(0, player.stamina - 28 * dt);
+            } else {
+                player.stamina = Math.min(100, player.stamina + 18 * dt);
+            }
+            staminaBar.style.width = `${player.stamina}%`;
+
+            if (isMoving) {
+                const angle = player.yaw;
+                const sinY = Math.sin(angle);
+                const cosY = Math.cos(angle);
+
+                const dirX = (-sinY * moveForward + cosY * moveRight);
+                const dirZ = (-cosY * moveForward - sinY * moveRight);
+                const len = Math.hypot(dirX, dirZ) || 1;
+
+                const stepX = (dirX / len) * currentSpeed * dt;
+                const stepZ = (dirZ / len) * currentSpeed * dt;
+
+                if (!isWallAt(player.pos.x + stepX, player.pos.z, player.radius)) {
+                    player.pos.x += stepX;
+                }
+                if (!isWallAt(player.pos.x, player.pos.z + stepZ, player.radius)) {
+                    player.pos.z += stepZ;
+                }
+
+                player.bobTimer += dt * (wantsSprint ? 13 : 8);
+                player.pos.y = 1.7 + Math.sin(player.bobTimer) * (wantsSprint ? 0.08 : 0.045);
+            } else {
+                player.pos.y += (1.7 - player.pos.y) * 8 * dt;
+            }
+
+            camera.position.copy(player.pos);
+            camera.rotation.y = player.yaw;
+            camera.rotation.x = player.pitch;
+
+            flashlight.position.copy(camera.position);
+            const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            flashlightTarget.position.copy(camera.position).add(forward.multiplyScalar(10));
+        }
+
+        function updateGhost(dt) {
+            const distToPlayer = Math.hypot(player.pos.x - ghost.pos.x, player.pos.z - ghost.pos.z);
+            const canSeePlayer = !isHiding && distToPlayer < ghost.detectRadius && hasLineOfSight(ghost.pos, player.pos);
+
+            if (canSeePlayer) {
+                if (ghost.state !== 'CHASE') {
+                    ghost.state = 'CHASE';
+                    soundEngine.playGhostGroan();
+                }
+            } else if (distToPlayer > ghost.detectRadius * 1.35 || isHiding) {
+                ghost.state = 'PATROL';
+            }
+
+            let targetPos;
+            let moveSpeed;
+
+            if (ghost.state === 'CHASE') {
+                targetPos = player.pos;
+                moveSpeed = ghost.chaseSpeed;
+            } else {
+                const tx = ghost.targetCell.c * CELL_SIZE;
+                const tz = ghost.targetCell.r * CELL_SIZE;
+                if (Math.hypot(tx - ghost.pos.x, tz - ghost.pos.z) < 1.2) {
+                    ghost.targetCell = pickRandomWalkableCell();
+                }
+                targetPos = new THREE.Vector3(ghost.targetCell.c * CELL_SIZE, 0, ghost.targetCell.r * CELL_SIZE);
+                moveSpeed = ghost.patrolSpeed;
+
+                ghost.teleportCooldown -= dt;
+                if (ghost.teleportCooldown <= 0 && distToPlayer > 28) {
+                    const candidate = pickRandomWalkableCell();
+                    const cx = candidate.c * CELL_SIZE;
+                    const cz = candidate.r * CELL_SIZE;
+                    const d = Math.hypot(cx - player.pos.x, cz - player.pos.z);
+                    if (d > 14 && d < 24) {
+                        ghost.pos.set(cx, 0, cz);
+                        ghost.targetCell = pickRandomWalkableCell();
+                        ghost.teleportCooldown = 14.0;
+                    }
+                }
+            }
+
+            const dx = targetPos.x - ghost.pos.x;
+            const dz = targetPos.z - ghost.pos.z;
+            const len = Math.hypot(dx, dz) || 1;
+            const vx = (dx / len) * moveSpeed * dt;
+            const vz = (dz / len) * moveSpeed * dt;
+
+            let moved = false;
+            if (!isWallAt(ghost.pos.x + vx, ghost.pos.z, 0.42)) {
+                ghost.pos.x += vx;
+                moved = true;
+            }
+            if (!isWallAt(ghost.pos.x, ghost.pos.z + vz, 0.42)) {
+                ghost.pos.z += vz;
+                moved = true;
+            }
+
+            if (!moved && ghost.state === 'PATROL') {
+                ghost.targetCell = pickRandomWalkableCell();
+            }
+
+            ghostGroup.position.set(ghost.pos.x, Math.sin(elapsedTime * 4.5) * 0.14, ghost.pos.z);
+            const lookAngle = Math.atan2(dx, dz);
+            ghostGroup.rotation.y = lookAngle;
+
+            if (ghostHead) {
+                if (ghost.state === 'CHASE') {
+                    ghostHead.rotation.z = Math.sin(elapsedTime * 19) * 0.24 + 0.16;
+                    ghostHead.rotation.x = Math.sin(elapsedTime * 15) * 0.12;
+                } else {
+                    ghostHead.rotation.z = Math.sin(elapsedTime * 2.5) * 0.08;
+                    ghostHead.rotation.x = 0;
+                }
+            }
+
+            ghostLeftArm.rotation.x = Math.PI / 2.6 + Math.sin(elapsedTime * 6) * 0.25;
+            ghostRightArm.rotation.x = Math.PI / 2.6 - Math.sin(elapsedTime * 6) * 0.25;
+
+            const dangerZone = 13.5;
+            if (distToPlayer < dangerZone) {
+                const intensity = 1 - (distToPlayer / dangerZone);
+                fearVignette.style.opacity = Math.min(0.95, intensity * 1.15).toFixed(2);
+
+                const beatInterval = Math.max(0.28, 0.9 - intensity * 0.6);
+                if (elapsedTime >= nextHeartbeatTime) {
+                    soundEngine.playHeartbeat(intensity);
+                    nextHeartbeatTime = elapsedTime + beatInterval;
+                }
+
+                // 여자 귀신이 주변(11.5m 이내)에 있는 동안 기괴한 울음소리가 연속적으로 이어짐
+                if (distToPlayer < 11.5 && (elapsedTime - lastScreamTime) > 1.35) {
+                    soundEngine.playWomanScream(false);
+                    lastScreamTime = elapsedTime;
+                }
+            } else {
+                fearVignette.style.opacity = '0';
+            }
+
+            if (!isHiding && distToPlayer < ghost.catchRadius) {
+                triggerGameOver(ghostFaceDataUrl);
+            }
+        }
+
+        // 뚱보 귀신 AI 및 물리/사운드 업데이트
+        function updateFatGhost(dt) {
+            const distToPlayer = Math.hypot(player.pos.x - fatGhost.pos.x, player.pos.z - fatGhost.pos.z);
+            const canSeePlayer = !isHiding && distToPlayer < fatGhost.detectRadius && hasLineOfSight(fatGhost.pos, player.pos);
+
+            if (canSeePlayer) {
+                if (fatGhost.state !== 'CHASE') {
+                    fatGhost.state = 'CHASE';
+                    soundEngine.playFatGhostRoar();
+                }
+            } else if (distToPlayer > fatGhost.detectRadius * 1.3 || isHiding) {
+                fatGhost.state = 'PATROL';
+            }
+
+            let targetPos;
+            let moveSpeed;
+
+            if (fatGhost.state === 'CHASE') {
+                targetPos = player.pos;
+                moveSpeed = fatGhost.chaseSpeed;
+            } else {
+                const tx = fatGhost.targetCell.c * CELL_SIZE;
+                const tz = fatGhost.targetCell.r * CELL_SIZE;
+                if (Math.hypot(tx - fatGhost.pos.x, tz - fatGhost.pos.z) < 1.3) {
+                    fatGhost.targetCell = pickRandomWalkableCell();
+                }
+                targetPos = new THREE.Vector3(fatGhost.targetCell.c * CELL_SIZE, 0, fatGhost.targetCell.r * CELL_SIZE);
+                moveSpeed = fatGhost.patrolSpeed;
+
+                fatGhost.teleportCooldown -= dt;
+                if (fatGhost.teleportCooldown <= 0 && distToPlayer > 30) {
+                    const candidate = pickRandomWalkableCell();
+                    const cx = candidate.c * CELL_SIZE;
+                    const cz = candidate.r * CELL_SIZE;
+                    const d = Math.hypot(cx - player.pos.x, cz - player.pos.z);
+                    if (d > 15 && d < 25) {
+                        fatGhost.pos.set(cx, 0, cz);
+                        fatGhost.targetCell = pickRandomWalkableCell();
+                        fatGhost.teleportCooldown = 18.0;
+                    }
+                }
+            }
+
+            const dx = targetPos.x - fatGhost.pos.x;
+            const dz = targetPos.z - fatGhost.pos.z;
+            const len = Math.hypot(dx, dz) || 1;
+            const vx = (dx / len) * moveSpeed * dt;
+            const vz = (dz / len) * moveSpeed * dt;
+
+            let moved = false;
+            if (!isWallAt(fatGhost.pos.x + vx, fatGhost.pos.z, 0.55)) {
+                fatGhost.pos.x += vx;
+                moved = true;
+            }
+            if (!isWallAt(fatGhost.pos.x, fatGhost.pos.z + vz, 0.55)) {
+                fatGhost.pos.z += vz;
+                moved = true;
+            }
+
+            if (!moved && fatGhost.state === 'PATROL') {
+                fatGhost.targetCell = pickRandomWalkableCell();
+            }
+
+            const waddle = Math.sin(elapsedTime * 7.5);
+            fatGhostGroup.position.set(fatGhost.pos.x, Math.abs(waddle) * 0.08, fatGhost.pos.z);
+            fatGhostGroup.rotation.y = Math.atan2(dx, dz);
+            fatGhostGroup.rotation.z = waddle * 0.09;
+
+            fatGhostLeftArm.rotation.x = Math.PI / 3.2 + waddle * 0.22;
+            fatGhostRightArm.rotation.x = Math.PI / 3.2 - waddle * 0.22;
+
+            if (distToPlayer < 12.0) {
+                const intensity = 1 - (distToPlayer / 12.0);
+                const curOpacity = parseFloat(fearVignette.style.opacity || '0');
+                fearVignette.style.opacity = Math.max(curOpacity, Math.min(0.95, intensity * 1.1)).toFixed(2);
+
+                if (!isHiding && distToPlayer < 9.0 && (elapsedTime - lastFatRoarTime) > 3.6) {
+                    soundEngine.playFatGhostRoar();
+                    lastFatRoarTime = elapsedTime;
+                }
+            }
+
+            if (!isHiding && distToPlayer < fatGhost.catchRadius) {
+                triggerGameOver(fatGhostFaceDataUrl);
+            }
+        }
+
+        // 열쇠 및 출구 문, 옷장 상호작용 체크
+        function updateInteractions(dt) {
+            if (!hasKey && keyGroup.visible) {
+                keyGroup.rotation.y += dt * 1.8;
+                keyGroup.position.y = 0.2 + Math.sin(elapsedTime * 3.5) * 0.05;
+            }
+
+            if (isHiding) {
+                interactPrompt.textContent = '[E] 옷장에서 나오기';
+                interactPrompt.style.display = 'block';
+                return;
+            }
+
+            let promptText = '';
+
+            if (!hasKey && keyGroup.visible) {
+                const distToKey = Math.hypot(player.pos.x - keyGroup.position.x, player.pos.z - keyGroup.position.z);
+                if (distToKey < 2.2) {
+                    promptText = '[E] 녹슨 출구 열쇠 줍기';
+                }
+            }
+
+            if (!promptText && exitDoorMesh) {
+                const distToDoor = Math.hypot(player.pos.x - exitDoorMesh.position.x, player.pos.z - exitDoorMesh.position.z);
+                if (distToDoor < 3.0) {
+                    promptText = hasKey ? '[E] 출구 문 열고 탈출하기' : '🔒 잠겨 있습니다 (열쇠가 필요합니다)';
+                }
+            }
+
+            if (!promptText) {
+                for (const closet of closets) {
+                    const distToCloset = Math.hypot(player.pos.x - closet.pos.x, player.pos.z - closet.pos.z);
+                    if (distToCloset < 2.3) {
+                        promptText = '[E] 옷장 안에 숨기';
+                        break;
+                    }
+                }
+            }
+
+            if (promptText) {
+                interactPrompt.textContent = promptText;
+                interactPrompt.style.display = 'block';
+            } else {
+                interactPrompt.style.display = 'none';
+            }
+        }
+
+        function performInteract() {
+            if (gameState !== 'PLAYING') return;
+
+            if (isHiding) {
+                isHiding = false;
+                currentCloset = null;
+                player.pos.copy(preHidePos);
+                player.yaw = preHideYaw;
+                hidingOverlay.style.display = 'none';
+                hidingBadge.classList.add('hidden');
+                soundEngine.playClosetSound();
+                return;
+            }
+
+            if (!hasKey && keyGroup.visible) {
+                const distToKey = Math.hypot(player.pos.x - keyGroup.position.x, player.pos.z - keyGroup.position.z);
+                if (distToKey < 2.2) {
+                    hasKey = true;
+                    keyGroup.visible = false;
+                    soundEngine.playKeyPickup();
+                    keyBadge.textContent = '🔑 열쇠: 획득 완료!';
+                    keyBadge.classList.add('has-key');
+                    objectiveText.textContent = '목표: 붉은 비상등이 켜진 출구 문으로 가서 탈출하세요!';
+                    return;
+                }
+            }
+
+            if (exitDoorMesh) {
+                const distToDoor = Math.hypot(player.pos.x - exitDoorMesh.position.x, player.pos.z - exitDoorMesh.position.z);
+                if (distToDoor < 3.0) {
+                    if (hasKey) {
+                        triggerWin();
+                    } else {
+                        soundEngine.playClick();
+                    }
+                    return;
+                }
+            }
+
+            for (const closet of closets) {
+                const distToCloset = Math.hypot(player.pos.x - closet.pos.x, player.pos.z - closet.pos.z);
+                if (distToCloset < 2.3) {
+                    isHiding = true;
+                    currentCloset = closet;
+                    preHidePos.copy(player.pos);
+                    preHideYaw = player.yaw;
+                    player.yaw = closet.rotY;
+                    player.pitch = 0;
+                    hidingOverlay.style.display = 'block';
+                    hidingBadge.classList.remove('hidden');
+                    soundEngine.playClosetSound();
+                    return;
+                }
+            }
+        }
+
+        function updateEnvironment(dt) {
+            flickeringLights.forEach(item => {
+                item.timer += dt;
+                if (Math.random() < 0.04) {
+                    item.light.intensity = Math.random() * 0.4;
+                } else {
+                    item.light.intensity += (item.baseIntensity - item.light.intensity) * 10 * dt;
+                }
+            });
+        }
+
+        // ==========================================
+        // 7. 게임 종료 / 승리 / 화면 전환 처리
+        // ==========================================
+        function triggerGameOver(scareFaceUrl) {
+            if (gameState === 'GAMEOVER') return;
+            gameState = 'GAMEOVER';
+            isHiding = false;
+            hidingOverlay.style.display = 'none';
+            hud.style.display = 'none';
+            fearVignette.style.opacity = '0';
+
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+
+            if (scareFaceUrl) {
+                jumpscareFace.style.backgroundImage = `url(${scareFaceUrl})`;
+            }
+            soundEngine.playWomanScream(true);
+            jumpscareContainer.style.display = 'flex';
+
+            setTimeout(() => {
+                jumpscareContainer.style.display = 'none';
+                gameoverScreen.classList.remove('hidden');
+            }, 1350);
+        }
+
+        function triggerWin() {
+            if (gameState === 'WIN') return;
+            gameState = 'WIN';
+            isHiding = false;
+            hidingOverlay.style.display = 'none';
+            hud.style.display = 'none';
+            fearVignette.style.opacity = '0';
+            soundEngine.playKeyPickup();
+
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+
+            const seconds = Math.floor(elapsedTime);
+            document.getElementById('win-stats').textContent = `탈출 소요 시간: ${seconds}초 — 무사히 저택의 원혼들을 따돌리고 빠져나왔습니다!`;
+            winScreen.classList.remove('hidden');
+        }
+
+        // 메인 애니메이션 루프
+        function animate(now) {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+            lastFrameTime = now;
+
+            if (gameState === 'PLAYING') {
+                elapsedTime += dt;
+                updatePlayer(dt);
+                updateGhost(dt);
+                updateFatGhost(dt);
+                updateInteractions(dt);
+                updateEnvironment(dt);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // 8. 이벤트 리스너 (키보드, 마우스, 터치, 창 크기)
+        // ==========================================
+        function toggleFlashlight() {
+            if (gameState !== 'PLAYING') return;
+            isFlashlightOn = !isFlashlightOn;
+            flashlight.visible = isFlashlightOn;
+            flashlightBadge.textContent = isFlashlightOn ? '🔦 손전등: 켜짐' : '🔦 손전등: 꺼짐';
+            soundEngine.playClick();
+        }
+
+        function startNewGame() {
+            soundEngine.init();
+            resetGame();
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            winScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            hud.style.display = 'flex';
+            gameState = 'PLAYING';
+            lastFrameTime = performance.now();
+        }
+
+        function resumeGame() {
+            soundEngine.init();
+            pauseScreen.classList.add('hidden');
+            hud.style.display = 'flex';
+            gameState = 'PLAYING';
+            lastFrameTime = performance.now();
+        }
+
+        function pauseGame() {
+            if (gameState !== 'PLAYING') return;
+            gameState = 'PAUSED';
+            hud.style.display = 'none';
+            pauseScreen.classList.remove('hidden');
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+        }
+
+        document.getElementById('start-btn').addEventListener('click', startNewGame);
+        document.getElementById('retry-btn').addEventListener('click', startNewGame);
+        document.getElementById('play-again-btn').addEventListener('click', startNewGame);
+        document.getElementById('resume-btn').addEventListener('click', resumeGame);
+
+        // 캔버스 클릭 시 선택적 마우스 잠금 (마우스가 없어도 방향키로 완벽 플레이 가능)
+        canvas.addEventListener('click', () => {
+            if (gameState === 'PLAYING' && canvas.requestPointerLock && !document.pointerLockElement) {
+                try {
+                    canvas.requestPointerLock();
+                } catch (e) {
+                    // 포인터 락 미지원 환경 무시
+                }
+            }
+        });
+
+        // 마우스 이동 시 1인칭 시점 회전 (포인터 락 상태일 때)
+        document.addEventListener('mousemove', (e) => {
+            if (gameState === 'PLAYING' && document.pointerLockElement === canvas) {
+                const sensitivity = 0.0022;
+                player.yaw -= e.movementX * sensitivity;
+                player.pitch -= e.movementY * sensitivity;
+                player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+            }
+        });
+
+        // 키보드 입력 처리 (마우스 없이 Enter/Space/방향키/WASD로 전체 게임 제어)
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (gameState === 'START' || gameState === 'GAMEOVER' || gameState === 'WIN') {
+                if (e.code === 'Enter' || e.code === 'Space') {
+                    startNewGame();
+                }
+                return;
+            }
+
+            if (gameState === 'PAUSED') {
+                if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyP') {
+                    resumeGame();
+                }
+                return;
+            }
+
+            keysPressed[e.code] = true;
+
+            if (e.code === 'KeyF') {
+                toggleFlashlight();
+            } else if (e.code === 'KeyE') {
+                performInteract();
+            } else if (e.code === 'KeyP') {
+                pauseGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.code] = false;
+        });
+
+        // 모바일 터치 이동 및 시점 드래그 지원
+        document.querySelectorAll('.touch-btn[data-key]').forEach(btn => {
+            const code = btn.getAttribute('data-key');
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keysPressed[code] = true;
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keysPressed[code] = false;
+            });
+        });
+
+        document.getElementById('mobile-interact').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            performInteract();
+        });
+
+        document.getElementById('mobile-flash').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            toggleFlashlight();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameState !== 'PLAYING') return;
+            for (const touch of e.changedTouches) {
+                if (touch.clientX > window.innerWidth * 0.35 && touchLookId === null) {
+                    touchLookId = touch.identifier;
+                    lastTouchX = touch.clientX;
+                    lastTouchY = touch.clientY;
+                }
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameState !== 'PLAYING' || touchLookId === null) return;
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === touchLookId) {
+                    const dx = touch.clientX - lastTouchX;
+                    const dy = touch.clientY - lastTouchY;
+                    lastTouchX = touch.clientX;
+                    lastTouchY = touch.clientY;
+
+                    player.yaw -= dx * 0.005;
+                    player.pitch -= dy * 0.005;
+                    player.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.pitch));
+                }
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            for (const touch of e.changedTouches) {
+                if (touch.identifier === touchLookId) {
+                    touchLookId = null;
+                }
+            }
+        });
+
+        // 반응형 창 크기 조절
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 페이지 로드 시 3D 환경 초기화 및 루프 시작
+        window.onload = function () {
+            initThree();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>

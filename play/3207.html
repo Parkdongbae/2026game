@@ -1,0 +1,3773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>라스트 쉘터 3D: 더 시즈 (Last Shelter 3D: The Siege)</title>
+    <!-- Google Fonts: Black Han Sans & Noto Sans KR -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0e0c0a;
+            color: #e7e5e4;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .font-military {
+            font-family: 'Black Han Sans', sans-serif;
+            letter-spacing: 0.04em;
+        }
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .hud-panel {
+            background: rgba(20, 18, 15, 0.90);
+            border: 1px solid rgba(168, 162, 158, 0.35);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+        }
+        .btn-tactical {
+            transition: all 0.14s ease;
+        }
+        .btn-tactical:hover:not(:disabled) {
+            transform: translateY(-1px);
+            filter: brightness(1.14);
+        }
+        .btn-tactical:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+        .cat-tab.active {
+            background-color: #b45309;
+            color: #ffffff;
+            border-color: #f59e0b;
+        }
+        /* 보스 등장 시 화면 붉은 경고 펄스 */
+        @keyframes bossAlertPulse {
+            0%, 100% { box-shadow: inset 0 0 0 0 rgba(220, 38, 38, 0); }
+            50% { box-shadow: inset 0 0 95px 24px rgba(220, 38, 38, 0.55); }
+        }
+        .boss-screen-alert {
+            animation: bossAlertPulse 0.85s ease-in-out infinite;
+        }
+        @keyframes cinematicSlide {
+            0% { transform: scale(1.18); opacity: 0; letter-spacing: 0.25em; }
+            15% { transform: scale(1); opacity: 1; letter-spacing: 0.08em; }
+            85% { transform: scale(1); opacity: 1; letter-spacing: 0.08em; }
+            100% { transform: scale(0.96); opacity: 0; }
+        }
+        .cinematic-banner-anim {
+            animation: cinematicSlide 3.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        ::-webkit-scrollbar { height: 5px; width: 5px; }
+        ::-webkit-scrollbar-track { background: #1c1917; }
+        ::-webkit-scrollbar-thumb { background: #57534e; border-radius: 3px; }
+    </style>
+</head>
+<body class="w-screen h-screen relative overflow-hidden">
+
+    <!-- 보스 경보 붉은 테두리 오버레이 -->
+    <div id="boss-vignette" class="hidden pointer-events-none fixed inset-0 z-30 boss-screen-alert"></div>
+
+    <!-- 보스 등장 시네마틱 경고 배너 -->
+    <div id="boss-cinematic-alert" class="hidden pointer-events-none fixed inset-x-0 top-1/4 z-40 flex flex-col items-center justify-center px-4">
+        <div class="cinematic-banner-anim bg-gradient-to-r from-transparent via-red-950/95 to-transparent border-y-2 border-red-500 py-4 px-10 text-center w-full max-w-3xl shadow-2xl">
+            <div class="text-xs sm:text-sm font-black text-amber-400 tracking-[0.25em] uppercase mb-1">⚠️ WARNING: APEX MUTANT DETECTED ⚠️</div>
+            <h2 id="cinematic-boss-title" class="font-military text-2xl sm:text-4xl text-white drop-shadow-[0_2px_10px_rgba(239,68,68,0.9)]">STAGE 1 BOSS: 골리앗</h2>
+            <p id="cinematic-boss-sub" class="text-xs sm:text-sm text-red-200 font-bold mt-1">특수 능력: 대지 분쇄 충격파</p>
+        </div>
+    </div>
+
+    <!-- ==================== 1. 3D 캔버스 ==================== -->
+    <div id="canvas-container"></div>
+
+    <!-- ==================== 2. 상단 전술 HUD ==================== -->
+    <header class="relative z-20 px-3 py-2 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <!-- 좌측: 스테이지 & 상태 배지 -->
+        <div class="hud-panel rounded-xl px-3 py-1.5 flex items-center gap-3 pointer-events-auto">
+            <div class="flex items-center gap-1.5 border-r border-stone-700 pr-3">
+                <span class="text-amber-500 text-[11px] font-black tracking-wider">STAGE</span>
+                <span id="hud-stage" class="font-military text-xl text-stone-100">1</span>
+            </div>
+
+            <div id="hud-phase-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-900/55 text-amber-200 border border-amber-600/50 flex items-center gap-1.5">
+                <span id="hud-phase-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span id="hud-phase-text">재정비 타임</span>
+            </div>
+
+            <div class="hidden sm:flex items-center gap-1.5 text-xs text-stone-300 border-l border-stone-700 pl-3">
+                <span>🧟 잔여 적군:</span>
+                <strong id="hud-enemies" class="text-red-400 text-sm font-black">0</strong>
+            </div>
+        </div>
+
+        <!-- 중앙: 중앙 요새(보호소) 내구도 & 군자금($) -->
+        <div class="hud-panel rounded-xl px-3.5 py-1.5 flex items-center gap-4 pointer-events-auto">
+            <div class="flex items-center gap-2 min-w-[180px] sm:min-w-[240px]">
+                <span class="text-xs font-bold text-stone-200 whitespace-nowrap">🏰 중앙 요새</span>
+                <div class="w-full bg-stone-950 h-4 rounded-md overflow-hidden border border-stone-600 relative">
+                    <div id="hud-shelter-bar" class="bg-gradient-to-r from-emerald-700 to-emerald-500 h-full transition-all duration-200" style="width: 100%;"></div>
+                    <span id="hud-shelter-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow">2000 / 2000</span>
+                </div>
+            </div>
+
+            <div class="bg-stone-950 border border-amber-600/60 px-3 py-1 rounded-lg flex items-center gap-1.5">
+                <span class="text-emerald-400 font-black text-sm">$</span>
+                <span id="hud-money" class="font-military text-lg text-amber-300">550</span>
+            </div>
+        </div>
+
+        <!-- 우측: 다음 웨이브 시작 & 카메라/오디오 버튼 -->
+        <div class="hud-panel rounded-xl p-1.5 flex items-center gap-1.5 pointer-events-auto">
+            <button id="btn-next-wave" onclick="startNextWave()" class="btn-tactical bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-700 hover:to-amber-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs sm:text-sm border border-amber-500/40 shadow flex items-center gap-1.5">
+                <span>🚨</span>
+                <span>다음 웨이브 시작</span>
+            </button>
+            <button id="btn-speed" onclick="cycleGameSpeed()" class="btn-tactical bg-stone-800 hover:bg-stone-700 border border-amber-500/50 px-2.5 py-1.5 rounded-lg text-xs font-black text-amber-300" title="게임 배속 전환 (1x / 2x / 3x)">
+                ⏩ 1x
+            </button>
+            <div class="hidden md:flex items-center gap-1 bg-stone-900/90 border border-stone-700 px-2 py-1 rounded-lg">
+                <span class="text-[11px] text-stone-400 font-bold">음량</span>
+                <input id="hud-volume-slider" type="range" min="0" max="100" value="45" oninput="setMasterVolume(this.value)" class="w-16 accent-amber-500 cursor-pointer h-1.5 bg-stone-700 rounded-lg">
+            </div>
+            <button onclick="resetCamera()" class="bg-stone-800 hover:bg-stone-700 border border-stone-600 px-2 py-1.5 rounded-lg text-xs font-bold text-stone-200" title="시점 초기화">
+                🎥 시점복구
+            </button>
+            <button onclick="toggleMute()" id="btn-mute" class="bg-stone-800 hover:bg-stone-700 border border-stone-600 p-1.5 rounded-lg text-sm" title="효과음/BGM 켜기/끄기">
+                🔊
+            </button>
+            <button onclick="toggleHelpModal(true)" class="bg-stone-800 hover:bg-stone-700 border border-stone-600 px-2.5 py-1.5 rounded-lg text-xs font-bold text-stone-200">
+                📖 교범
+            </button>
+        </div>
+    </header>
+
+    <!-- ==================== 3. 보스 전용 체력바 (보스 출현 시 표시) ==================== -->
+    <div id="boss-hud" class="hidden relative z-20 px-4 mt-1 flex justify-center pointer-events-none">
+        <div class="hud-panel border-2 border-red-600/80 rounded-xl px-4 py-2 w-full max-w-xl shadow-2xl">
+            <div class="flex justify-between items-center mb-1">
+                <div class="flex items-center gap-2">
+                    <span class="bg-red-700 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider animate-pulse">BOSS WARNING</span>
+                    <span id="boss-name" class="font-military text-base sm:text-lg text-red-300">STAGE 1 BOSS: 골리앗</span>
+                </div>
+                <span id="boss-hp-text" class="text-xs font-bold text-stone-200">1500 / 1500</span>
+            </div>
+            <div class="w-full bg-stone-950 h-3.5 rounded-full overflow-hidden border border-red-900">
+                <div id="boss-hp-bar" class="bg-gradient-to-r from-red-800 via-red-600 to-orange-500 h-full transition-all duration-150" style="width: 100%;"></div>
+            </div>
+            <div id="boss-skill-desc" class="text-[11px] text-amber-300/90 mt-1 text-right font-bold">특수 능력: 대지 분쇄 충격파</div>
+        </div>
+    </div>
+
+    <!-- ==================== 4. 좌측 수비대장 컨트롤 & 우측 시설 개별 패널 ==================== -->
+    <aside class="relative z-20 px-3 pt-1 flex justify-between items-start pointer-events-none">
+        <!-- 수비대장 상태 카드 -->
+        <div class="hud-panel rounded-xl p-2.5 text-xs space-y-1.5 pointer-events-auto max-w-[245px]">
+            <div class="flex items-center justify-between border-b border-stone-700 pb-1">
+                <span class="font-bold text-amber-300">🪖 수비대장 (WASD)</span>
+                <span id="hud-cmd-hp" class="text-[10px] font-bold text-emerald-400">HP 100%</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-stone-300">🧨 세열 수류탄 (클릭/Space):</span>
+                <span id="hud-grenade-text" class="font-bold text-emerald-400">투척 가능</span>
+            </div>
+            <div class="w-full bg-stone-950 h-1.5 rounded-full overflow-hidden border border-stone-700">
+                <div id="hud-grenade-bar" class="bg-amber-500 h-full transition-all duration-75" style="width: 100%;"></div>
+            </div>
+            <div class="flex items-center justify-between gap-2 pt-0.5">
+                <span class="text-stone-300">⚡ 전술 대시 (Shift):</span>
+                <span id="hud-dash-text" class="font-bold text-sky-400">준비 완료</span>
+            </div>
+            <div class="text-[10px] text-stone-400 pt-1 border-t border-stone-800 leading-relaxed">
+                • <b>우클릭 / Q·E</b>: 카메라 360° 회전<br>
+                • <b>마우스 휠</b>: 줌 인/아웃 | <b>ESC</b>: 취소
+            </div>
+        </div>
+
+        <!-- 선택된 방어 시설 개별 개조/수리/해체 카드 -->
+        <div id="selected-panel" class="hidden hud-panel rounded-xl p-3 w-64 pointer-events-auto border-amber-500/70">
+            <div class="flex justify-between items-start border-b border-stone-700 pb-2 mb-2">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span id="sel-icon" class="text-lg">🔫</span>
+                        <h3 id="sel-name" class="font-bold text-sm text-stone-100">M2 중기관총 거치대</h3>
+                    </div>
+                    <span id="sel-level" class="text-xs text-amber-400 font-bold">개조 등급: Lv.1 / 5</span>
+                </div>
+                <button onclick="deselectStructure()" class="text-stone-400 hover:text-white text-sm px-1">✕</button>
+            </div>
+
+            <div class="space-y-1 text-xs text-stone-300 mb-3">
+                <div class="flex justify-between">
+                    <span>내구도:</span>
+                    <span id="sel-hp" class="font-bold text-emerald-400">250 / 250</span>
+                </div>
+                <div class="flex justify-between">
+                    <span id="sel-stat-label">화력 / 유효사거리:</span>
+                    <span id="sel-stat-val" class="font-bold text-amber-300">22 / 14.0m</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <button id="btn-sel-upgrade" onclick="upgradeSelected()" class="btn-tactical w-full bg-amber-700 hover:bg-amber-600 disabled:bg-stone-800 disabled:text-stone-500 text-white font-bold py-1.5 rounded-lg text-xs flex justify-between px-3 border border-amber-500/30">
+                    <span>⬆️ 화력/장갑 개조</span>
+                    <span id="sel-upg-cost">$100</span>
+                </button>
+                <button id="btn-sel-repair" onclick="repairSelected()" class="btn-tactical w-full bg-emerald-800 hover:bg-emerald-700 disabled:bg-stone-800 disabled:text-stone-500 text-white font-bold py-1.5 rounded-lg text-xs flex justify-between px-3 border border-emerald-500/30">
+                    <span>🔧 현장 긴급 보수</span>
+                    <span id="sel-rep-cost">$20</span>
+                </button>
+                <button onclick="sellSelected()" class="btn-tactical w-full bg-red-950/90 hover:bg-red-900 text-red-200 font-bold py-1.5 rounded-lg text-xs flex justify-between px-3 border border-red-800/60">
+                    <span>🗑️ 해체 (자재 회수)</span>
+                    <span id="sel-sell-val">+$40</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 중앙 알림 배너 -->
+    <div id="banner-overlay" class="hidden pointer-events-none fixed inset-x-0 top-24 flex justify-center z-30">
+        <div class="hud-panel border-2 border-amber-500/80 px-6 py-2.5 rounded-2xl text-center shadow-2xl">
+            <h2 id="banner-title" class="font-military text-xl sm:text-2xl text-amber-400">STAGE 1 방어 성공!</h2>
+            <p id="banner-sub" class="text-xs sm:text-sm text-stone-200 font-bold mt-0.5">보급 자금 +$220 획득! 방어선을 정비하십시오.</p>
+        </div>
+    </div>
+
+    <!-- ==================== 5. 하단 16종 방어 시설 & 요새 업그레이드 독 ==================== -->
+    <footer class="fixed bottom-0 inset-x-0 z-20 p-2 pointer-events-none">
+        <div class="hud-panel rounded-2xl p-2 max-w-7xl mx-auto flex flex-col gap-1.5 pointer-events-auto">
+            
+            <!-- 상단 줄: 카테고리 탭 + 요새/수비대장 글로벌 업그레이드 -->
+            <div class="flex flex-wrap items-center justify-between gap-1.5 border-b border-stone-800 pb-1.5">
+                <div class="flex flex-wrap items-center gap-1" id="category-tabs">
+                    <button onclick="setBuildCategory('ALL')" data-cat="ALL" class="cat-tab active px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-600 bg-stone-800 text-stone-200">전체 (28)</button>
+                    <button onclick="setBuildCategory('BARRIER')" data-cat="BARRIER" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-600 bg-stone-800 text-stone-200">🧱 방벽/장애물</button>
+                    <button onclick="setBuildCategory('TRAP')" data-cat="TRAP" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-600 bg-stone-800 text-stone-200">🧨 함정/폭발</button>
+                    <button onclick="setBuildCategory('WEAPON')" data-cat="WEAPON" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-600 bg-stone-800 text-stone-200">🔫 화기 거치대</button>
+                    <button onclick="setBuildCategory('BARRACKS')" data-cat="BARRACKS" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-500/60 bg-stone-800 text-emerald-300">🪖 군인 생성기</button>
+                    <button onclick="setBuildCategory('SUPPORT')" data-cat="SUPPORT" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-stone-600 bg-stone-800 text-stone-200">🔦 특수/지원</button>
+                    <button onclick="setBuildCategory('BUILDING')" data-cat="BUILDING" class="cat-tab px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-500/50 bg-stone-800 text-amber-200">🏛️ 전술 건물</button>
+                </div>
+
+                <!-- 우측 글로벌 강화 버튼들 -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="repairAllStructures()" class="btn-tactical bg-emerald-900/90 hover:bg-emerald-800 border border-emerald-600/50 text-emerald-100 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                        <span>🛠️ 전체보수</span>
+                        <span id="repair-all-cost" class="text-emerald-300">$0</span>
+                    </button>
+                    <button onclick="upgradeShelter()" class="btn-tactical bg-stone-800 hover:bg-stone-700 border border-amber-500/40 text-amber-100 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                        <span>🏰 요새증축</span>
+                        <span id="upg-shelter-cost" class="text-amber-300">Lv.1 ($180)</span>
+                    </button>
+                    <button onclick="upgradeCommander()" class="btn-tactical bg-stone-800 hover:bg-stone-700 border border-red-500/40 text-red-100 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                        <span>🔫 대장화기</span>
+                        <span id="upg-cmd-cost" class="text-red-300">Lv.1 ($140)</span>
+                    </button>
+                    <button onclick="upgradeSalvage()" class="btn-tactical bg-stone-800 hover:bg-stone-700 border border-sky-500/40 text-sky-100 px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                        <span>📦 보급효율</span>
+                        <span id="upg-salvage-cost" class="text-sky-300">Lv.1 ($150)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 하단 줄: 방어 시설 카드 목록 -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5" id="build-menu">
+                <!-- JS 동적 렌더링 -->
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== 6. 작전 브리핑 / 교범 / 게임오버 모달 ==================== -->
+    <div id="modal-overlay" class="fixed inset-0 bg-stone-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-stone-900 border-2 border-stone-600 rounded-2xl max-w-2xl w-full p-6 shadow-2xl text-center">
+            <div class="inline-block bg-red-900/70 border border-red-500/60 text-red-200 text-xs font-bold px-3 py-1 rounded-full mb-2">
+                HARDCORE 3D FORTRESS ZOMBIE DEFENSE
+            </div>
+            <h1 id="modal-title" class="font-military text-3xl sm:text-4xl text-stone-100 mb-2">라스트 쉘터 3D: 더 시즈 (하드코어)</h1>
+            <p id="modal-desc" class="text-stone-300 text-sm mb-4 leading-relaxed">
+                극한의 좀비 공세가 시작됩니다. <span class="text-emerald-400 font-bold">군인 생성기(병영)</span>로 보병·중화기병·저격수를 출격시키고,<br>
+                <span class="text-amber-400 font-bold">28종의 방어 요소</span>를 조합해 몰려오는 변이체 군단과 보스를 저지하십시오.
+            </p>
+
+            <!-- 결과 통계 박스 -->
+            <div id="modal-stats" class="hidden bg-stone-950/90 border border-stone-700 rounded-xl p-4 mb-4 grid grid-cols-3 gap-2 text-center">
+                <div>
+                    <div class="text-xs text-stone-400">최종 도달 스테이지</div>
+                    <div id="stat-stage" class="font-military text-xl text-amber-400">STAGE 1</div>
+                </div>
+                <div>
+                    <div class="text-xs text-stone-400">섬멸한 좀비 수</div>
+                    <div id="stat-kills" class="font-military text-xl text-red-400">0구</div>
+                </div>
+                <div>
+                    <div class="text-xs text-stone-400">누적 확보 자금</div>
+                    <div id="stat-money" class="font-military text-xl text-emerald-400">$0</div>
+                </div>
+            </div>
+
+            <!-- 핵심 전술 교범 -->
+            <div class="bg-stone-950/85 border border-stone-700/80 rounded-xl p-3.5 mb-5 text-left text-xs grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-stone-300">
+                <div class="bg-stone-900/90 p-2.5 rounded-lg border border-stone-800">
+                    <div class="text-amber-400 font-bold mb-1">🧱 16종 방어선 & 재정비 타임</div>
+                    <p>스테이지 클리어 시 보너스 자금과 함께 <b>재정비 타임</b>이 주어집니다. 방벽으로 길목을 좁히고, 함정과 6종의 중화기 포탑을 배치하십시오.</p>
+                </div>
+                <div class="bg-stone-900/90 p-2.5 rounded-lg border border-stone-800">
+                    <div class="text-red-400 font-bold mb-1">💣 특수 감염체 & 스테이지 보스</div>
+                    <p><b>자폭 폭탄병</b>은 방벽에 닿기 전 원거리에서 터뜨리면 주변 좀비를 함께 폭사시킵니다! 매 스테이지 말미에 <b>거대 보스</b>가 출현합니다.</p>
+                </div>
+                <div class="bg-stone-900/90 p-2.5 rounded-lg border border-stone-800">
+                    <div class="text-emerald-400 font-bold mb-1">🪖 수비대장 직접 전투</div>
+                    <p><b>WASD/방향키</b>로 요새 안팎을 이동하며 돌격소총으로 엄호 사격하고, <b>좌클릭(건설 미선택 시) 또는 Space</b>로 수류탄을 투척합니다.</p>
+                </div>
+                <div class="bg-stone-900/90 p-2.5 rounded-lg border border-stone-800">
+                    <div class="text-sky-400 font-bold mb-1">🎥 3D 전장 카메라 조작</div>
+                    <p><b>우클릭 드래그(또는 Q/E키)</b>로 360도 시점 회전, <b>마우스 휠</b>로 줌인/아웃, 기존 시설 클릭 시 최대 <b>Lv.5</b>까지 개조 가능합니다.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="modal-btn-start" onclick="startGame()" class="btn-tactical bg-gradient-to-r from-amber-700 to-red-800 hover:from-amber-600 hover:to-red-700 text-white font-bold py-3 rounded-xl text-base shadow-lg w-full border border-amber-500/40">
+                    요새 방어 작전 개시
+                </button>
+                <button id="modal-btn-resume" onclick="toggleHelpModal(false)" class="hidden btn-tactical bg-stone-700 hover:bg-stone-600 text-white font-bold py-3 rounded-xl text-base w-full">
+                    전장으로 복귀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. 현실적인 Web Audio API 사운드 엔진 (저소음 총기 & 오케스트라 BGM)
+           ========================================================================== */
+        class TacticalAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.muted = false;
+                this.volume = 0.45;
+                this.musicMode = 'NONE';
+                this.musicTimer = null;
+                this.step = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.value = this.muted ? 0 : this.volume;
+                    this.masterGain.connect(this.ctx.destination);
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            setVolume(val) {
+                this.volume = Math.max(0, Math.min(1, val / 100));
+                if (this.masterGain && !this.muted) {
+                    this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.02);
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.masterGain) {
+                    this.masterGain.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.02);
+                }
+                return this.muted;
+            }
+
+            createNoiseBuffer(duration) {
+                const length = Math.floor(this.ctx.sampleRate * duration);
+                const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < length; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                return buffer;
+            }
+
+            playRifleShot(isHeavy = false) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const dur = isHeavy ? 0.11 : 0.08;
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(dur);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(isHeavy ? 1400 : 1900, now);
+                filter.frequency.exponentialRampToValueAtTime(240, now + dur);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(isHeavy ? 0.09 : 0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+
+                const osc = this.ctx.createOscillator();
+                const oscGain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(isHeavy ? 125 : 165, now);
+                osc.frequency.exponentialRampToValueAtTime(42, now + 0.06);
+                oscGain.gain.setValueAtTime(isHeavy ? 0.08 : 0.05, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                osc.connect(oscGain);
+                oscGain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.065);
+            }
+
+            playShotgunBlast() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.22);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1100, now);
+                filter.frequency.exponentialRampToValueAtTime(140, now + 0.22);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+            }
+
+            playSniperCrack() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.28);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(2200, now);
+                filter.Q.value = 1.2;
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.13, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+            }
+
+            playFlameBurst() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.18);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(650, now);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.07, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+            }
+
+            playRocketLaunch() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.35);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(900, now);
+                filter.frequency.exponentialRampToValueAtTime(300, now + 0.35);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.11, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+            }
+
+            playHeavyExplosion() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = this.createNoiseBuffer(0.55);
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(480, now);
+                filter.frequency.exponentialRampToValueAtTime(55, now + 0.55);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.24, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
+                noise.start(now);
+
+                const sub = this.ctx.createOscillator();
+                const subGain = this.ctx.createGain();
+                sub.type = 'sine';
+                sub.frequency.setValueAtTime(95, now);
+                sub.frequency.exponentialRampToValueAtTime(24, now + 0.45);
+                subGain.gain.setValueAtTime(0.28, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                sub.connect(subGain);
+                subGain.connect(this.masterGain);
+                sub.start(now);
+                sub.stop(now + 0.46);
+            }
+
+            playConstruct() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.exponentialRampToValueAtTime(520, now + 0.12);
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now);
+                osc.stop(now + 0.14);
+            }
+
+            playZombieRoar(isBoss = false) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const dur = isBoss ? 1.1 : 0.55;
+                [isBoss ? 68 : 95, isBoss ? 73 : 102].forEach(freq => {
+                    const osc = this.ctx.createOscillator();
+                    const filter = this.ctx.createBiquadFilter();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now);
+                    osc.frequency.linearRampToValueAtTime(freq * 0.65, now + dur);
+                    filter.type = 'lowpass';
+                    filter.frequency.value = isBoss ? 360 : 480;
+                    gain.gain.setValueAtTime(isBoss ? 0.18 : 0.09, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(now);
+                    osc.stop(now + dur);
+                });
+            }
+
+            playBossKlaxon() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                for (let i = 0; i < 2; i++) {
+                    const t0 = now + i * 0.85;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, t0);
+                    osc.frequency.linearRampToValueAtTime(560, t0 + 0.42);
+                    osc.frequency.linearRampToValueAtTime(260, t0 + 0.8);
+                    gain.gain.setValueAtTime(0.14, t0);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.82);
+                    osc.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(t0);
+                    osc.stop(t0 + 0.83);
+                }
+            }
+
+            startMusic(mode) {
+                if (this.musicMode === mode) return;
+                this.stopMusic();
+                this.musicMode = mode;
+                this.step = 0;
+                const intervalMs = mode === 'BOSS' ? 240 : 650;
+                this.musicTimer = setInterval(() => this.tickMusic(), intervalMs);
+            }
+
+            stopMusic() {
+                this.musicMode = 'NONE';
+                if (this.musicTimer) {
+                    clearInterval(this.musicTimer);
+                    this.musicTimer = null;
+                }
+            }
+
+            tickMusic() {
+                if (this.muted || !this.ctx || this.musicMode === 'NONE') return;
+                const now = this.ctx.currentTime;
+                const s = this.step++;
+
+                if (this.musicMode === 'BOSS') {
+                    // D단조 오케스트라 전투 테마 (팀파니 + 현악 오스티나토 + 브라스)
+                    const ostinato = [146.83, 146.83, 174.61, 146.83, 220.00, 146.83, 233.08, 220.00];
+                    const freq = ostinato[s % ostinato.length];
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now);
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 620;
+                    gain.gain.setValueAtTime(0.055, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.21);
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.masterGain);
+                    osc.start(now);
+                    osc.stop(now + 0.22);
+
+                    if (s % 4 === 0) {
+                        const timp = this.ctx.createOscillator();
+                        const tGain = this.ctx.createGain();
+                        timp.type = 'sine';
+                        timp.frequency.setValueAtTime(73.42, now);
+                        timp.frequency.exponentialRampToValueAtTime(36.71, now + 0.35);
+                        tGain.gain.setValueAtTime(0.16, now);
+                        tGain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+                        timp.connect(tGain);
+                        tGain.connect(this.masterGain);
+                        timp.start(now);
+                        timp.stop(now + 0.37);
+                    }
+                    if (s % 8 === 0) {
+                        const brassNotes = [293.66, 349.23, 329.63, 261.63];
+                        const bFreq = brassNotes[Math.floor(s / 8) % brassNotes.length];
+                        const brass = this.ctx.createOscillator();
+                        const bGain = this.ctx.createGain();
+                        brass.type = 'sawtooth';
+                        brass.frequency.setValueAtTime(bFreq, now);
+                        const bFilter = this.ctx.createBiquadFilter();
+                        bFilter.type = 'lowpass';
+                        bFilter.frequency.value = 950;
+                        bGain.gain.setValueAtTime(0.07, now);
+                        bGain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+                        brass.connect(bFilter);
+                        bFilter.connect(bGain);
+                        bGain.connect(this.masterGain);
+                        brass.start(now);
+                        brass.stop(now + 1.45);
+                    }
+                } else {
+                    // 황혼 재정비 앰비언트 드론
+                    if (s % 4 === 0) {
+                        const droneNotes = [73.42, 65.41, 58.27, 65.41];
+                        const dFreq = droneNotes[Math.floor(s / 4) % droneNotes.length];
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(dFreq, now);
+                        gain.gain.setValueAtTime(0.04, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+                        osc.connect(gain);
+                        gain.connect(this.masterGain);
+                        osc.start(now);
+                        osc.stop(now + 2.25);
+                    }
+                }
+            }
+        }
+
+        const sfx = new TacticalAudioEngine();
+
+        function setMasterVolume(val) {
+            sfx.init();
+            sfx.setVolume(Number(val));
+        }
+
+        function toggleMute() {
+            sfx.init();
+            const isMuted = sfx.toggleMute();
+            document.getElementById('btn-mute').textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        /* ==========================================================================
+           2. 28종의 현실 방어 시설 + 함정 + 중화기 + 군인 생성기(병영) + 전술 건물
+           ========================================================================== */
+        const TILE_SIZE = 2.4;
+        const GRID_HALF = 12; // 25x25 전술 그리드
+
+        const FACILITIES = {
+            // [1. 방벽 / 장애물]
+            sandbag: {
+                id: 'sandbag', cat: 'BARRIER', name: '모래주머니 방벽', icon: '🧱', cost: 35,
+                maxHp: 320, range: 0, damage: 0, fireRate: 0, isPassable: false,
+                desc: '흙을 채운 마대 방벽. 저렴하게 구축하는 기본 엄폐 방어선입니다.'
+            },
+            wood_barricade: {
+                id: 'wood_barricade', cat: 'BARRIER', name: '가시 목책 바리케이드', icon: '🪵', cost: 50,
+                maxHp: 260, range: 1.6, damage: 18, fireRate: 0.6, isPassable: false,
+                desc: '날카로운 말뚝이 전방을 향한 목책. 공격하는 좀비에게 반사 피해를 입힙니다.'
+            },
+            hedgehog_barrier: {
+                id: 'hedgehog_barrier', cat: 'BARRIER', name: '강철 대전차 장애물', icon: '✖️', cost: 75,
+                maxHp: 620, range: 1.8, damage: 22, fireRate: 0.55, isPassable: false,
+                desc: '교차 용접된 H빔 강철 바리케이드. 대형 변이체의 돌진을 저지하고 반사 피해를 줍니다.'
+            },
+            concrete_wall: {
+                id: 'concrete_wall', cat: 'BARRIER', name: '강화 콘크리트 방호벽', icon: '🏢', cost: 105,
+                maxHp: 950, range: 0, damage: 0, fireRate: 0, isPassable: false,
+                desc: '철근 콘크리트 방호벽. 거대 보스의 강타와 폭탄병의 자폭을 견뎌냅니다.'
+            },
+            barbed_wire: {
+                id: 'barbed_wire', cat: 'BARRIER', name: '윤형 철조망', icon: '〰️', cost: 40,
+                maxHp: 220, range: 1.5, damage: 15, fireRate: 0.45, isPassable: true,
+                desc: '바닥에 설치하는 가시 철조망. 통과하는 좀비를 크게 감속시키고 출혈을 일으킵니다.'
+            },
+            electric_fence: {
+                id: 'electric_fence', cat: 'BARRIER', name: '고압 전기 철책', icon: '⚡', cost: 115,
+                maxHp: 460, range: 2.2, damage: 28, fireRate: 0.4, isPassable: false,
+                desc: '고전압 전류가 흐르는 강철 펜스. 접촉한 좀비 무리에게 감전 경직과 지속 피해를 입힙니다.'
+            },
+
+            // [2. 함정 / 폭발물]
+            spike_trap: {
+                id: 'spike_trap', cat: 'TRAP', name: '강철 스파이크 함정', icon: '⚙️', cost: 60,
+                maxHp: 240, range: 1.4, damage: 38, fireRate: 0.65, isPassable: true,
+                desc: '압력판 작동 시 강철 쇠말뚝이 솟아올라 위를 지나가는 좀비를 관통합니다.'
+            },
+            cryo_mine: {
+                id: 'cryo_mine', cat: 'TRAP', name: '액화질소 냉각 지뢰', icon: '❄️', cost: 75,
+                maxHp: 60, range: 5.5, damage: 90, fireRate: 0, isPassable: true,
+                desc: '폭발 시 영하 196도의 냉기를 분사하여 반경 내 좀비들을 4.5초간 빙결 감속시킵니다.'
+            },
+            claymore: {
+                id: 'claymore', cat: 'TRAP', name: '클레이모어 대인지뢰', icon: '🧨', cost: 65,
+                maxHp: 45, range: 5.2, damage: 310, fireRate: 0, isPassable: true,
+                desc: '적 접근 시 수백 개의 강철 구슬을 비산시켜 일대를 초토화하는 지향성 지뢰.'
+            },
+            fuel_barrel: {
+                id: 'fuel_barrel', cat: 'TRAP', name: '인화성 휘발유 드럼통', icon: '🛢️', cost: 45,
+                maxHp: 75, range: 6.2, damage: 390, fireRate: 0, isPassable: false,
+                desc: '사격하거나 피격되면 거대한 화염 폭발을 일으키며 주변 드럼통을 연쇄 기폭합니다.'
+            },
+            napalm_trench: {
+                id: 'napalm_trench', cat: 'TRAP', name: '네이팜 화염 참호', icon: '🔥', cost: 95,
+                maxHp: 200, range: 2.3, damage: 30, fireRate: 0.35, isPassable: true,
+                desc: '좀비가 밟으면 점화되어 바닥에 불바다를 형성, 지나가는 무리를 불태웁니다.'
+            },
+
+            // [3. 화기 거치대]
+            mg_turret: {
+                id: 'mg_turret', cat: 'WEAPON', name: 'M2 중기관총 거치대', icon: '🔫', cost: 95,
+                maxHp: 250, range: 13.5, damage: 20, fireRate: 0.23, isPassable: false,
+                desc: '50구경 중기관총. 빠른 연사 속도로 접근하는 워커와 러너를 제압합니다.'
+            },
+            shotgun_turret: {
+                id: 'shotgun_turret', cat: 'WEAPON', name: '자동 산탄총 포탑', icon: '💥', cost: 130,
+                maxHp: 290, range: 8.0, damage: 24, fireRate: 0.85, isPassable: false,
+                desc: '근접한 좀비 무리에게 7발의 산탄을 동시에 퍼부어 밀어내고 분쇄합니다.'
+            },
+            gatling_turret: {
+                id: 'gatling_turret', cat: 'WEAPON', name: 'M134 미니건 개틀링', icon: '🌪️', cost: 210,
+                maxHp: 310, range: 14.5, damage: 17, fireRate: 0.09, isPassable: false,
+                desc: '6총신 회전식 개틀링 포탑. 압도적인 탄막을 퍼부어 물량 공세를 분쇄합니다.'
+            },
+            sniper_nest: {
+                id: 'sniper_nest', cat: 'WEAPON', name: '대물 저격 거치대', icon: '🎯', cost: 160,
+                maxHp: 220, range: 23.0, damage: 150, fireRate: 1.65, isPassable: false,
+                desc: '초장거리 대물 저격총. 폭탄병과 스테이지 보스를 우선 조준해 관통 사격합니다.'
+            },
+            mortar_pit: {
+                id: 'mortar_pit', cat: 'WEAPON', name: '81mm 박격포 진지', icon: '💣', cost: 180,
+                maxHp: 250, range: 21.0, damage: 125, fireRate: 2.1, isPassable: false,
+                desc: '포물선 고폭탄을 투하하여 원거리 좀비 밀집 지역에 광역 폭발 피해를 줍니다.'
+            },
+            flamethrower: {
+                id: 'flamethrower', cat: 'WEAPON', name: '화염방사 포탑', icon: '🧯', cost: 165,
+                maxHp: 270, range: 7.2, damage: 16, fireRate: 0.16, isPassable: false,
+                desc: '전방 부채꼴 범위로 고열 화염을 방사하여 몰려오는 좀비 떼를 동시에 소각합니다.'
+            },
+            autocannon: {
+                id: 'autocannon', cat: 'WEAPON', name: '40mm 보포스 기관포', icon: '🧨', cost: 265,
+                maxHp: 340, range: 18.0, damage: 95, fireRate: 0.95, isPassable: false,
+                desc: '중장갑 관통 고폭 유탄을 직사하여 방독면 장갑병과 보스의 장갑을 파괴합니다.'
+            },
+            rocket_pod: {
+                id: 'rocket_pod', cat: 'WEAPON', name: 'M202 다연장 로켓포', icon: '🚀', cost: 250,
+                maxHp: 260, range: 19.5, damage: 88, fireRate: 2.8, isPassable: false,
+                desc: '4연장 고폭 로켓을 연속 발사하여 중장갑 좀비와 보스에게 막대한 타격을 입힙니다.'
+            },
+
+            // [4. 군인 생성기 (Soldier Spawner Barracks - 3종)]
+            barracks_rifle: {
+                id: 'barracks_rifle', cat: 'BARRACKS', name: '보병 소대 막사 (소총수)', icon: '🪖', cost: 190,
+                maxHp: 480, range: 15.0, damage: 20, fireRate: 7.5, isPassable: false,
+                desc: '전투 보병 생성기. 7.5초마다 M4 소총수를 최대 3명까지 출격시켜 전장을 순찰하며 교전합니다.'
+            },
+            barracks_heavy: {
+                id: 'barracks_heavy', cat: 'BARRACKS', name: '중화기 분대 막사 (기관총병)', icon: '🛡️', cost: 260,
+                maxHp: 560, range: 13.0, damage: 18, fireRate: 10.0, isPassable: false,
+                desc: '방탄 중장갑 기관총병 생성기. 높은 체력과 빠른 연사로 전방 방벽 앞을 사수합니다(최대 2명).'
+            },
+            barracks_sniper: {
+                id: 'barracks_sniper', cat: 'BARRACKS', name: '특수전 정찰 막사 (저격병)', icon: '🎖️', cost: 290,
+                maxHp: 440, range: 21.0, damage: 95, fireRate: 11.0, isPassable: false,
+                desc: '특수전 정예 저격병 생성기. 원거리에서 폭탄병과 보스를 정밀 저격해 제거합니다(최대 2명).'
+            },
+
+            // [5. 특수 / 지원]
+            searchlight: {
+                id: 'searchlight', cat: 'SUPPORT', name: '탐조등 감시탑', icon: '🔦', cost: 105,
+                maxHp: 240, range: 12.0, damage: 0, fireRate: 0.5, isPassable: false,
+                desc: '강력한 서치라이트로 어둠을 밝혀 반경 내 아군 화기의 공격력을 30% 증가시킵니다.'
+            },
+            repair_depot: {
+                id: 'repair_depot', cat: 'SUPPORT', name: '야전 공병 보수소', icon: '🧰', cost: 150,
+                maxHp: 270, range: 10.5, damage: 26, fireRate: 0.95, isPassable: false,
+                desc: '용접 불꽃을 투사하여 반경 내 손상된 방벽과 포탑의 내구도를 자동 수리합니다.'
+            },
+
+            // [6. 전술 건물]
+            field_hospital: {
+                id: 'field_hospital', cat: 'BUILDING', name: '야전 의무소', icon: '🏥', cost: 195,
+                maxHp: 460, range: 10.5, damage: 18, fireRate: 1.0, isPassable: false,
+                desc: '반경 내 수비대장과 아군 병사들의 체력을 치유하고 웨이브 종료 시 요새 내구도를 +180 복구합니다.'
+            },
+            ammo_depot: {
+                id: 'ammo_depot', cat: 'BUILDING', name: '군수 탄약 보급고', icon: '📦', cost: 220,
+                maxHp: 520, range: 13.0, damage: 0, fireRate: 1.0, isPassable: false,
+                desc: '반경 내 모든 화기 거치대의 연사 속도를 +25% 가속하고 웨이브 보급금을 +15% 추가 확보합니다.'
+            },
+            solar_station: {
+                id: 'solar_station', cat: 'BUILDING', name: '태양광 발전소', icon: '☀️', cost: 250,
+                maxHp: 440, range: 11.5, damage: 15, fireRate: 6.5, isPassable: false,
+                desc: '교전 중 6.5초마다 +$15 전력을 생산하며 주변 화기 공격력을 +15% 증폭합니다.'
+            },
+            guard_bunker: {
+                id: 'guard_bunker', cat: 'BUILDING', name: '전술 지휘 벙커', icon: '🏰', cost: 275,
+                maxHp: 1150, range: 15.5, damage: 25, fireRate: 0.55, isPassable: false,
+                desc: '콘크리트 유개호. 내부 정예 소총수 2명이 2연발 점사로 접근하는 좀비를 제압합니다.'
+            },
+            radar_tower: {
+                id: 'radar_tower', cat: 'BUILDING', name: '조기경보 레이더 기지', icon: '📡', cost: 295,
+                maxHp: 480, range: 16.0, damage: 0, fireRate: 1.0, isPassable: false,
+                desc: '아군 전체 화기의 유효 사거리를 +25% 확장하고 수비대장의 수류탄 재사용 대기시간을 30% 단축합니다.'
+            }
+        };
+
+        /* ==========================================================================
+           3. 6종의 강화된 좀비 아키타입 (하드코어 밸런스)
+           ========================================================================== */
+        const ZOMBIE_TYPES = {
+            walker: {
+                name: '감염된 워커', hp: 115, speed: 2.75, damage: 19, reward: 13,
+                scale: 1.0, skinColor: 0x6b7c65, shirtColor: 0x3f4756, pantsColor: 0x292524
+            },
+            runner: {
+                name: '광폭화 러너 (초고속)', hp: 85, speed: 6.1, damage: 18, reward: 16,
+                scale: 0.92, skinColor: 0x996b5e, shirtColor: 0x991b1b, pantsColor: 0x1c1917, isRunner: true
+            },
+            bomber: {
+                name: '자폭 폭탄병 (블로터)', hp: 110, speed: 4.1, damage: 340, reward: 22,
+                scale: 1.24, skinColor: 0x7c8a48, shirtColor: 0xb45309, pantsColor: 0x292524, isBomber: true
+            },
+            hazmat: {
+                name: '방독면 중장갑병', hp: 310, speed: 2.35, damage: 28, reward: 24,
+                scale: 1.1, skinColor: 0x52525b, shirtColor: 0xd97706, pantsColor: 0x78350f, isHazmat: true
+            },
+            spitter: {
+                name: '산성 용액 스피터', hp: 145, speed: 2.6, damage: 25, reward: 21,
+                scale: 1.02, skinColor: 0x4d7c0f, shirtColor: 0x365314, pantsColor: 0x1c1917, isSpitter: true
+            },
+            brute: {
+                name: '거대 변이 브루트', hp: 560, speed: 1.95, damage: 58, reward: 38,
+                scale: 1.55, skinColor: 0x57534e, shirtColor: 0x1e293b, pantsColor: 0x0f172a
+            }
+        };
+
+        // 스테이지별 진화 보스 프리셋 (강화된 하드코어 스펙)
+        const BOSS_PRESETS = [
+            {
+                name: 'STAGE 1 BOSS: 골리앗 (Goliath)',
+                skillDesc: '특수 능력: 대지 분쇄 충격파 (주변 방벽 및 병사 광역 타격)',
+                baseHp: 2200, speed: 1.75, damage: 85, reward: 190, scale: 2.4,
+                skinColor: 0x44403c, armorColor: 0x7f1d1d, ability: 'SLAM'
+            },
+            {
+                name: 'STAGE 2 BOSS: 네크로 캐리어 (Necro Carrier)',
+                skillDesc: '특수 능력: 감염체 부화 (등에서 러너 및 자폭 폭탄병 대량 소환)',
+                baseHp: 3500, speed: 1.65, damage: 100, reward: 270, scale: 2.6,
+                skinColor: 0x3f6212, armorColor: 0x4d7c0f, ability: 'SUMMON'
+            },
+            {
+                name: 'STAGE 3 BOSS: 저거너트 (Juggernaut)',
+                skillDesc: '특수 능력: 중장갑 돌진 & 충격파 (방어선 돌파 강타)',
+                baseHp: 5400, speed: 2.1, damage: 130, reward: 380, scale: 2.8,
+                skinColor: 0x27272a, armorColor: 0x52525b, ability: 'CHARGE'
+            },
+            {
+                name: 'APEX BOSS: 타이탄 오버로드 (Titan Overlord)',
+                skillDesc: '특수 능력: 복합 재앙 (대지 충격파 + 폭탄병 소환 + 중장갑 돌진)',
+                baseHp: 7800, speed: 1.95, damage: 155, reward: 500, scale: 3.0,
+                skinColor: 0x450a0a, armorColor: 0xb45309, ability: 'APEX'
+            }
+        ];
+
+        /* ==========================================================================
+           4. Three.js 3D 씬, 웅장한 다층 요새 보호소, 황혼 폐허 환경 구축
+           ========================================================================== */
+        let scene, camera, renderer;
+        let raycaster = new THREE.Raycaster();
+        let mouseNDC = new THREE.Vector2();
+        let groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+        let fortressGroup, searchlightLeft, searchlightRight, radioBeaconMesh;
+        let commanderMesh, cmdLeftLeg, cmdRightLeg, cmdMuzzleFlash;
+        let hoverMesh, rangeRingMesh, selectedRingMesh;
+
+        let facilitiesGroup = new THREE.Group();
+        let soldiersGroup = new THREE.Group();
+        let zombiesGroup = new THREE.Group();
+        let effectsGroup = new THREE.Group();
+
+        let camOrbit = {
+            yaw: 0.68,
+            pitch: 0.76,
+            distance: 31,
+            target: new THREE.Vector3(0, 0, 0),
+            isDragging: false,
+            prevX: 0,
+            prevY: 0
+        };
+
+        let state = {
+            running: false,
+            paused: false,
+            gameSpeed: 1,
+            phase: 'PREP', // 'PREP' | 'COMBAT' | 'GAMEOVER'
+            stage: 1,
+            money: 450,
+            totalMoneyEarned: 450,
+            totalKills: 0,
+            salvageLevel: 1,
+
+            shelter: { hp: 1800, maxHp: 1800, level: 1 },
+            commander: {
+                x: 0, z: 5.2,
+                hp: 200, maxHp: 200,
+                speed: 8.0,
+                damage: 30,
+                fireRate: 0.25,
+                fireTimer: 0,
+                level: 1,
+                grenadeCooldown: 6.0,
+                grenadeTimer: 0,
+                dashCooldown: 3.5,
+                dashTimer: 0,
+                dashActiveTimer: 0,
+                walkCycle: 0
+            },
+
+            buildCategory: 'ALL',
+            selectedBuildType: null,
+            selectedFacility: null,
+
+            facilities: [],
+            soldiers: [],
+            zombies: [],
+            activeBoss: null,
+            projectiles: [],
+            firePools: [],
+            particles: [],
+            smokeParticles: [],
+
+            spawnQueue: [],
+            bossToSpawn: null,
+            spawnTimer: 0,
+            spawnInterval: 0.85,
+            keys: {},
+            timeElapsed: 0
+        };
+
+        let lastFrameTime = 0;
+
+        function initThreeScene() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+
+            const duskColor = new THREE.Color(0x231b17);
+            scene.background = duskColor;
+            scene.fog = new THREE.FogExp2(0x231b17, 0.0135);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 180);
+            updateCameraTransform();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // 황혼빛 반구광 + 따뜻한 저녁 석양 방향광
+            const hemiLight = new THREE.HemisphereLight(0xd99b66, 0x26221e, 0.78);
+            scene.add(hemiLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffb46e, 1.4);
+            sunLight.position.set(32, 38, 26);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 5;
+            sunLight.shadow.camera.far = 110;
+            const d = 36;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            sunLight.shadow.bias = -0.0005;
+            scene.add(sunLight);
+
+            // 중앙 요새 내부 & 외곽 투광기 따뜻한 포인트 라이트
+            const fortressWarmLight = new THREE.PointLight(0xff9238, 1.8, 22);
+            fortressWarmLight.position.set(0, 4.2, 0);
+            scene.add(fortressWarmLight);
+
+            buildApocalypseTerrain();
+            buildGrandFortressShelter();
+            buildCommanderCharacter();
+            buildPlacementIndicators();
+
+            scene.add(facilitiesGroup);
+            scene.add(soldiersGroup);
+            scene.add(zombiesGroup);
+            scene.add(effectsGroup);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        function updateCameraTransform() {
+            const x = camOrbit.target.x + camOrbit.distance * Math.sin(camOrbit.pitch) * Math.sin(camOrbit.yaw);
+            const y = camOrbit.target.y + camOrbit.distance * Math.cos(camOrbit.pitch);
+            const z = camOrbit.target.z + camOrbit.distance * Math.sin(camOrbit.pitch) * Math.cos(camOrbit.yaw);
+            camera.position.set(x, y, z);
+            camera.lookAt(camOrbit.target);
+        }
+
+        function resetCamera() {
+            camOrbit.yaw = 0.68;
+            camOrbit.pitch = 0.76;
+            camOrbit.distance = 31;
+            updateCameraTransform();
+        }
+
+        function buildApocalypseTerrain() {
+            // 황무지 지면
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(160, 160),
+                new THREE.MeshStandardMaterial({ color: 0x302d26, roughness: 0.96, metalness: 0.04 })
+            );
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // 교차하는 아스팔트 도로
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.92 });
+            const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 150), roadMat);
+            roadNS.rotation.x = -Math.PI / 2;
+            roadNS.position.set(-16, 0.02, 0);
+            roadNS.receiveShadow = true;
+            scene.add(roadNS);
+
+            const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(150, 7.6), roadMat);
+            roadEW.rotation.x = -Math.PI / 2;
+            roadEW.position.set(0, 0.025, -17);
+            roadEW.receiveShadow = true;
+            scene.add(roadEW);
+
+            // 중앙선 점선
+            const lineMat = new THREE.MeshStandardMaterial({ color: 0x9a8448, roughness: 0.85 });
+            for (let i = -66; i <= 66; i += 6) {
+                const d1 = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 2.6), lineMat);
+                d1.rotation.x = -Math.PI / 2;
+                d1.position.set(-16, 0.035, i);
+                scene.add(d1);
+
+                const d2 = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.26), lineMat);
+                d2.rotation.x = -Math.PI / 2;
+                d2.position.set(i, 0.035, -17);
+                scene.add(d2);
+            }
+
+            // 전술 그리드 가이드
+            const gridSize = (GRID_HALF * 2 + 1) * TILE_SIZE;
+            const gridHelper = new THREE.GridHelper(gridSize, GRID_HALF * 2 + 1, 0x78716c, 0x44403c);
+            gridHelper.position.y = 0.04;
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.22;
+            scene.add(gridHelper);
+
+            // 외곽 폐허 건물 잔해 & 버려진 차량
+            createWreckedCar(-17.5, 21, 0.35, 0x7c2d12);
+            createWreckedCar(24, -18.5, -1.15, 0x334155);
+            createWreckedCar(-27, -15.5, 2.5, 0x4d5b32);
+            createRuinedBuilding(-34, -30, 8, 9, 8);
+            createRuinedBuilding(33, 29, 9, 7, 9);
+            createRuinedBuilding(-35, 28, 7, 6, 7);
+        }
+
+        function createWreckedCar(x, z, rotY, colorHex) {
+            const car = new THREE.Group();
+            car.position.set(x, 0, z);
+            car.rotation.y = rotY;
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.85, metalness: 0.35 });
+            const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.85, 4.5), bodyMat);
+            chassis.position.y = 0.65;
+            chassis.castShadow = true;
+            car.add(chassis);
+
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.75, 2.2), bodyMat);
+            cabin.position.set(0, 1.35, -0.2);
+            cabin.rotation.z = 0.07;
+            cabin.castShadow = true;
+            car.add(cabin);
+
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 });
+            const wGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 12);
+            [[-1.15, 1.35], [1.15, 1.35], [-1.15, -1.35], [1.15, -1.35]].forEach(([wx, wz]) => {
+                const w = new THREE.Mesh(wGeo, wheelMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(wx, 0.42, wz);
+                car.add(w);
+            });
+            scene.add(car);
+        }
+
+        function createRuinedBuilding(x, z, w, h, d) {
+            const bGroup = new THREE.Group();
+            bGroup.position.set(x, 0, z);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x44403c, roughness: 0.95 });
+            const main = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+            main.position.y = h / 2;
+            main.castShadow = true;
+            main.receiveShadow = true;
+            bGroup.add(main);
+            scene.add(bGroup);
+        }
+
+        /* ==========================================================================
+           웅장한 다층 요새형 보호소 (Grand Multi-Tiered Fortress Compound)
+           ========================================================================== */
+        function buildGrandFortressShelter() {
+            fortressGroup = new THREE.Group();
+
+            const concreteMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.9, metalness: 0.15 });
+            const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x292524, roughness: 0.6, metalness: 0.65 });
+            const bunkerWallMat = new THREE.MeshStandardMaterial({ color: 0x6b635b, roughness: 0.88 });
+            const plankMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.85 });
+            const warmWindowMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+
+            // 1) 거대한 팔각/사각 2단 콘크리트 요새 기초 단상 (6.6m x 6.6m)
+            const tier1Base = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.65, 6.6), concreteMat);
+            tier1Base.position.y = 0.325;
+            tier1Base.castShadow = true;
+            tier1Base.receiveShadow = true;
+            fortressGroup.add(tier1Base);
+
+            // 2) 1층 메인 장갑 벙커 본체 (5.4m x 2.6m x 5.4m)
+            const firstFloor = new THREE.Mesh(new THREE.BoxGeometry(5.4, 2.6, 5.4), bunkerWallMat);
+            firstFloor.position.y = 1.95;
+            firstFloor.castShadow = true;
+            firstFloor.receiveShadow = true;
+            fortressGroup.add(firstFloor);
+
+            // 1층 사방 경사 장갑 스커트 & 방탄 창문/나무 판자 바리케이드
+            [0, Math.PI / 2, Math.PI, -Math.PI / 2].forEach(rot => {
+                const face = new THREE.Group();
+                face.rotation.y = rot;
+
+                // 경사 콘크리트 방호벽
+                const slopeArmor = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.3, 0.55), concreteMat);
+                slopeArmor.position.set(0, 1.15, 2.75);
+                slopeArmor.rotation.x = -0.22;
+                slopeArmor.castShadow = true;
+                face.add(slopeArmor);
+
+                // 1층 방탄 관측창 2개 + X자 나무판자 덧댐
+                [-1.3, 1.3].forEach(wx => {
+                    const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.75), warmWindowMat);
+                    win.position.set(wx, 2.35, 2.71);
+                    face.add(win);
+
+                    for (let p = -0.22; p <= 0.22; p += 0.22) {
+                        const plank = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.14, 0.08), plankMat);
+                        plank.position.set(wx, 2.35 + p, 2.75);
+                        plank.rotation.z = p * 0.2;
+                        face.add(plank);
+                    }
+                });
+
+                fortressGroup.add(face);
+            });
+
+            // 3) 2층 지휘 사령부 벙커 타워 (3.6m x 2.1m x 3.6m)
+            const secondFloor = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.1, 3.6), concreteMat);
+            secondFloor.position.y = 4.3;
+            secondFloor.castShadow = true;
+            secondFloor.receiveShadow = true;
+            fortressGroup.add(secondFloor);
+
+            // 2층 사방 사격 총안구(Slit Windows) & 강철 난간
+            [0, Math.PI / 2, Math.PI, -Math.PI / 2].forEach(rot => {
+                const f2 = new THREE.Group();
+                f2.rotation.y = rot;
+
+                const slit = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.42), warmWindowMat);
+                slit.position.set(0, 4.45, 1.81);
+                f2.add(slit);
+
+                // 강철 방호 창살
+                for (let bx = -0.8; bx <= 0.8; bx += 0.4) {
+                    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.1), darkSteelMat);
+                    bar.position.set(bx, 4.45, 1.84);
+                    f2.add(bar);
+                }
+
+                // 옥상 방탄 흉벽(Parapet)
+                const parapet = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.45, 0.22), darkSteelMat);
+                parapet.position.set(0, 5.55, 1.8);
+                f2.add(parapet);
+
+                fortressGroup.add(f2);
+            });
+
+            // 4) 4개 모서리 강철 감시 망루 (Corner Watchtower Bastions)
+            [[-2.55, -2.55], [2.55, -2.55], [-2.55, 2.55], [2.55, 2.55]].forEach(([cx, cz]) => {
+                const bastion = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.82, 3.8, 8), darkSteelMat);
+                bastion.position.set(cx, 1.9, cz);
+                bastion.castShadow = true;
+                bastion.receiveShadow = true;
+                fortressGroup.add(bastion);
+
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.72, 0.35, 8), concreteMat);
+                cap.position.set(cx, 3.9, cz);
+                fortressGroup.add(cap);
+            });
+
+            // 5) 옥상 대형 무전 안테나 타워 & 점멸하는 붉은 항공장애등(Beacon)
+            const towerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.38, 3.6, 6), darkSteelMat);
+            towerBase.position.set(0, 7.1, 0);
+            towerBase.castShadow = true;
+            fortressGroup.add(towerBase);
+
+            // 안테나 크로스바
+            const cross1 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.08), darkSteelMat);
+            cross1.position.set(0, 7.8, 0);
+            const cross2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), darkSteelMat);
+            cross2.position.set(0, 8.3, 0);
+            fortressGroup.add(cross1, cross2);
+
+            radioBeaconMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.2, 10, 10),
+                new THREE.MeshBasicMaterial({ color: 0xff2222 })
+            );
+            radioBeaconMesh.position.set(0, 9.0, 0);
+            fortressGroup.add(radioBeaconMesh);
+
+            // 6) 옥상 듀얼 회전 탐조등 (Dual Volumetric Searchlights)
+            searchlightLeft = createRoofSearchlight(-1.35, 5.75, 1.35);
+            searchlightRight = createRoofSearchlight(1.35, 5.75, -1.35);
+            fortressGroup.add(searchlightLeft, searchlightRight);
+
+            // 7) 발전기 배기 연통 (연기 배출)
+            const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 2.2, 8), darkSteelMat);
+            exhaust.position.set(1.4, 6.2, 1.2);
+            fortressGroup.add(exhaust);
+
+            // 8) 요새 외곽 콘크리트 저지 배리어 & 모래주머니 진지
+            const sbMat = new THREE.MeshStandardMaterial({ color: 0xa8997a, roughness: 0.95 });
+            for (let i = -2.8; i <= 2.8; i += 0.93) {
+                [[-3.45, i], [3.45, i], [i, -3.45], [i, 3.45]].forEach(([sx, sz]) => {
+                    const sb = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.48, 0.52), sbMat);
+                    sb.position.set(sx, 0.24, sz);
+                    sb.castShadow = true;
+                    sb.receiveShadow = true;
+                    fortressGroup.add(sb);
+                });
+            }
+
+            scene.add(fortressGroup);
+        }
+
+        function createRoofSearchlight(x, y, z) {
+            const sl = new THREE.Group();
+            sl.position.set(x, y, z);
+
+            const housing = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.28, 0.34, 0.55, 12),
+                new THREE.MeshStandardMaterial({ color: 0x1c1917, metalness: 0.75 })
+            );
+            housing.rotation.x = Math.PI / 2.6;
+            sl.add(housing);
+
+            const beam = new THREE.Mesh(
+                new THREE.ConeGeometry(3.2, 15, 16, 1, true),
+                new THREE.MeshBasicMaterial({
+                    color: 0xfef08a,
+                    transparent: true,
+                    opacity: 0.085,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                })
+            );
+            beam.position.set(0, -4.1, 6.6);
+            beam.rotation.x = -Math.PI / 3.1;
+            sl.add(beam);
+
+            return sl;
+        }
+
+        /* ==========================================================================
+           5. 수비대장(Commander) 3D 캐릭터 & 건설 인디케이터
+           ========================================================================== */
+        function buildCommanderCharacter() {
+            commanderMesh = new THREE.Group();
+
+            const armorMat = new THREE.MeshStandardMaterial({ color: 0x365314, roughness: 0.7 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.9 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd6a384, roughness: 0.7 });
+            const gunMat = new THREE.MeshStandardMaterial({ color: 0x171717, metalness: 0.85, roughness: 0.25 });
+
+            const legGeo = new THREE.BoxGeometry(0.22, 0.76, 0.24);
+            cmdLeftLeg = new THREE.Mesh(legGeo, pantsMat);
+            cmdLeftLeg.position.set(-0.16, 0.38, 0);
+            cmdLeftLeg.castShadow = true;
+            commanderMesh.add(cmdLeftLeg);
+
+            cmdRightLeg = new THREE.Mesh(legGeo, pantsMat);
+            cmdRightLeg.position.set(0.16, 0.38, 0);
+            cmdRightLeg.castShadow = true;
+            commanderMesh.add(cmdRightLeg);
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.82, 0.38), armorMat);
+            torso.position.y = 1.14;
+            torso.castShadow = true;
+            commanderMesh.add(torso);
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), skinMat);
+            head.position.y = 1.76;
+            head.castShadow = true;
+            commanderMesh.add(head);
+
+            const helmet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.26, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+                new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.6 })
+            );
+            helmet.position.y = 1.84;
+            commanderMesh.add(helmet);
+
+            const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 1.15), gunMat);
+            rifle.position.set(0.32, 1.18, 0.48);
+            rifle.castShadow = true;
+            commanderMesh.add(rifle);
+
+            cmdMuzzleFlash = new THREE.Mesh(
+                new THREE.SphereGeometry(0.18, 6, 6),
+                new THREE.MeshBasicMaterial({ color: 0xfef08a })
+            );
+            cmdMuzzleFlash.position.set(0.32, 1.18, 1.12);
+            cmdMuzzleFlash.visible = false;
+            commanderMesh.add(cmdMuzzleFlash);
+
+            commanderMesh.position.set(state.commander.x, 0, state.commander.z);
+            scene.add(commanderMesh);
+        }
+
+        function buildPlacementIndicators() {
+            hoverMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(TILE_SIZE * 0.94, 0.16, TILE_SIZE * 0.94),
+                new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.45 })
+            );
+            hoverMesh.visible = false;
+            scene.add(hoverMesh);
+
+            rangeRingMesh = new THREE.Mesh(
+                new THREE.RingGeometry(0.96, 1.0, 48),
+                new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, transparent: true, opacity: 0.55 })
+            );
+            rangeRingMesh.rotation.x = -Math.PI / 2;
+            rangeRingMesh.position.y = 0.08;
+            rangeRingMesh.visible = false;
+            scene.add(rangeRingMesh);
+
+            selectedRingMesh = new THREE.Mesh(
+                new THREE.RingGeometry(1.05, 1.24, 32),
+                new THREE.MeshBasicMaterial({ color: 0xfbbf24, side: THREE.DoubleSide })
+            );
+            selectedRingMesh.rotation.x = -Math.PI / 2;
+            selectedRingMesh.position.y = 0.09;
+            selectedRingMesh.visible = false;
+            scene.add(selectedRingMesh);
+        }
+
+        /* ==========================================================================
+           6. 28종 방어 시설 & 3종 아군 군인 & 6종 좀비 + 스테이지 보스 3D 조형물 생성기
+           ========================================================================== */
+        function createFacilityMesh(type) {
+            const group = new THREE.Group();
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0x27272a, metalness: 0.75, roughness: 0.35 });
+
+            if (type === 'sandbag') {
+                const mat = new THREE.MeshStandardMaterial({ color: 0xb5a484, roughness: 0.95 });
+                for (let row = 0; row < 2; row++) {
+                    for (let col = -1; col <= 1; col++) {
+                        const bag = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.36, 0.58), mat);
+                        bag.position.set(col * 0.72 + (row % 2) * 0.12, 0.18 + row * 0.34, 0);
+                        bag.castShadow = true;
+                        bag.receiveShadow = true;
+                        group.add(bag);
+                    }
+                }
+            } else if (type === 'wood_barricade') {
+                const woodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+                const beam = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.25, 0.25), woodMat);
+                beam.position.y = 0.55;
+                beam.castShadow = true;
+                group.add(beam);
+                for (let x = -0.8; x <= 0.8; x += 0.4) {
+                    const stake = new THREE.Mesh(new THREE.ConeGeometry(0.11, 1.45, 5), woodMat);
+                    stake.position.set(x, 0.65, 0.15);
+                    stake.rotation.x = 0.45;
+                    stake.castShadow = true;
+                    group.add(stake);
+                }
+            } else if (type === 'hedgehog_barrier') {
+                // 강철 대전차 장애물 (H빔 3축 교차 조형)
+                const rustSteel = new THREE.MeshStandardMaterial({ color: 0x44403c, metalness: 0.8, roughness: 0.45 });
+                [
+                    [0.55, 0, 0.55],
+                    [-0.55, 0, 0.55],
+                    [0, 0.55, -0.55]
+                ].forEach(([rx, ry, rz]) => {
+                    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.85, 0.18), rustSteel);
+                    beam.position.y = 0.75;
+                    beam.rotation.set(rx, ry, rz);
+                    beam.castShadow = true;
+                    group.add(beam);
+                });
+            } else if (type === 'electric_fence') {
+                // 고압 전기 철책
+                [-0.85, 0.85].forEach(px => {
+                    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.65, 8), steelMat);
+                    post.position.set(px, 0.825, 0);
+                    post.castShadow = true;
+                    group.add(post);
+                });
+                const wireGlow = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+                [0.45, 0.85, 1.25].forEach(wy => {
+                    const wire = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.04, 0.04), wireGlow);
+                    wire.position.set(0, wy, 0);
+                    group.add(wire);
+                });
+            } else if (type === 'concrete_wall') {
+                const concMat = new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.92 });
+                const block = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.5, 0.78), concMat);
+                block.position.y = 0.75;
+                block.castShadow = true;
+                block.receiveShadow = true;
+                group.add(block);
+                [-0.7, 0, 0.7].forEach(rx => {
+                    const rebar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 6), steelMat);
+                    rebar.position.set(rx, 1.65, 0);
+                    group.add(rebar);
+                });
+            } else if (type === 'barbed_wire') {
+                const wireMat = new THREE.MeshStandardMaterial({ color: 0x52525b, metalness: 0.8, roughness: 0.4 });
+                for (let i = -0.6; i <= 0.6; i += 0.4) {
+                    const coil = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.04, 6, 14), wireMat);
+                    coil.position.set(i, 0.48, 0);
+                    coil.rotation.y = 0.4;
+                    coil.castShadow = true;
+                    group.add(coil);
+                }
+            } else if (type === 'spike_trap') {
+                const plate = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.1, 1.85), steelMat);
+                plate.position.y = 0.05;
+                group.add(plate);
+                const spMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.85 });
+                for (let sx = -0.55; sx <= 0.55; sx += 0.55) {
+                    for (let sz = -0.55; sz <= 0.55; sz += 0.55) {
+                        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.48, 6), spMat);
+                        sp.position.set(sx, 0.26, sz);
+                        group.add(sp);
+                    }
+                }
+            } else if (type === 'cryo_mine') {
+                // 액화질소 냉각 지뢰
+                const disc = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.45, 0.5, 0.18, 12),
+                    new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6 })
+                );
+                disc.position.y = 0.09;
+                group.add(disc);
+                const core = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.18, 8, 8),
+                    new THREE.MeshBasicMaterial({ color: 0x7dd3fc })
+                );
+                core.position.y = 0.2;
+                group.add(core);
+            } else if (type === 'claymore') {
+                const body = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.68, 0.36, 0.22),
+                    new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.8 })
+                );
+                body.position.y = 0.25;
+                body.castShadow = true;
+                group.add(body);
+            } else if (type === 'fuel_barrel') {
+                const barrel = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.55, 0.55, 1.38, 14),
+                    new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5, metalness: 0.4 })
+                );
+                barrel.position.y = 0.69;
+                barrel.castShadow = true;
+                group.add(barrel);
+                const stripe = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.565, 0.565, 0.22, 14),
+                    new THREE.MeshStandardMaterial({ color: 0xeab308 })
+                );
+                stripe.position.y = 0.74;
+                group.add(stripe);
+            } else if (type === 'napalm_trench') {
+                const trench = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.0, 0.12, 2.0),
+                    new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 1.0 })
+                );
+                trench.position.y = 0.06;
+                group.add(trench);
+                const fuelLine = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1.75, 1.75),
+                    new THREE.MeshBasicMaterial({ color: 0x9a3412, transparent: true, opacity: 0.75 })
+                );
+                fuelLine.rotation.x = -Math.PI / 2;
+                fuelLine.position.y = 0.13;
+                group.add(fuelLine);
+            } else if (['mg_turret', 'shotgun_turret', 'gatling_turret', 'sniper_nest', 'flamethrower', 'autocannon', 'rocket_pod'].includes(type)) {
+                // 공통 삼각대 베이스
+                for (let a = 0; a < 3; a++) {
+                    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.15, 6), steelMat);
+                    const ang = (a * Math.PI * 2) / 3;
+                    leg.position.set(Math.cos(ang) * 0.38, 0.46, Math.sin(ang) * 0.38);
+                    leg.rotation.z = -Math.cos(ang) * 0.45;
+                    leg.rotation.x = Math.sin(ang) * 0.45;
+                    group.add(leg);
+                }
+
+                const head = new THREE.Group();
+                head.position.y = 1.0;
+                head.name = 'turretHead';
+
+                if (type === 'mg_turret') {
+                    const rec = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.34, 0.85), new THREE.MeshStandardMaterial({ color: 0x3f6212 }));
+                    rec.castShadow = true;
+                    head.add(rec);
+                    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.2, 8), steelMat);
+                    barrel.rotation.x = Math.PI / 2;
+                    barrel.position.z = 0.78;
+                    head.add(barrel);
+                } else if (type === 'gatling_turret') {
+                    const rec = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.44, 0.9), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+                    rec.castShadow = true;
+                    head.add(rec);
+                    for (let b = 0; b < 4; b++) {
+                        const ba = (b * Math.PI) / 2;
+                        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.35, 6), steelMat);
+                        barrel.rotation.x = Math.PI / 2;
+                        barrel.position.set(Math.cos(ba) * 0.11, Math.sin(ba) * 0.11, 0.85);
+                        head.add(barrel);
+                    }
+                } else if (type === 'autocannon') {
+                    const turret = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.48, 1.05), new THREE.MeshStandardMaterial({ color: 0x4d7c0f }));
+                    turret.castShadow = true;
+                    head.add(turret);
+                    const cannon = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 1.65, 10), steelMat);
+                    cannon.rotation.x = Math.PI / 2;
+                    cannon.position.z = 1.05;
+                    head.add(cannon);
+                } else if (type === 'shotgun_turret') {
+                    const rec = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.38, 0.8), new THREE.MeshStandardMaterial({ color: 0x7c2d12 }));
+                    rec.castShadow = true;
+                    head.add(rec);
+                    [-0.09, 0.09].forEach(bx => {
+                        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.88, 8), steelMat);
+                        barrel.rotation.x = Math.PI / 2;
+                        barrel.position.set(bx, 0, 0.68);
+                        head.add(barrel);
+                    });
+                } else if (type === 'sniper_nest') {
+                    const rec = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.3, 1.0), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+                    rec.castShadow = true;
+                    head.add(rec);
+                    const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8), steelMat);
+                    scope.rotation.x = Math.PI / 2;
+                    scope.position.set(0, 0.24, 0.1);
+                    head.add(scope);
+                    const longBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 1.75, 8), steelMat);
+                    longBarrel.rotation.x = Math.PI / 2;
+                    longBarrel.position.z = 1.15;
+                    head.add(longBarrel);
+                } else if (type === 'flamethrower') {
+                    const tank = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.24, 0.24, 0.72, 10),
+                        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 })
+                    );
+                    tank.position.set(0, 0.12, -0.28);
+                    head.add(tank);
+                    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 1.05, 8), steelMat);
+                    nozzle.rotation.x = Math.PI / 2;
+                    nozzle.position.z = 0.55;
+                    head.add(nozzle);
+                } else if (type === 'rocket_pod') {
+                    const pod = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.68, 0.62, 1.05),
+                        new THREE.MeshStandardMaterial({ color: 0x365314, roughness: 0.6 })
+                    );
+                    pod.castShadow = true;
+                    head.add(pod);
+                    [[-0.16, 0.14], [0.16, 0.14], [-0.16, -0.14], [0.16, -0.14]].forEach(([rx, ry]) => {
+                        const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.12, 8), steelMat);
+                        tube.rotation.x = Math.PI / 2;
+                        tube.position.set(rx, ry, 0.05);
+                        head.add(tube);
+                    });
+                }
+
+                group.add(head);
+            } else if (type === 'barracks_rifle' || type === 'barracks_heavy' || type === 'barracks_sniper') {
+                // 군인 생성기 (병영 텐트 + 모래주머니 엄폐 + 깃발)
+                const tentColor = type === 'barracks_rifle' ? 0x3f6212 : (type === 'barracks_heavy' ? 0x334155 : 0x78350f);
+                const flagColor = type === 'barracks_rifle' ? 0x22c55e : (type === 'barracks_heavy' ? 0x38bdf8 : 0xf59e0b);
+
+                const base = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.95, 2.1), new THREE.MeshStandardMaterial({ color: tentColor, roughness: 0.85 }));
+                base.position.y = 0.475;
+                base.castShadow = true;
+                base.receiveShadow = true;
+                group.add(base);
+
+                const roof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.35, 1.5), steelMat);
+                roof.position.y = 1.12;
+                roof.castShadow = true;
+                group.add(roof);
+
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6), steelMat);
+                pole.position.set(0.85, 1.6, 0.85);
+                group.add(pole);
+
+                const flag = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.05), new THREE.MeshBasicMaterial({ color: flagColor }));
+                flag.position.set(1.12, 2.2, 0.85);
+                flag.name = 'buildingAnim';
+                group.add(flag);
+            } else if (type === 'mortar_pit') {
+                const sbMat = new THREE.MeshStandardMaterial({ color: 0xa8997a, roughness: 0.95 });
+                for (let i = 0; i < 8; i++) {
+                    const ang = (i * Math.PI * 2) / 8;
+                    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.38, 0.42), sbMat);
+                    bag.position.set(Math.cos(ang) * 0.85, 0.19, Math.sin(ang) * 0.85);
+                    bag.rotation.y = -ang + Math.PI / 2;
+                    bag.castShadow = true;
+                    group.add(bag);
+                }
+                const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 1.35, 10), new THREE.MeshStandardMaterial({ color: 0x365314 }));
+                tube.position.set(0, 0.68, 0);
+                tube.rotation.x = 0.45;
+                tube.castShadow = true;
+                group.add(tube);
+            } else if (type === 'searchlight') {
+                const tower = new THREE.Mesh(new THREE.BoxGeometry(0.85, 2.5, 0.85), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
+                tower.position.y = 1.25;
+                tower.castShadow = true;
+                group.add(tower);
+
+                const head = new THREE.Group();
+                head.position.y = 2.65;
+                head.name = 'turretHead';
+                const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.48, 10), steelMat);
+                lamp.rotation.x = Math.PI / 2;
+                head.add(lamp);
+
+                const cone = new THREE.Mesh(
+                    new THREE.ConeGeometry(3.0, 10.5, 16, 1, true),
+                    new THREE.MeshBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 0.11, side: THREE.DoubleSide, depthWrite: false })
+                );
+                cone.position.set(0, -1.3, 5.0);
+                cone.rotation.x = -Math.PI / 2.3;
+                head.add(cone);
+                group.add(head);
+            } else if (type === 'repair_depot') {
+                const crate = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.8, 1.0), new THREE.MeshStandardMaterial({ color: 0x3f6212 }));
+                crate.position.y = 0.4;
+                crate.castShadow = true;
+                group.add(crate);
+
+                const crossMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+                const c1 = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.13, 0.05), crossMat);
+                c1.position.set(0, 0.42, 0.51);
+                const c2 = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.48, 0.05), crossMat);
+                c2.position.set(0, 0.42, 0.51);
+                group.add(c1, c2);
+            } else if (type === 'field_hospital') {
+                // 야전 의무소 (붉은 십자가가 빛나는 군용 의료 천막)
+                const tentMat = new THREE.MeshStandardMaterial({ color: 0xe7e5e4, roughness: 0.9 });
+                const base = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.1, 2.1), tentMat);
+                base.position.y = 0.55;
+                base.castShadow = true;
+                base.receiveShadow = true;
+                group.add(base);
+
+                const roof = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.95, 4), new THREE.MeshStandardMaterial({ color: 0xd6d3d1, roughness: 0.85 }));
+                roof.position.y = 1.55;
+                roof.rotation.y = Math.PI / 4;
+                roof.castShadow = true;
+                group.add(roof);
+
+                const medCross = new THREE.Group();
+                medCross.position.set(0, 2.25, 0);
+                medCross.name = 'buildingAnim';
+                const redMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+                const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.18, 0.14), redMat);
+                const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.65, 0.14), redMat);
+                medCross.add(hBar, vBar);
+                group.add(medCross);
+            } else if (type === 'ammo_depot') {
+                // 군수 탄약 보급고 (강화 탄약 벙커 & 미사일/탄약 상자)
+                const bunker = new THREE.Mesh(new THREE.BoxGeometry(2.15, 1.25, 2.15), new THREE.MeshStandardMaterial({ color: 0x365314, roughness: 0.75 }));
+                bunker.position.y = 0.625;
+                bunker.castShadow = true;
+                bunker.receiveShadow = true;
+                group.add(bunker);
+
+                const roof = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.22, 2.25), steelMat);
+                roof.position.y = 1.35;
+                group.add(roof);
+
+                const crateMat = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.8 });
+                [[-0.55, 1.62, 0.45], [0.55, 1.62, -0.45]].forEach(([cx, cy, cz]) => {
+                    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.42, 0.55), crateMat);
+                    crate.position.set(cx, cy, cz);
+                    crate.castShadow = true;
+                    group.add(crate);
+                });
+            } else if (type === 'solar_station') {
+                // 태양광 발전소 (회전형 태양광 패널 어레이 & 축전지 뱅크)
+                const battery = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.75, 1.4), steelMat);
+                battery.position.y = 0.375;
+                battery.castShadow = true;
+                group.add(battery);
+
+                const pivot = new THREE.Group();
+                pivot.position.y = 1.15;
+                pivot.name = 'buildingAnim';
+                const panel = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.1, 0.08, 1.6),
+                    new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.75, roughness: 0.2 })
+                );
+                panel.rotation.x = 0.38;
+                panel.castShadow = true;
+                pivot.add(panel);
+                group.add(pivot);
+            } else if (type === 'guard_bunker') {
+                // 전술 지휘 벙커 (콘크리트 유개호 + 듀얼 총안구 포탑)
+                const pillbox = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.32, 1.55, 8), new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.92 }));
+                pillbox.position.y = 0.775;
+                pillbox.castShadow = true;
+                pillbox.receiveShadow = true;
+                group.add(pillbox);
+
+                const slit = new THREE.Mesh(new THREE.CylinderGeometry(1.18, 1.18, 0.24, 8), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+                slit.position.y = 1.18;
+                group.add(slit);
+
+                const head = new THREE.Group();
+                head.position.y = 1.65;
+                head.name = 'turretHead';
+                const cupola = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.4, 8), steelMat);
+                head.add(cupola);
+                [-0.22, 0.22].forEach(bx => {
+                    const rifle = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.95, 6), steelMat);
+                    rifle.rotation.x = Math.PI / 2;
+                    rifle.position.set(bx, 0.05, 0.55);
+                    head.add(rifle);
+                });
+                group.add(head);
+            } else if (type === 'radar_tower') {
+                // 조기경보 레이더 기지 (기지국 쉘터 + 회전 파라볼라 레이더 안테나)
+                const station = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.3, 1.85), new THREE.MeshStandardMaterial({ color: 0x44403c, roughness: 0.85 }));
+                station.position.y = 0.65;
+                station.castShadow = true;
+                station.receiveShadow = true;
+                group.add(station);
+
+                const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.22, 1.1, 8), steelMat);
+                mast.position.y = 1.85;
+                group.add(mast);
+
+                const dishGroup = new THREE.Group();
+                dishGroup.position.y = 2.45;
+                dishGroup.name = 'buildingAnim';
+                const dish = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.85, 0.22, 0.35, 12),
+                    new THREE.MeshStandardMaterial({ color: 0xd6d3d1, metalness: 0.5, roughness: 0.4 })
+                );
+                dish.rotation.x = Math.PI / 3;
+                dishGroup.add(dish);
+                group.add(dishGroup);
+            }
+
+            return group;
+        }
+
+        function createSoldierMesh(role) {
+            const group = new THREE.Group();
+            const isHeavy = role === 'heavy';
+            const isSniper = role === 'sniper';
+            const s = isHeavy ? 1.12 : 0.95;
+            group.scale.set(s, s, s);
+
+            const armorColor = isHeavy ? 0x1e293b : (isSniper ? 0x713f12 : 0x3f6212);
+            const helmetColor = isHeavy ? 0x0f172a : (isSniper ? 0x854d0e : 0x4d7c0f);
+
+            const armorMat = new THREE.MeshStandardMaterial({ color: armorColor, roughness: 0.7 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.9 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd6a384, roughness: 0.7 });
+            const gunMat = new THREE.MeshStandardMaterial({ color: 0x171717, metalness: 0.85 });
+
+            const legGeo = new THREE.BoxGeometry(0.2, 0.7, 0.22);
+            const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+            leftLeg.position.set(-0.15, 0.35, 0);
+            leftLeg.castShadow = true;
+            leftLeg.name = 'leftLeg';
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+            rightLeg.position.set(0.15, 0.35, 0);
+            rightLeg.castShadow = true;
+            rightLeg.name = 'rightLeg';
+            group.add(rightLeg);
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(isHeavy ? 0.72 : 0.58, 0.76, 0.36), armorMat);
+            torso.position.y = 1.08;
+            torso.castShadow = true;
+            group.add(torso);
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), skinMat);
+            head.position.y = 1.66;
+            head.castShadow = true;
+            group.add(head);
+
+            const helmet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.24, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
+                new THREE.MeshStandardMaterial({ color: helmetColor, roughness: 0.6 })
+            );
+            helmet.position.y = 1.74;
+            group.add(helmet);
+
+            const gunLen = isSniper ? 1.55 : (isHeavy ? 1.25 : 1.0);
+            const gun = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, gunLen), gunMat);
+            gun.position.set(0.28, 1.12, gunLen * 0.42);
+            group.add(gun);
+
+            return group;
+        }
+
+        function createZombieOrBossMesh(arch, isBoss = false) {
+            const group = new THREE.Group();
+            const s = arch.scale;
+            group.scale.set(s, s, s);
+
+            const skinMat = new THREE.MeshStandardMaterial({ color: arch.skinColor, roughness: 0.85 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: isBoss ? arch.armorColor : arch.shirtColor, roughness: 0.8 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x18181b : arch.pantsColor, roughness: 0.95 });
+
+            // 다리
+            const legGeo = new THREE.BoxGeometry(0.2, 0.72, 0.22);
+            const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+            leftLeg.position.set(-0.15, 0.36, 0);
+            leftLeg.castShadow = true;
+            leftLeg.name = 'leftLeg';
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+            rightLeg.position.set(0.15, 0.36, 0);
+            rightLeg.castShadow = true;
+            rightLeg.name = 'rightLeg';
+            group.add(rightLeg);
+
+            // 상체 (폭탄병은 거대하게 부풀어 오른 폭탄 조끼/낭종 부착)
+            const torsoW = arch.isBomber ? 0.88 : (isBoss ? 0.84 : 0.58);
+            const torsoD = arch.isBomber ? 0.76 : (isBoss ? 0.54 : 0.34);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(torsoW, 0.8, torsoD), shirtMat);
+            torso.position.set(0, 1.08, 0.05);
+            torso.rotation.x = arch.isRunner ? 0.38 : 0.16;
+            torso.castShadow = true;
+            group.add(torso);
+
+            // 폭탄병 전용 점멸하는 폭발물 낭종
+            if (arch.isBomber) {
+                const bombSac = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.46, 10, 10),
+                    new THREE.MeshBasicMaterial({ color: 0xf97316 })
+                );
+                bombSac.position.set(0, 1.12, 0.22);
+                bombSac.name = 'bomberSac';
+                group.add(bombSac);
+            }
+
+            // 머리
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.38, 0.38), skinMat);
+            head.position.set(0, 1.68, arch.isRunner ? 0.26 : 0.14);
+            head.castShadow = true;
+            group.add(head);
+
+            // 방독면 병사 전용 헬멧 & 방독면 필터
+            if (arch.isHazmat) {
+                const mask = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.12, 0.14, 0.2, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x171717 })
+                );
+                mask.rotation.x = Math.PI / 2;
+                mask.position.set(0, 1.6, 0.36);
+                group.add(mask);
+            }
+
+            // 보스 전용 어깨 장갑 및 붉은 눈빛
+            if (isBoss) {
+                const padMat = new THREE.MeshStandardMaterial({ color: 0x27272a, metalness: 0.7, roughness: 0.3 });
+                [-0.52, 0.52].forEach(px => {
+                    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.48), padMat);
+                    pad.position.set(px, 1.44, 0.05);
+                    pad.castShadow = true;
+                    group.add(pad);
+                });
+
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
+                [-0.09, 0.09].forEach(ex => {
+                    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+                    eye.position.set(ex, 1.72, 0.34);
+                    group.add(eye);
+                });
+            }
+
+            // 앞으로 뻗은 양팔
+            const armGeo = new THREE.BoxGeometry(0.16, 0.16, 0.72);
+            const leftArm = new THREE.Mesh(armGeo, skinMat);
+            leftArm.position.set(-torsoW / 2 - 0.08, 1.28, 0.38);
+            leftArm.rotation.x = -0.15;
+            leftArm.castShadow = true;
+            group.add(leftArm);
+
+            const rightArm = new THREE.Mesh(armGeo, skinMat);
+            rightArm.position.set(torsoW / 2 + 0.08, 1.28, 0.38);
+            rightArm.rotation.x = -0.1;
+            rightArm.castShadow = true;
+            group.add(rightArm);
+
+            return group;
+        }
+
+        /* ==========================================================================
+           7. UI 렌더링 및 빌드 카테고리 관리
+           ========================================================================== */
+        function setBuildCategory(cat) {
+            state.buildCategory = cat;
+            document.querySelectorAll('.cat-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.cat === cat);
+            });
+            renderBuildMenu();
+        }
+
+        function renderBuildMenu() {
+            const menu = document.getElementById('build-menu');
+            menu.innerHTML = '';
+
+            Object.values(FACILITIES).forEach(fac => {
+                if (state.buildCategory !== 'ALL' && fac.cat !== state.buildCategory) return;
+
+                const isSelected = state.selectedBuildType === fac.id;
+                const canAfford = state.money >= fac.cost;
+
+                const btn = document.createElement('button');
+                btn.onclick = () => selectBuildType(fac.id);
+                btn.title = `${fac.name} ($${fac.cost}): ${fac.desc}`;
+                btn.className = `shrink-0 px-2.5 py-1.5 rounded-xl border text-left transition flex flex-col justify-between min-w-[92px] ${
+                    isSelected
+                        ? 'bg-amber-900/95 border-amber-400 ring-2 ring-amber-400/50 -translate-y-0.5'
+                        : canAfford
+                            ? 'bg-stone-800/90 hover:bg-stone-700 border-stone-600'
+                            : 'bg-stone-900/60 border-stone-800 opacity-45'
+                }`;
+
+                btn.innerHTML = `
+                    <div class="flex items-center justify-between w-full gap-1">
+                        <span class="text-base">${fac.icon}</span>
+                        <span class="text-[11px] font-bold ${canAfford ? 'text-emerald-400' : 'text-red-400'}">$${fac.cost}</span>
+                    </div>
+                    <div class="text-[11px] font-bold text-stone-100 truncate w-full mt-0.5">${fac.name}</div>
+                `;
+                menu.appendChild(btn);
+            });
+        }
+
+        function selectBuildType(typeId) {
+            sfx.init();
+            if (state.selectedBuildType === typeId) {
+                state.selectedBuildType = null;
+                hoverMesh.visible = false;
+                rangeRingMesh.visible = false;
+            } else {
+                state.selectedBuildType = typeId;
+                deselectStructure();
+            }
+            renderBuildMenu();
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-stage').textContent = state.stage;
+            document.getElementById('hud-money').textContent = Math.floor(state.money).toLocaleString();
+
+            const remaining = state.zombies.length + state.spawnQueue.length + (state.bossToSpawn ? 1 : 0);
+            document.getElementById('hud-enemies').textContent = remaining;
+
+            const hpPct = Math.max(0, (state.shelter.hp / state.shelter.maxHp) * 100);
+            document.getElementById('hud-shelter-bar').style.width = `${hpPct}%`;
+            document.getElementById('hud-shelter-text').textContent = `${Math.ceil(state.shelter.hp)} / ${state.shelter.maxHp}`;
+
+            const badge = document.getElementById('hud-phase-badge');
+            const phaseText = document.getElementById('hud-phase-text');
+            const nextBtn = document.getElementById('btn-next-wave');
+
+            if (state.phase === 'PREP') {
+                badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-900/55 text-amber-200 border border-amber-600/50 flex items-center gap-1.5';
+                phaseText.textContent = '재정비 타임 (방어 구축 가능)';
+                nextBtn.disabled = false;
+                nextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            } else {
+                badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-red-950/85 text-red-300 border border-red-600/60 flex items-center gap-1.5';
+                phaseText.textContent = `STAGE ${state.stage} 습격 교전 중!`;
+                nextBtn.disabled = true;
+                nextBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            }
+
+            // 보스 체력바 갱신
+            const bossHud = document.getElementById('boss-hud');
+            if (state.activeBoss && state.activeBoss.hp > 0) {
+                bossHud.classList.remove('hidden');
+                const b = state.activeBoss;
+                document.getElementById('boss-name').textContent = b.arch.name;
+                document.getElementById('boss-skill-desc').textContent = b.arch.skillDesc;
+                document.getElementById('boss-hp-text').textContent = `${Math.ceil(b.hp)} / ${b.maxHp}`;
+                document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (b.hp / b.maxHp) * 100)}%`;
+            } else {
+                bossHud.classList.add('hidden');
+            }
+
+            let repairTotal = 0;
+            state.facilities.forEach(f => {
+                const miss = f.maxHp - f.hp;
+                if (miss > 0) repairTotal += Math.max(1, Math.ceil((miss / f.maxHp) * (f.baseCost * 0.4)));
+            });
+            document.getElementById('repair-all-cost').textContent = `$${repairTotal}`;
+
+            const shelterCost = 180 + (state.shelter.level - 1) * 130;
+            const cmdCost = 140 + (state.commander.level - 1) * 105;
+            const salvCost = 150 + (state.salvageLevel - 1) * 120;
+            document.getElementById('upg-shelter-cost').textContent = `Lv.${state.shelter.level} ($${shelterCost})`;
+            document.getElementById('upg-cmd-cost').textContent = `Lv.${state.commander.level} ($${cmdCost})`;
+            document.getElementById('upg-salvage-cost').textContent = `Lv.${state.salvageLevel} ($${salvCost})`;
+
+            if (state.selectedFacility) updateSelectedPanel();
+        }
+
+        function showBanner(title, sub) {
+            const banner = document.getElementById('banner-overlay');
+            document.getElementById('banner-title').textContent = title;
+            document.getElementById('banner-sub').textContent = sub;
+            banner.classList.remove('hidden');
+            clearTimeout(banner._t);
+            banner._t = setTimeout(() => banner.classList.add('hidden'), 3600);
+        }
+
+        function triggerBossCinematicWarning(arch) {
+            const alertBox = document.getElementById('boss-cinematic-alert');
+            const vignette = document.getElementById('boss-vignette');
+            document.getElementById('cinematic-boss-title').textContent = arch.name;
+            document.getElementById('cinematic-boss-sub').textContent = arch.skillDesc;
+
+            alertBox.classList.remove('hidden');
+            vignette.classList.remove('hidden');
+
+            // 웅장한 공습 사이렌 및 교향악 전투 BGM 시작
+            sfx.playBossKlaxon();
+            sfx.playZombieRoar(true);
+            sfx.startMusic('BOSS');
+
+            clearTimeout(alertBox._t);
+            alertBox._t = setTimeout(() => {
+                alertBox.classList.add('hidden');
+            }, 3700);
+        }
+
+        function startGame() {
+            sfx.init();
+            sfx.playConstruct();
+            sfx.startMusic('AMBIENT');
+
+            document.getElementById('boss-vignette').classList.add('hidden');
+            document.getElementById('boss-cinematic-alert').classList.add('hidden');
+
+            while (facilitiesGroup.children.length) facilitiesGroup.remove(facilitiesGroup.children[0]);
+            while (soldiersGroup.children.length) soldiersGroup.remove(soldiersGroup.children[0]);
+            while (zombiesGroup.children.length) zombiesGroup.remove(zombiesGroup.children[0]);
+            while (effectsGroup.children.length) effectsGroup.remove(effectsGroup.children[0]);
+
+            state = {
+                running: true,
+                paused: false,
+                gameSpeed: 1,
+                phase: 'PREP',
+                stage: 1,
+                money: 450,
+                totalMoneyEarned: 450,
+                totalKills: 0,
+                salvageLevel: 1,
+                shelter: { hp: 1800, maxHp: 1800, level: 1 },
+                commander: {
+                    x: 0, z: 5.2,
+                    hp: 200, maxHp: 200,
+                    speed: 8.0,
+                    damage: 30,
+                    fireRate: 0.25,
+                    fireTimer: 0,
+                    level: 1,
+                    grenadeCooldown: 6.0,
+                    grenadeTimer: 0,
+                    dashCooldown: 3.5,
+                    dashTimer: 0,
+                    dashActiveTimer: 0,
+                    walkCycle: 0
+                },
+                buildCategory: 'ALL',
+                selectedBuildType: null,
+                selectedFacility: null,
+                facilities: [],
+                soldiers: [],
+                zombies: [],
+                activeBoss: null,
+                projectiles: [],
+                firePools: [],
+                particles: [],
+                smokeParticles: [],
+                spawnQueue: [],
+                bossToSpawn: null,
+                spawnTimer: 0,
+                spawnInterval: 0.85,
+                keys: {},
+                timeElapsed: 0
+            };
+
+            commanderMesh.position.set(0, 0, 5.2);
+            updateSpeedButtonUI();
+            deselectStructure();
+            document.getElementById('modal-overlay').classList.add('hidden');
+            renderBuildMenu();
+            updateHUD();
+            showBanner('STAGE 1 - 방어선 구축 재정비 타임', '요새 주변에 방벽, 함정, 화기 거치대를 설치하고 [다음 웨이브 시작]을 누르십시오.');
+        }
+
+        function cycleGameSpeed() {
+            const speeds = [1, 2, 3];
+            const nextIdx = (speeds.indexOf(state.gameSpeed) + 1) % speeds.length;
+            state.gameSpeed = speeds[nextIdx];
+            updateSpeedButtonUI();
+            sfx.init();
+            sfx.playConstruct();
+        }
+
+        function setGameSpeed(spd) {
+            state.gameSpeed = spd;
+            updateSpeedButtonUI();
+        }
+
+        function updateSpeedButtonUI() {
+            const btn = document.getElementById('btn-speed');
+            if (!btn) return;
+            btn.textContent = `⏩ ${state.gameSpeed}x`;
+            if (state.gameSpeed === 1) {
+                btn.className = 'btn-tactical bg-stone-800 hover:bg-stone-700 border border-stone-600 px-2.5 py-1.5 rounded-lg text-xs font-black text-stone-200';
+            } else if (state.gameSpeed === 2) {
+                btn.className = 'btn-tactical bg-amber-800 hover:bg-amber-700 border border-amber-400 px-2.5 py-1.5 rounded-lg text-xs font-black text-amber-200';
+            } else {
+                btn.className = 'btn-tactical bg-red-800 hover:bg-red-700 border border-red-400 px-2.5 py-1.5 rounded-lg text-xs font-black text-white animate-pulse';
+            }
+        }
+
+        function toggleHelpModal(show) {
+            const modal = document.getElementById('modal-overlay');
+            if (show) {
+                state.paused = true;
+                document.getElementById('modal-title').textContent = '요새 방어 작전 교범';
+                document.getElementById('modal-stats').classList.add('hidden');
+                document.getElementById('modal-btn-start').classList.add('hidden');
+                document.getElementById('modal-btn-resume').classList.remove('hidden');
+                modal.classList.remove('hidden');
+            } else {
+                state.paused = false;
+                modal.classList.add('hidden');
+            }
+        }
+
+        /* ==========================================================================
+           8. 건설, 개별 개조(Lv.5), 보수, 글로벌 업그레이드
+           ========================================================================== */
+        function worldToGrid(x, z) {
+            const gx = Math.round(x / TILE_SIZE);
+            const gz = Math.round(z / TILE_SIZE);
+            if (Math.abs(gx) > GRID_HALF || Math.abs(gz) > GRID_HALF) return null;
+            return { gx, gz };
+        }
+
+        function isShelterZone(gx, gz) {
+            // 중앙 3x3 타일은 다층 요새 본체 구역
+            return Math.abs(gx) <= 1 && Math.abs(gz) <= 1;
+        }
+
+        function getFacilityAt(gx, gz) {
+            return state.facilities.find(f => f.gx === gx && f.gz === gz);
+        }
+
+        function tryBuildFacility(gx, gz) {
+            const typeId = state.selectedBuildType;
+            if (!typeId) return;
+            const spec = FACILITIES[typeId];
+
+            if (isShelterZone(gx, gz) || getFacilityAt(gx, gz) || state.money < spec.cost) return;
+
+            const wx = gx * TILE_SIZE;
+            const wz = gz * TILE_SIZE;
+
+            if (!spec.isPassable) {
+                const blocked = state.zombies.some(z => Math.hypot(z.x - wx, z.z - wz) < 1.6);
+                if (blocked) return;
+            }
+
+            state.money -= spec.cost;
+            const mesh = createFacilityMesh(typeId);
+            mesh.position.set(wx, 0, wz);
+            mesh.rotation.y = Math.atan2(wx, wz);
+            facilitiesGroup.add(mesh);
+
+            state.facilities.push({
+                id: Date.now() + Math.random(),
+                type: typeId,
+                name: spec.name,
+                icon: spec.icon,
+                gx, gz,
+                x: wx, z: wz,
+                level: 1,
+                baseCost: spec.cost,
+                totalInvested: spec.cost,
+                hp: spec.maxHp,
+                maxHp: spec.maxHp,
+                range: spec.range,
+                damage: spec.damage,
+                fireRate: spec.fireRate,
+                isPassable: spec.isPassable,
+                cooldown: 0,
+                mesh
+            });
+
+            sfx.playConstruct();
+            spawnExplosionParticles(wx, 0.6, wz, 0xd6d3d1, 8, 2.5);
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function selectStructure(fac) {
+            state.selectedFacility = fac;
+            state.selectedBuildType = null;
+            hoverMesh.visible = false;
+            renderBuildMenu();
+
+            selectedRingMesh.position.set(fac.x, 0.09, fac.z);
+            selectedRingMesh.visible = true;
+
+            if (fac.range > 0) {
+                rangeRingMesh.scale.set(fac.range, fac.range, 1);
+                rangeRingMesh.position.set(fac.x, 0.08, fac.z);
+                rangeRingMesh.visible = true;
+            } else {
+                rangeRingMesh.visible = false;
+            }
+
+            document.getElementById('selected-panel').classList.remove('hidden');
+            updateSelectedPanel();
+        }
+
+        function deselectStructure() {
+            state.selectedFacility = null;
+            selectedRingMesh.visible = false;
+            if (!state.selectedBuildType) rangeRingMesh.visible = false;
+            document.getElementById('selected-panel').classList.add('hidden');
+        }
+
+        function updateSelectedPanel() {
+            const f = state.selectedFacility;
+            if (!f || !state.facilities.includes(f)) {
+                deselectStructure();
+                return;
+            }
+            document.getElementById('sel-icon').textContent = f.icon;
+            document.getElementById('sel-name').textContent = f.name;
+            document.getElementById('sel-level').textContent = `개조 등급: Lv.${f.level} / 5`;
+            document.getElementById('sel-hp').textContent = `${Math.ceil(f.hp)} / ${f.maxHp}`;
+
+            if (f.damage > 0) {
+                document.getElementById('sel-stat-label').textContent = '화력 / 유효사거리:';
+                document.getElementById('sel-stat-val').textContent = `${Math.round(f.damage)} / ${f.range.toFixed(1)}m`;
+            } else {
+                document.getElementById('sel-stat-label').textContent = '장갑 등급:';
+                document.getElementById('sel-stat-val').textContent = `중장갑 ${f.level}단계`;
+            }
+
+            const upgCost = Math.round(f.baseCost * (0.85 + f.level * 0.45));
+            const upgBtn = document.getElementById('btn-sel-upgrade');
+            if (f.level >= 5) {
+                document.getElementById('sel-upg-cost').textContent = 'MAX';
+                upgBtn.disabled = true;
+            } else {
+                document.getElementById('sel-upg-cost').textContent = `$${upgCost}`;
+                upgBtn.disabled = state.money < upgCost;
+            }
+
+            const miss = f.maxHp - f.hp;
+            const repCost = miss > 0 ? Math.max(1, Math.ceil((miss / f.maxHp) * (f.baseCost * 0.4))) : 0;
+            const repBtn = document.getElementById('btn-sel-repair');
+            document.getElementById('sel-rep-cost').textContent = miss > 0 ? `$${repCost}` : '손상 없음';
+            repBtn.disabled = miss <= 0 || state.money < repCost;
+
+            document.getElementById('sel-sell-val').textContent = `+$${Math.floor(f.totalInvested * 0.65)}`;
+        }
+
+        function upgradeSelected() {
+            const f = state.selectedFacility;
+            if (!f || f.level >= 5) return;
+            const cost = Math.round(f.baseCost * (0.85 + f.level * 0.45));
+            if (state.money < cost) return;
+
+            state.money -= cost;
+            f.totalInvested += cost;
+            f.level += 1;
+            f.maxHp = Math.round(f.maxHp * 1.38);
+            f.hp = f.maxHp;
+            if (f.damage > 0) f.damage = Math.round(f.damage * 1.34);
+            if (f.range > 0 && f.type !== 'claymore' && f.type !== 'fuel_barrel') f.range *= 1.07;
+
+            // 시각적 크기 미세 강화
+            f.mesh.scale.setScalar(1 + (f.level - 1) * 0.05);
+
+            sfx.playConstruct();
+            spawnExplosionParticles(f.x, 1.0, f.z, 0xfbbf24, 15, 3.8);
+            selectStructure(f);
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function repairSelected() {
+            const f = state.selectedFacility;
+            if (!f || f.hp >= f.maxHp) return;
+            const miss = f.maxHp - f.hp;
+            const cost = Math.max(1, Math.ceil((miss / f.maxHp) * (f.baseCost * 0.4)));
+            if (state.money < cost) return;
+
+            state.money -= cost;
+            f.hp = f.maxHp;
+            sfx.playConstruct();
+            spawnExplosionParticles(f.x, 0.8, f.z, 0x22c55e, 10, 2.5);
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function sellSelected() {
+            const f = state.selectedFacility;
+            if (!f) return;
+            state.money += Math.floor(f.totalInvested * 0.65);
+            // 해당 병영 소속 군인들도 함께 철수
+            for (let i = state.soldiers.length - 1; i >= 0; i--) {
+                if (state.soldiers[i].barracksId === f.id) {
+                    soldiersGroup.remove(state.soldiers[i].mesh);
+                    state.soldiers.splice(i, 1);
+                }
+            }
+            facilitiesGroup.remove(f.mesh);
+            state.facilities = state.facilities.filter(item => item.id !== f.id);
+            sfx.playConstruct();
+            deselectStructure();
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function repairAllStructures() {
+            let cost = 0;
+            state.facilities.forEach(f => {
+                const miss = f.maxHp - f.hp;
+                if (miss > 0) cost += Math.max(1, Math.ceil((miss / f.maxHp) * (f.baseCost * 0.4)));
+            });
+            if (cost === 0 || state.money < cost) return;
+            state.money -= cost;
+            state.facilities.forEach(f => { f.hp = f.maxHp; });
+            sfx.playConstruct();
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function upgradeShelter() {
+            const cost = 180 + (state.shelter.level - 1) * 130;
+            if (state.money < cost) return;
+            state.money -= cost;
+            state.shelter.level += 1;
+            state.shelter.maxHp += 650;
+            state.shelter.hp = Math.min(state.shelter.maxHp, state.shelter.hp + 800);
+            sfx.playConstruct();
+            spawnExplosionParticles(0, 3.0, 0, 0xfbbf24, 24, 5.0);
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function upgradeCommander() {
+            const cost = 140 + (state.commander.level - 1) * 105;
+            if (state.money < cost) return;
+            state.money -= cost;
+            state.commander.level += 1;
+            state.commander.damage = Math.round(state.commander.damage * 1.32);
+            state.commander.fireRate = Math.max(0.10, state.commander.fireRate * 0.88);
+            sfx.playConstruct();
+            spawnExplosionParticles(state.commander.x, 1.2, state.commander.z, 0xf87171, 14, 3.2);
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        function upgradeSalvage() {
+            const cost = 150 + (state.salvageLevel - 1) * 120;
+            if (state.money < cost) return;
+            state.money -= cost;
+            state.salvageLevel += 1;
+            sfx.playConstruct();
+            renderBuildMenu();
+            updateHUD();
+        }
+
+        /* ==========================================================================
+           9. 스테이지 웨이브 & 진화형 거대 보스 스폰 시스템 (하드코어 물량 공세)
+           ========================================================================== */
+        function startNextWave() {
+            if (state.phase !== 'PREP') return;
+            sfx.init();
+            sfx.playZombieRoar(false);
+
+            state.phase = 'COMBAT';
+            state.selectedBuildType = null;
+            hoverMesh.visible = false;
+            rangeRingMesh.visible = false;
+            renderBuildMenu();
+
+            const stg = state.stage;
+            const queue = [];
+            const walkers = 14 + stg * 6;
+            const runners = 4 + Math.floor(stg * 3.5);
+            const bombers = 2 + Math.floor(stg * 2.5);
+            const hazmats = stg >= 1 ? Math.floor(stg * 2.8) : 0;
+            const spitters = stg >= 2 ? Math.floor((stg - 1) * 2.6) : 0;
+            const brutes = stg >= 2 ? Math.floor((stg - 1) * 2.2) : 0;
+
+            for (let i = 0; i < walkers; i++) queue.push('walker');
+            for (let i = 0; i < runners; i++) queue.push('runner');
+            for (let i = 0; i < bombers; i++) queue.push('bomber');
+            for (let i = 0; i < hazmats; i++) queue.push('hazmat');
+            for (let i = 0; i < spitters; i++) queue.push('spitter');
+            for (let i = 0; i < brutes; i++) queue.push('brute');
+
+            for (let i = queue.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [queue[i], queue[j]] = [queue[j], queue[i]];
+            }
+
+            state.spawnQueue = queue;
+            state.bossToSpawn = stg; // 매 스테이지 말미에 해당 스테이지 보스 등장
+            state.spawnInterval = Math.max(0.22, 0.85 - stg * 0.07);
+            state.spawnTimer = 0.3;
+
+            showBanner(`STAGE ${stg} - 극한 좀비 군단 총공세!`, `총 ${queue.length}구의 감염체 및 스테이지 보스가 사방에서 쇄도합니다!`);
+            updateHUD();
+        }
+
+        function spawnZombieUnit(typeKey, customX = null, customZ = null) {
+            const arch = ZOMBIE_TYPES[typeKey];
+            const stg = state.stage;
+            const hpMult = 1 + (stg - 1) * 0.34;
+            const dmgMult = 1 + (stg - 1) * 0.22;
+
+            let x = customX, z = customZ;
+            if (x === null || z === null) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 36 + Math.random() * 6;
+                x = Math.cos(angle) * dist;
+                z = Math.sin(angle) * dist;
+            }
+
+            const mesh = createZombieOrBossMesh(arch, false);
+            mesh.position.set(x, 0, z);
+            zombiesGroup.add(mesh);
+
+            state.zombies.push({
+                id: Date.now() + Math.random(),
+                type: typeKey,
+                arch,
+                isBoss: false,
+                x, z,
+                hp: Math.round(arch.hp * hpMult),
+                maxHp: Math.round(arch.hp * hpMult),
+                speed: arch.speed * (1 + Math.min(0.45, (stg - 1) * 0.04)),
+                damage: Math.round(arch.damage * dmgMult),
+                reward: Math.round(arch.reward * (1 + (state.salvageLevel - 1) * 0.2)),
+                attackCooldown: 0,
+                rangedCooldown: 2.0,
+                slowTimer: 0,
+                walkPhase: Math.random() * 6,
+                mesh
+            });
+        }
+
+        function spawnStageBoss(stageNum) {
+            const presetIdx = Math.min(BOSS_PRESETS.length - 1, stageNum - 1);
+            const basePreset = BOSS_PRESETS[presetIdx];
+            const extraScale = Math.max(0, stageNum - 4);
+            const hpMult = 1 + extraScale * 0.55;
+            const dmgMult = 1 + extraScale * 0.3;
+
+            const arch = {
+                ...basePreset,
+                name: stageNum > 4 ? `STAGE ${stageNum} APEX: 타이탄 오버로드 Lv.${extraScale + 1}` : basePreset.name
+            };
+
+            const angle = Math.random() * Math.PI * 2;
+            const x = Math.cos(angle) * 39;
+            const z = Math.sin(angle) * 39;
+
+            const mesh = createZombieOrBossMesh(arch, true);
+            mesh.position.set(x, 0, z);
+            zombiesGroup.add(mesh);
+
+            const bossObj = {
+                id: 'BOSS_' + Date.now(),
+                type: 'BOSS',
+                arch,
+                isBoss: true,
+                x, z,
+                hp: Math.round(arch.baseHp * hpMult),
+                maxHp: Math.round(arch.baseHp * hpMult),
+                speed: arch.speed * (1 + Math.min(0.35, (stageNum - 1) * 0.04)),
+                damage: Math.round(arch.damage * dmgMult),
+                reward: Math.round(arch.reward * (1 + (state.salvageLevel - 1) * 0.25)),
+                attackCooldown: 0,
+                abilityTimer: 4.5,
+                chargeTimer: 0,
+                slowTimer: 0,
+                walkPhase: 0,
+                mesh
+            };
+
+            state.zombies.push(bossObj);
+            state.activeBoss = bossObj;
+            triggerBossCinematicWarning(arch);
+            updateHUD();
+        }
+
+        function onStageCleared() {
+            state.phase = 'PREP';
+            state.activeBoss = null;
+            document.getElementById('boss-vignette').classList.add('hidden');
+            sfx.startMusic('AMBIENT');
+
+            const ammoDepotCount = state.facilities.filter(f => f.type === 'ammo_depot').length;
+            const hospitalCount = state.facilities.filter(f => f.type === 'field_hospital').length;
+
+            // 야전 의무소 웨이브 종료 시 중앙 요새 자동 복구
+            if (hospitalCount > 0) {
+                const healAmt = hospitalCount * 180;
+                state.shelter.hp = Math.min(state.shelter.maxHp, state.shelter.hp + healAmt);
+            }
+
+            const salvBonus = 1 + (state.salvageLevel - 1) * 0.2 + (ammoDepotCount * 0.15);
+            const bonus = Math.round((150 + state.stage * 65) * salvBonus);
+            state.money += bonus;
+            state.totalMoneyEarned += bonus;
+            state.stage += 1;
+
+            // 생존한 아군 병사들 체력 완전 회복
+            state.soldiers.forEach(s => { s.hp = s.maxHp; });
+
+            sfx.playConstruct();
+            renderBuildMenu();
+            updateHUD();
+            showBanner(`STAGE ${state.stage - 1} 완벽 방어 성공!`, `보급 자금 +$${bonus} 지급! 다음 웨이브는 훨씬 더 강력합니다.`);
+        }
+
+        function onGameOver() {
+            state.phase = 'GAMEOVER';
+            state.running = false;
+            document.getElementById('boss-vignette').classList.add('hidden');
+            sfx.stopMusic();
+            sfx.playHeavyExplosion();
+
+            document.getElementById('modal-title').textContent = '중앙 요새 함락 (DEFEAT)';
+            document.getElementById('modal-desc').textContent = '좀비 군단이 최후의 방어선을 돌파했습니다.';
+            document.getElementById('stat-stage').textContent = `STAGE ${state.stage}`;
+            document.getElementById('stat-kills').textContent = `${state.totalKills}구`;
+            document.getElementById('stat-money').textContent = `$${Math.floor(state.totalMoneyEarned).toLocaleString()}`;
+
+            document.getElementById('modal-stats').classList.remove('hidden');
+            document.getElementById('modal-btn-start').textContent = '새로운 요새 방어 시작';
+            document.getElementById('modal-btn-start').classList.remove('hidden');
+            document.getElementById('modal-btn-resume').classList.add('hidden');
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        /* ==========================================================================
+           10. 입력 컨트롤 (마우스, 휠, Q/E 회전, WASD, 수류탄)
+           ========================================================================== */
+        const domCanvas = document.getElementById('canvas-container');
+
+        domCanvas.addEventListener('mousemove', (e) => {
+            if (camOrbit.isDragging) {
+                const dx = e.clientX - camOrbit.prevX;
+                const dy = e.clientY - camOrbit.prevY;
+                camOrbit.prevX = e.clientX;
+                camOrbit.prevY = e.clientY;
+                camOrbit.yaw -= dx * 0.0065;
+                camOrbit.pitch = Math.max(0.28, Math.min(1.32, camOrbit.pitch - dy * 0.0065));
+                updateCameraTransform();
+                return;
+            }
+
+            mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouseNDC, camera);
+            const hitPt = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(groundPlane, hitPt)) {
+                const g = worldToGrid(hitPt.x, hitPt.z);
+
+                if (state.selectedBuildType && g) {
+                    const spec = FACILITIES[state.selectedBuildType];
+                    const wx = g.gx * TILE_SIZE;
+                    const wz = g.gz * TILE_SIZE;
+                    const valid = !isShelterZone(g.gx, g.gz) && !getFacilityAt(g.gx, g.gz) && state.money >= spec.cost;
+
+                    hoverMesh.position.set(wx, 0.08, wz);
+                    hoverMesh.material.color.setHex(valid ? 0x22c55e : 0xef4444);
+                    hoverMesh.visible = true;
+
+                    if (spec.range > 0) {
+                        rangeRingMesh.scale.set(spec.range, spec.range, 1);
+                        rangeRingMesh.position.set(wx, 0.09, wz);
+                        rangeRingMesh.visible = true;
+                    } else {
+                        rangeRingMesh.visible = false;
+                    }
+                } else {
+                    hoverMesh.visible = false;
+                }
+            }
+        });
+
+        domCanvas.addEventListener('mousedown', (e) => {
+            if (!state.running || state.paused) return;
+            sfx.init();
+
+            if (e.button === 2) {
+                camOrbit.isDragging = true;
+                camOrbit.prevX = e.clientX;
+                camOrbit.prevY = e.clientY;
+                if (state.selectedBuildType) {
+                    state.selectedBuildType = null;
+                    hoverMesh.visible = false;
+                    rangeRingMesh.visible = false;
+                    renderBuildMenu();
+                }
+                return;
+            }
+
+            if (e.button === 0) {
+                mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouseNDC, camera);
+                const hitPt = new THREE.Vector3();
+                if (!raycaster.ray.intersectPlane(groundPlane, hitPt)) return;
+
+                const g = worldToGrid(hitPt.x, hitPt.z);
+
+                if (state.selectedBuildType && g) {
+                    tryBuildFacility(g.gx, g.gz);
+                    return;
+                }
+
+                if (g) {
+                    const existing = getFacilityAt(g.gx, g.gz);
+                    if (existing) {
+                        selectStructure(existing);
+                        return;
+                    }
+                }
+
+                deselectStructure();
+                if (state.phase === 'COMBAT') {
+                    throwHandGrenade(hitPt.x, hitPt.z);
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => { camOrbit.isDragging = false; });
+
+        domCanvas.addEventListener('wheel', (e) => {
+            camOrbit.distance = Math.max(13, Math.min(50, camOrbit.distance + e.deltaY * 0.015));
+            updateCameraTransform();
+        }, { passive: true });
+
+        domCanvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        window.addEventListener('keydown', (e) => {
+            state.keys[e.code] = true;
+            if (e.code === 'Digit1') setGameSpeed(1);
+            if (e.code === 'Digit2') setGameSpeed(2);
+            if (e.code === 'Digit3') setGameSpeed(3);
+            if (e.code === 'Escape') {
+                state.selectedBuildType = null;
+                hoverMesh.visible = false;
+                deselectStructure();
+                renderBuildMenu();
+            }
+            if (e.code === 'Space' && state.running && !state.paused && state.phase === 'COMBAT') {
+                e.preventDefault();
+                const nearest = findNearestZombie(state.commander.x, state.commander.z, 26);
+                if (nearest) throwHandGrenade(nearest.x, nearest.z);
+            }
+            if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && state.running && !state.paused) {
+                if (state.commander.dashTimer <= 0) {
+                    state.commander.dashTimer = state.commander.dashCooldown;
+                    state.commander.dashActiveTimer = 0.25;
+                    spawnExplosionParticles(state.commander.x, 0.4, state.commander.z, 0x38bdf8, 8, 2.5);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => { state.keys[e.code] = false; });
+
+        function throwHandGrenade(tx, tz) {
+            const c = state.commander;
+            if (c.grenadeTimer > 0) return;
+
+            const hasRadar = state.facilities.some(f => f.type === 'radar_tower');
+            c.grenadeTimer = hasRadar ? c.grenadeCooldown * 0.7 : c.grenadeCooldown;
+            sfx.playConstruct();
+
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.24, 8, 8),
+                new THREE.MeshStandardMaterial({ color: 0x3f6212 })
+            );
+            mesh.position.set(c.x, 1.2, c.z);
+            effectsGroup.add(mesh);
+
+            state.projectiles.push({
+                kind: 'grenade',
+                sx: c.x, sz: c.z,
+                tx, tz,
+                progress: 0,
+                duration: 0.62,
+                damage: 210 + (c.level - 1) * 65,
+                radius: 5.5,
+                mesh
+            });
+        }
+
+        /* ==========================================================================
+           11. 메인 시뮬레이션 & 3D 렌더링 루프
+           ========================================================================== */
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const rawDt = Math.min(0.05, (now - lastFrameTime) / 1000);
+            lastFrameTime = now;
+            const simDt = rawDt * (state.gameSpeed || 1);
+            state.timeElapsed += simDt;
+
+            // Q / E 키 카메라 회전
+            if (state.keys['KeyQ']) { camOrbit.yaw += rawDt * 1.4; updateCameraTransform(); }
+            if (state.keys['KeyE']) { camOrbit.yaw -= rawDt * 1.4; updateCameraTransform(); }
+
+            // 요새 듀얼 탐조등 회전 및 항공장애등 점멸
+            if (searchlightLeft) searchlightLeft.rotation.y += simDt * 0.7;
+            if (searchlightRight) searchlightRight.rotation.y -= simDt * 0.6;
+            if (radioBeaconMesh) {
+                radioBeaconMesh.visible = Math.sin(state.timeElapsed * 5.5) > 0;
+            }
+            updateGeneratorSmoke(simDt);
+
+            if (state.running && !state.paused) {
+                // 고배속(2x, 3x) 시 충돌/이동 안정성을 위해 서브스텝 분할 실행
+                const steps = state.gameSpeed || 1;
+                const stepDt = simDt / steps;
+                for (let s = 0; s < steps; s++) {
+                    if (!state.running || state.paused) break;
+                    updateSimulation(stepDt);
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateGeneratorSmoke(dt) {
+            if (Math.random() < dt * 9) {
+                const pMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.2 + Math.random() * 0.16, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0x78716c, transparent: true, opacity: 0.32 })
+                );
+                pMesh.position.set(1.4, 7.3, 1.2);
+                effectsGroup.add(pMesh);
+                state.smokeParticles.push({ mesh: pMesh, life: 2.3, vx: 0.45, vy: 1.2 });
+            }
+
+            for (let i = state.smokeParticles.length - 1; i >= 0; i--) {
+                const sp = state.smokeParticles[i];
+                sp.life -= dt;
+                sp.mesh.position.x += sp.vx * dt;
+                sp.mesh.position.y += sp.vy * dt;
+                sp.mesh.scale.addScalar(dt * 0.75);
+                sp.mesh.material.opacity = Math.max(0, sp.life * 0.14);
+                if (sp.life <= 0) {
+                    effectsGroup.remove(sp.mesh);
+                    state.smokeParticles.splice(i, 1);
+                }
+            }
+        }
+
+        function updateSimulation(dt) {
+            const cmd = state.commander;
+
+            // 전술 건물 글로벌 시너지 확인
+            const hasRadarTower = state.facilities.some(f => f.type === 'radar_tower');
+            const globalRangeMult = hasRadarTower ? 1.25 : 1.0;
+
+            // 1) 수비대장 이동 & 전술 대시
+            if (cmd.dashTimer > 0) cmd.dashTimer = Math.max(0, cmd.dashTimer - dt);
+            if (cmd.dashActiveTimer > 0) cmd.dashActiveTimer = Math.max(0, cmd.dashActiveTimer - dt);
+
+            const dashEl = document.getElementById('hud-dash-text');
+            if (dashEl) {
+                dashEl.textContent = cmd.dashTimer > 0 ? `${cmd.dashTimer.toFixed(1)}초` : '준비 완료';
+                dashEl.className = cmd.dashTimer > 0 ? 'font-bold text-stone-400' : 'font-bold text-sky-400';
+            }
+            const cmdHpEl = document.getElementById('hud-cmd-hp');
+            if (cmdHpEl) {
+                cmdHpEl.textContent = `HP ${Math.round((cmd.hp / cmd.maxHp) * 100)}%`;
+            }
+
+            let mx = 0, mz = 0;
+            if (state.keys['KeyW'] || state.keys['ArrowUp']) mz -= 1;
+            if (state.keys['KeyS'] || state.keys['ArrowDown']) mz += 1;
+            if (state.keys['KeyA'] || state.keys['ArrowLeft']) mx -= 1;
+            if (state.keys['KeyD'] || state.keys['ArrowRight']) mx += 1;
+
+            if (mx !== 0 || mz !== 0) {
+                const sin = Math.sin(camOrbit.yaw);
+                const cos = Math.cos(camOrbit.yaw);
+                const worldX = mx * cos + mz * sin;
+                const worldZ = -mx * sin + mz * cos;
+                const len = Math.hypot(worldX, worldZ);
+                const moveSpd = cmd.dashActiveTimer > 0 ? cmd.speed * 2.4 : cmd.speed;
+
+                cmd.x = Math.max(-26, Math.min(26, cmd.x + (worldX / len) * moveSpd * dt));
+                cmd.z = Math.max(-26, Math.min(26, cmd.z + (worldZ / len) * moveSpd * dt));
+
+                commanderMesh.position.set(cmd.x, 0, cmd.z);
+                commanderMesh.rotation.y = Math.atan2(worldX, worldZ);
+
+                cmd.walkCycle += dt * 15;
+                cmdLeftLeg.rotation.x = Math.sin(cmd.walkCycle) * 0.55;
+                cmdRightLeg.rotation.x = -Math.sin(cmd.walkCycle) * 0.55;
+            } else {
+                cmdLeftLeg.rotation.x = 0;
+                cmdRightLeg.rotation.x = 0;
+            }
+
+            // 수류탄 쿨다운
+            if (cmd.grenadeTimer > 0) {
+                cmd.grenadeTimer = Math.max(0, cmd.grenadeTimer - dt);
+                const pct = ((cmd.grenadeCooldown - cmd.grenadeTimer) / cmd.grenadeCooldown) * 100;
+                document.getElementById('hud-grenade-bar').style.width = `${pct}%`;
+                document.getElementById('hud-grenade-text').textContent = `${cmd.grenadeTimer.toFixed(1)}초`;
+                document.getElementById('hud-grenade-text').className = 'font-bold text-amber-400';
+            } else {
+                document.getElementById('hud-grenade-bar').style.width = '100%';
+                document.getElementById('hud-grenade-text').textContent = '투척 가능';
+                document.getElementById('hud-grenade-text').className = 'font-bold text-emerald-400';
+            }
+
+            // 2) 스테이지 스폰 및 보스 출현 처리
+            if (state.phase === 'COMBAT') {
+                if (state.spawnQueue.length > 0) {
+                    state.spawnTimer -= dt;
+                    if (state.spawnTimer <= 0) {
+                        const nextKey = state.spawnQueue.shift();
+                        spawnZombieUnit(nextKey);
+                        state.spawnTimer = state.spawnInterval;
+                        updateHUD();
+                    }
+                } else if (state.bossToSpawn !== null) {
+                    const bossStage = state.bossToSpawn;
+                    state.bossToSpawn = null;
+                    spawnStageBoss(bossStage);
+                } else if (state.zombies.length === 0) {
+                    onStageCleared();
+                }
+            }
+
+            // 3) 수비대장 자동 엄호 사격
+            if (cmd.fireTimer > 0) cmd.fireTimer -= dt;
+            if (state.phase === 'COMBAT' && cmd.fireTimer <= 0) {
+                const target = findNearestZombie(cmd.x, cmd.z, 14.5 * globalRangeMult);
+                if (target) {
+                    cmd.fireTimer = cmd.fireRate;
+                    commanderMesh.rotation.y = Math.atan2(target.x - cmd.x, target.z - cmd.z);
+                    cmdMuzzleFlash.visible = true;
+                    clearTimeout(cmdMuzzleFlash._t);
+                    cmdMuzzleFlash._t = setTimeout(() => { cmdMuzzleFlash.visible = false; }, 55);
+                    sfx.playRifleShot(false);
+                    fireBullet(cmd.x, 1.18, cmd.z, target.x, 0.95, target.z, cmd.damage, 0xfef08a, false);
+                }
+            }
+
+            // 4) 네이팜 화염 장판 업데이트
+            for (let i = state.firePools.length - 1; i >= 0; i--) {
+                const fp = state.firePools[i];
+                fp.life -= dt;
+                fp.tick -= dt;
+                fp.mesh.material.opacity = Math.min(0.65, fp.life * 0.25);
+                if (fp.tick <= 0) {
+                    fp.tick = 0.25;
+                    state.zombies.forEach(z => {
+                        if (Math.hypot(z.x - fp.x, z.z - fp.z) <= fp.radius) {
+                            z.hp -= fp.damage;
+                        }
+                    });
+                }
+                if (fp.life <= 0) {
+                    effectsGroup.remove(fp.mesh);
+                    state.firePools.splice(i, 1);
+                }
+            }
+
+            // 5) 방어 시설 & 병영 & 전술 건물 업데이트
+            const searchlights = state.facilities.filter(item => item.type === 'searchlight');
+            const solarStations = state.facilities.filter(item => item.type === 'solar_station');
+            const ammoDepots = state.facilities.filter(item => item.type === 'ammo_depot');
+
+            for (let i = state.facilities.length - 1; i >= 0; i--) {
+                const f = state.facilities[i];
+                if (f.cooldown > 0) f.cooldown -= dt;
+
+                // 전술 건물 & 병영 옥상 애니메이션
+                const bAnim = f.mesh.getObjectByName('buildingAnim');
+                if (bAnim) {
+                    if (f.type === 'radar_tower') bAnim.rotation.y += dt * 1.8;
+                    else if (f.type === 'solar_station') bAnim.rotation.y = Math.sin(state.timeElapsed * 0.6) * 0.55;
+                    else if (f.type === 'field_hospital') bAnim.rotation.y += dt * 1.4;
+                    else if (f.type.startsWith('barracks_')) bAnim.rotation.y = Math.sin(state.timeElapsed * 3.0) * 0.25;
+                }
+
+                const hasLightBuff = searchlights.some(sl => Math.hypot(sl.x - f.x, sl.z - f.z) <= sl.range);
+                const hasSolarBuff = solarStations.some(ss => Math.hypot(ss.x - f.x, ss.z - f.z) <= ss.range);
+                const hasAmmoBuff = ammoDepots.some(ad => Math.hypot(ad.x - f.x, ad.z - f.z) <= ad.range);
+
+                const dmgMult = (hasLightBuff ? 1.30 : 1.0) * (hasSolarBuff ? 1.15 : 1.0);
+                const rateMult = hasAmmoBuff ? 0.75 : 1.0; // 탄약 보급고 버프: 쿨다운 25% 단축
+                const effRange = f.range * globalRangeMult;
+
+                if (f.type.startsWith('barracks_')) {
+                    // 군인 생성기 (병영): 소속 살아있는 병사 수 확인 후 자동 출격
+                    const mySoldiers = state.soldiers.filter(s => s.barracksId === f.id);
+                    const maxCap = f.type === 'barracks_rifle' ? 3 : 2;
+                    if (mySoldiers.length < maxCap && f.cooldown <= 0) {
+                        f.cooldown = f.fireRate;
+                        spawnBarracksSoldier(f);
+                    }
+                } else if (f.type === 'field_hospital') {
+                    // 반경 내 수비대장 및 아군 병사 체력 회복
+                    if (f.cooldown <= 0) {
+                        f.cooldown = f.fireRate;
+                        if (cmd.hp < cmd.maxHp && Math.hypot(cmd.x - f.x, cmd.z - f.z) <= effRange) {
+                            cmd.hp = Math.min(cmd.maxHp, cmd.hp + f.damage);
+                            spawnExplosionParticles(cmd.x, 1.4, cmd.z, 0xef4444, 5, 2.0);
+                        }
+                        state.soldiers.forEach(s => {
+                            if (s.hp < s.maxHp && Math.hypot(s.x - f.x, s.z - f.z) <= effRange) {
+                                s.hp = Math.min(s.maxHp, s.hp + f.damage);
+                            }
+                        });
+                    }
+                } else if (f.type === 'solar_station') {
+                    // 교전 중 주기적 전력/자금 생산
+                    if (state.phase === 'COMBAT' && f.cooldown <= 0) {
+                        f.cooldown = f.fireRate;
+                        const genMoney = Math.round(f.damage * (1 + (f.level - 1) * 0.35));
+                        state.money += genMoney;
+                        state.totalMoneyEarned += genMoney;
+                        spawnExplosionParticles(f.x, 1.8, f.z, 0xfbbf24, 6, 2.2);
+                        renderBuildMenu();
+                        updateHUD();
+                    }
+                } else if (f.type === 'barbed_wire' || f.type === 'spike_trap') {
+                    let hitAny = false;
+                    state.zombies.forEach(z => {
+                        if (Math.hypot(z.x - f.x, z.z - f.z) <= f.range) {
+                            if (f.type === 'barbed_wire') z.slowTimer = 0.45;
+                            if (f.cooldown <= 0) {
+                                z.hp -= f.damage;
+                                hitAny = true;
+                            }
+                        }
+                    });
+                    if (hitAny) {
+                        f.cooldown = f.fireRate;
+                        f.hp -= 2.5;
+                    }
+                } else if (f.type === 'electric_fence') {
+                    // 고압 전기 철책: 근접 좀비 감전 및 경직
+                    let hitAny = false;
+                    state.zombies.forEach(z => {
+                        if (Math.hypot(z.x - f.x, z.z - f.z) <= f.range) {
+                            z.slowTimer = 0.5;
+                            if (f.cooldown <= 0) {
+                                z.hp -= Math.round(f.damage * dmgMult);
+                                hitAny = true;
+                            }
+                        }
+                    });
+                    if (hitAny) {
+                        f.cooldown = f.fireRate;
+                        f.hp -= 2.0;
+                        spawnExplosionParticles(f.x, 0.9, f.z, 0x38bdf8, 4, 2.5);
+                    }
+                } else if (f.type === 'cryo_mine') {
+                    // 액화질소 냉각 지뢰
+                    const trigger = state.zombies.find(z => Math.hypot(z.x - f.x, z.z - f.z) <= 2.3);
+                    if (trigger) {
+                        sfx.playHeavyExplosion();
+                        spawnExplosionParticles(f.x, 0.7, f.z, 0x38bdf8, 24, 6.0);
+                        state.zombies.forEach(z => {
+                            if (Math.hypot(z.x - f.x, z.z - f.z) <= f.range) {
+                                z.hp -= f.damage;
+                                z.slowTimer = 4.5;
+                            }
+                        });
+                        facilitiesGroup.remove(f.mesh);
+                        state.facilities.splice(i, 1);
+                        if (state.selectedFacility && state.selectedFacility.id === f.id) deselectStructure();
+                        continue;
+                    }
+                } else if (f.type === 'claymore') {
+                    const trigger = state.zombies.find(z => Math.hypot(z.x - f.x, z.z - f.z) <= 2.3);
+                    if (trigger) {
+                        triggerExplosion(f.x, f.z, f.range, f.damage);
+                        facilitiesGroup.remove(f.mesh);
+                        state.facilities.splice(i, 1);
+                        if (state.selectedFacility && state.selectedFacility.id === f.id) deselectStructure();
+                        continue;
+                    }
+                } else if (f.type === 'napalm_trench') {
+                    const trigger = state.zombies.find(z => Math.hypot(z.x - f.x, z.z - f.z) <= 1.8);
+                    if (trigger && f.cooldown <= 0) {
+                        f.cooldown = 3.8;
+                        f.hp -= 45;
+                        sfx.playFlameBurst();
+                        createNapalmFirePool(f.x, f.z, f.range, f.damage);
+                    }
+                } else if (f.type === 'repair_depot') {
+                    if (f.cooldown <= 0) {
+                        let fixed = false;
+                        state.facilities.forEach(other => {
+                            if (other.hp < other.maxHp && Math.hypot(other.x - f.x, other.z - f.z) <= effRange) {
+                                other.hp = Math.min(other.maxHp, other.hp + f.damage);
+                                fixed = true;
+                            }
+                        });
+                        if (fixed) {
+                            f.cooldown = f.fireRate;
+                            spawnExplosionParticles(f.x, 1.0, f.z, 0x22c55e, 6, 2.2);
+                        }
+                    }
+                } else if (f.type === 'searchlight') {
+                    const head = f.mesh.getObjectByName('turretHead');
+                    if (head) head.rotation.y += dt * 1.15;
+                } else if (['mg_turret', 'shotgun_turret', 'gatling_turret', 'sniper_nest', 'mortar_pit', 'flamethrower', 'autocannon', 'rocket_pod', 'guard_bunker'].includes(f.type)) {
+                    const target = (f.type === 'sniper_nest' || f.type === 'autocannon')
+                        ? findPriorityTarget(f.x, f.z, effRange)
+                        : findNearestZombie(f.x, f.z, effRange);
+
+                    if (target) {
+                        const ang = Math.atan2(target.x - f.x, target.z - f.z);
+                        const head = f.mesh.getObjectByName('turretHead');
+                        if (head) head.rotation.y = ang;
+                        else f.mesh.rotation.y = ang;
+
+                        if (f.cooldown <= 0) {
+                            f.cooldown = f.fireRate * rateMult;
+                            const finalDmg = Math.round(f.damage * dmgMult);
+
+                            if (f.type === 'mg_turret') {
+                                sfx.playRifleShot(true);
+                                fireBullet(f.x, 1.0, f.z, target.x, 0.95, target.z, finalDmg, 0xfbbf24, false);
+                            } else if (f.type === 'gatling_turret') {
+                                if (Math.random() < 0.45) sfx.playRifleShot(false);
+                                const spreadX = target.x + (Math.random() - 0.5) * 1.2;
+                                const spreadZ = target.z + (Math.random() - 0.5) * 1.2;
+                                fireBullet(f.x, 1.0, f.z, spreadX, 0.95, spreadZ, finalDmg, 0xfef08a, false);
+                            } else if (f.type === 'autocannon') {
+                                sfx.playShotgunBlast();
+                                launchArcProjectile('rocket', f.x, f.z, target.x, target.z, 0.35, 0.6, finalDmg, 3.0);
+                            } else if (f.type === 'guard_bunker') {
+                                sfx.playRifleShot(false);
+                                // 전술 지휘 벙커 정예 소총수 2연발 점사
+                                fireBullet(f.x - 0.2, 1.45, f.z, target.x, 0.95, target.z, finalDmg, 0xfef08a, false);
+                                setTimeout(() => {
+                                    if (state.running) fireBullet(f.x + 0.2, 1.45, f.z, target.x, 0.95, target.z, finalDmg, 0xfef08a, false);
+                                }, 85);
+                            } else if (f.type === 'shotgun_turret') {
+                                sfx.playShotgunBlast();
+                                for (let p = 0; p < 7; p++) {
+                                    const spread = (Math.random() - 0.5) * 0.45;
+                                    const tx = f.x + Math.sin(ang + spread) * effRange;
+                                    const tz = f.z + Math.cos(ang + spread) * effRange;
+                                    fireBullet(f.x, 1.0, f.z, tx, 0.95, tz, finalDmg, 0xf97316, false);
+                                }
+                            } else if (f.type === 'sniper_nest') {
+                                sfx.playSniperCrack();
+                                fireBullet(f.x, 1.05, f.z, target.x, 1.0, target.z, finalDmg, 0x38bdf8, true);
+                            } else if (f.type === 'flamethrower') {
+                                sfx.playFlameBurst();
+                                spawnExplosionParticles(f.x + Math.sin(ang) * 2.2, 0.9, f.z + Math.cos(ang) * 2.2, 0xf97316, 7, 3.2);
+                                state.zombies.forEach(z => {
+                                    const dist = Math.hypot(z.x - f.x, z.z - f.z);
+                                    if (dist <= effRange) {
+                                        const zAng = Math.atan2(z.x - f.x, z.z - f.z);
+                                        const diff = Math.abs(Math.atan2(Math.sin(zAng - ang), Math.cos(zAng - ang)));
+                                        if (diff < 0.48) z.hp -= finalDmg;
+                                    }
+                                });
+                            } else if (f.type === 'mortar_pit') {
+                                sfx.playConstruct();
+                                launchArcProjectile('mortar', f.x, f.z, target.x, target.z, 1.05, 10.0, finalDmg, 4.8);
+                            } else if (f.type === 'rocket_pod') {
+                                sfx.playRocketLaunch();
+                                for (let r = 0; r < 4; r++) {
+                                    const ox = (Math.random() - 0.5) * 2.6;
+                                    const oz = (Math.random() - 0.5) * 2.6;
+                                    launchArcProjectile('rocket', f.x, f.z, target.x + ox, target.z + oz, 0.55 + r * 0.08, 3.2, finalDmg, 3.6);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (f.hp <= 0) {
+                    if (f.type === 'fuel_barrel') {
+                        triggerExplosion(f.x, f.z, f.range, f.damage);
+                    } else {
+                        sfx.playHeavyExplosion();
+                        spawnExplosionParticles(f.x, 0.7, f.z, 0x78716c, 15, 3.8);
+                    }
+                    // 파괴된 병영 소속 군인 제거
+                    if (f.type.startsWith('barracks_')) {
+                        for (let sIdx = state.soldiers.length - 1; sIdx >= 0; sIdx--) {
+                            if (state.soldiers[sIdx].barracksId === f.id) {
+                                soldiersGroup.remove(state.soldiers[sIdx].mesh);
+                                state.soldiers.splice(sIdx, 1);
+                            }
+                        }
+                    }
+                    facilitiesGroup.remove(f.mesh);
+                    state.facilities.splice(i, 1);
+                    if (state.selectedFacility && state.selectedFacility.id === f.id) deselectStructure();
+                }
+            }
+
+            // 5.5) 아군 출격 군인(Soldiers) AI 이동 및 교전 업데이트
+            updateSoldiersAI(dt, globalRangeMult);
+
+            // 6) 투사체 업데이트
+            for (let i = state.projectiles.length - 1; i >= 0; i--) {
+                const pr = state.projectiles[i];
+                if (pr.kind === 'bullet') {
+                    pr.x += pr.vx * dt;
+                    pr.z += pr.vz * dt;
+                    pr.life -= dt;
+                    pr.mesh.position.set(pr.x, pr.y, pr.z);
+
+                    // 드럼통 사격 시 기폭
+                    const hitBarrel = state.facilities.find(f => f.type === 'fuel_barrel' && Math.hypot(f.x - pr.x, f.z - pr.z) < 0.9);
+                    if (hitBarrel) {
+                        hitBarrel.hp = 0;
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                        continue;
+                    }
+
+                    const hitZombie = state.zombies.find(z => Math.hypot(z.x - pr.x, z.z - pr.z) < 0.78 * z.arch.scale);
+                    if (hitZombie) {
+                        hitZombie.hp -= pr.damage;
+                        spawnExplosionParticles(pr.x, 1.0, pr.z, 0x991b1b, 4, 2.2);
+                        if (!pr.piercing) {
+                            effectsGroup.remove(pr.mesh);
+                            state.projectiles.splice(i, 1);
+                            continue;
+                        }
+                    }
+
+                    if (pr.life <= 0) {
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                    }
+                } else if (pr.kind === 'acid') {
+                    pr.x += pr.vx * dt;
+                    pr.z += pr.vz * dt;
+                    pr.life -= dt;
+                    pr.mesh.position.set(pr.x, 1.0, pr.z);
+
+                    const hitFac = state.facilities.find(f => !f.isPassable && Math.hypot(f.x - pr.x, f.z - pr.z) < 1.1);
+                    if (hitFac) {
+                        hitFac.hp -= pr.damage;
+                        spawnExplosionParticles(pr.x, 0.8, pr.z, 0x84cc16, 6, 2.2);
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                        continue;
+                    }
+                    if (Math.hypot(pr.x, pr.z) < 3.4) {
+                        state.shelter.hp = Math.max(0, state.shelter.hp - pr.damage);
+                        updateHUD();
+                        if (state.shelter.hp <= 0 && state.phase !== 'GAMEOVER') onGameOver();
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                        continue;
+                    }
+                    if (pr.life <= 0) {
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                    }
+                } else if (['grenade', 'mortar', 'rocket'].includes(pr.kind)) {
+                    pr.progress += dt / pr.duration;
+                    const t = Math.min(1, pr.progress);
+                    const cx = pr.sx + (pr.tx - pr.sx) * t;
+                    const cz = pr.sz + (pr.tz - pr.sz) * t;
+                    const cy = 0.6 + Math.sin(t * Math.PI) * pr.arcHeight;
+                    pr.mesh.position.set(cx, cy, cz);
+
+                    if (t >= 1) {
+                        triggerExplosion(pr.tx, pr.tz, pr.radius, pr.damage);
+                        effectsGroup.remove(pr.mesh);
+                        state.projectiles.splice(i, 1);
+                    }
+                }
+            }
+
+            // 7) 좀비 & 스테이지 보스 AI 업데이트
+            for (let i = state.zombies.length - 1; i >= 0; i--) {
+                const z = state.zombies[i];
+
+                // 사망 처리
+                if (z.hp <= 0) {
+                    if (z.arch.isBomber) {
+                        // 폭탄병을 원거리 사격으로 처치 시 주변 좀비들에게 광역 폭발 피해!
+                        triggerExplosion(z.x, z.z, 5.2, 220, false);
+                    }
+                    if (z.isBoss) {
+                        triggerExplosion(z.x, z.z, 7.5, 300, false);
+                        state.activeBoss = null;
+                    }
+                    state.money += z.reward;
+                    state.totalMoneyEarned += z.reward;
+                    state.totalKills += 1;
+                    spawnExplosionParticles(z.x, 1.0, z.z, 0x7f1d1d, z.isBoss ? 30 : 12, 3.6);
+                    zombiesGroup.remove(z.mesh);
+                    state.zombies.splice(i, 1);
+                    renderBuildMenu();
+                    updateHUD();
+                    continue;
+                }
+
+                if (z.slowTimer > 0) z.slowTimer -= dt;
+                if (z.attackCooldown > 0) z.attackCooldown -= dt;
+
+                // 폭탄병 낭종 점멸 효과
+                if (z.arch.isBomber) {
+                    const sac = z.mesh.getObjectByName('bomberSac');
+                    if (sac) sac.scale.setScalar(1 + Math.sin(state.timeElapsed * 14) * 0.16);
+                }
+
+                // 보스 특수 스킬 발동 로직
+                if (z.isBoss) {
+                    updateHUD();
+                    z.abilityTimer -= dt;
+                    if (z.abilityTimer <= 0) {
+                        z.abilityTimer = Math.max(4.5, 7.5 - state.stage * 0.35);
+                        executeBossAbility(z);
+                    }
+                }
+
+                let curSpeed = z.slowTimer > 0 ? z.speed * 0.45 : z.speed;
+                if (z.isBoss && z.chargeTimer > 0) {
+                    z.chargeTimer -= dt;
+                    curSpeed *= 2.6;
+                }
+
+                const angToShelter = Math.atan2(-z.x, -z.z);
+                const distToShelter = Math.hypot(z.x, z.z);
+                z.mesh.rotation.y = angToShelter;
+
+                // 걷기 애니메이션
+                z.walkPhase += dt * curSpeed * 3.2;
+                const lLeg = z.mesh.getObjectByName('leftLeg');
+                const rLeg = z.mesh.getObjectByName('rightLeg');
+                if (lLeg && rLeg) {
+                    lLeg.rotation.x = Math.sin(z.walkPhase) * 0.52;
+                    rLeg.rotation.x = -Math.sin(z.walkPhase) * 0.52;
+                }
+
+                // 스피터 원거리 산성 용액 발사
+                if (z.arch.isSpitter && distToShelter < 17 && distToShelter > 6.5) {
+                    z.rangedCooldown -= dt;
+                    if (z.rangedCooldown <= 0) {
+                        z.rangedCooldown = 3.2;
+                        fireAcidGlob(z.x, z.z, 0, 0, z.damage);
+                        continue;
+                    }
+                }
+
+                // 통행 불가 방어 시설 충돌 판정
+                let obstacle = null;
+                for (const f of state.facilities) {
+                    if (f.isPassable) continue;
+                    if (Math.hypot(f.x - z.x, f.z - z.z) < 1.35 + 0.38 * z.arch.scale) {
+                        obstacle = f;
+                        break;
+                    }
+                }
+
+                // 근접 아군 병사 충돌 판정
+                let engagedSoldier = null;
+                if (!obstacle) {
+                    for (const s of state.soldiers) {
+                        if (Math.hypot(s.x - z.x, s.z - z.z) < 1.1 + 0.35 * z.arch.scale) {
+                            engagedSoldier = s;
+                            break;
+                        }
+                    }
+                }
+
+                if (obstacle) {
+                    // 자폭 폭탄병이 방벽에 닿으면 즉시 자폭!
+                    if (z.arch.isBomber) {
+                        triggerExplosion(z.x, z.z, 5.4, z.damage, true);
+                        zombiesGroup.remove(z.mesh);
+                        state.zombies.splice(i, 1);
+                        updateHUD();
+                        continue;
+                    }
+
+                    if (z.attackCooldown <= 0) {
+                        z.attackCooldown = 1.0;
+                        obstacle.hp -= z.damage;
+                        if (obstacle.type === 'wood_barricade' || obstacle.type === 'hedgehog_barrier') {
+                            z.hp -= obstacle.damage;
+                        }
+                        spawnExplosionParticles(obstacle.x, 0.8, obstacle.z, 0xd6d3d1, 5, 2.2);
+                    }
+                } else if (engagedSoldier) {
+                    if (z.arch.isBomber) {
+                        triggerExplosion(z.x, z.z, 5.4, z.damage, true);
+                        engagedSoldier.hp = 0;
+                        zombiesGroup.remove(z.mesh);
+                        state.zombies.splice(i, 1);
+                        updateHUD();
+                        continue;
+                    }
+                    if (z.attackCooldown <= 0) {
+                        z.attackCooldown = 1.0;
+                        engagedSoldier.hp -= z.damage;
+                        spawnExplosionParticles(engagedSoldier.x, 0.9, engagedSoldier.z, 0xef4444, 4, 2.0);
+                    }
+                } else if (distToShelter <= 3.6 + 0.42 * z.arch.scale) {
+                    if (z.arch.isBomber) {
+                        triggerExplosion(z.x, z.z, 5.4, z.damage, true);
+                        zombiesGroup.remove(z.mesh);
+                        state.zombies.splice(i, 1);
+                        updateHUD();
+                        continue;
+                    }
+                    if (z.attackCooldown <= 0) {
+                        z.attackCooldown = 1.0;
+                        state.shelter.hp = Math.max(0, state.shelter.hp - z.damage);
+                        sfx.playHeavyExplosion();
+                        spawnExplosionParticles(z.x * 0.75, 1.2, z.z * 0.75, 0xef4444, 8, 2.8);
+                        updateHUD();
+                        if (state.shelter.hp <= 0 && state.phase !== 'GAMEOVER') {
+                            onGameOver();
+                            return;
+                        }
+                    }
+                } else {
+                    z.x += Math.sin(angToShelter) * curSpeed * dt;
+                    z.z += Math.cos(angToShelter) * curSpeed * dt;
+                    z.mesh.position.set(z.x, 0, z.z);
+                }
+            }
+
+            // 8) 폭발/파편 파티클 업데이트
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const pt = state.particles[i];
+                pt.life -= dt;
+                pt.vy -= 14.0 * dt;
+                pt.mesh.position.x += pt.vx * dt;
+                pt.mesh.position.y = Math.max(0.05, pt.mesh.position.y + pt.vy * dt);
+                pt.mesh.position.z += pt.vz * dt;
+                if (pt.life <= 0) {
+                    effectsGroup.remove(pt.mesh);
+                    state.particles.splice(i, 1);
+                }
+            }
+        }
+
+        function spawnBarracksSoldier(barracks) {
+            const role = barracks.type === 'barracks_heavy' ? 'heavy' : (barracks.type === 'barracks_sniper' ? 'sniper' : 'rifle');
+            const lvMult = 1 + (barracks.level - 1) * 0.32;
+
+            const specs = {
+                rifle:  { hp: 165, speed: 5.2, damage: Math.round(20 * lvMult), fireRate: 0.34, range: 13.5, piercing: false, color: 0xfef08a },
+                heavy:  { hp: 380, speed: 4.0, speedMod: 1, damage: Math.round(18 * lvMult), fireRate: 0.18, range: 11.5, piercing: false, color: 0xfbbf24 },
+                sniper: { hp: 140, speed: 4.6, damage: Math.round(95 * lvMult), fireRate: 1.45, range: 20.5, piercing: true, color: 0x38bdf8 }
+            }[role];
+
+            const ang = Math.random() * Math.PI * 2;
+            const sx = barracks.x + Math.cos(ang) * 1.4;
+            const sz = barracks.z + Math.sin(ang) * 1.4;
+
+            const mesh = createSoldierMesh(role);
+            mesh.position.set(sx, 0, sz);
+            soldiersGroup.add(mesh);
+
+            sfx.playConstruct();
+            spawnExplosionParticles(sx, 0.8, sz, 0x22c55e, 8, 2.4);
+
+            state.soldiers.push({
+                id: Date.now() + Math.random(),
+                barracksId: barracks.id,
+                role,
+                x: sx, z: sz,
+                homeX: barracks.x,
+                homeZ: barracks.z,
+                hp: Math.round(specs.hp * lvMult),
+                maxHp: Math.round(specs.hp * lvMult),
+                speed: specs.speed,
+                damage: specs.damage,
+                fireRate: specs.fireRate,
+                fireTimer: 0,
+                range: specs.range,
+                piercing: specs.piercing,
+                bulletColor: specs.color,
+                walkCycle: 0,
+                mesh
+            });
+        }
+
+        function updateSoldiersAI(dt, globalRangeMult) {
+            for (let i = state.soldiers.length - 1; i >= 0; i--) {
+                const s = state.soldiers[i];
+                if (s.hp <= 0) {
+                    spawnExplosionParticles(s.x, 0.9, s.z, 0x991b1b, 10, 2.8);
+                    soldiersGroup.remove(s.mesh);
+                    state.soldiers.splice(i, 1);
+                    continue;
+                }
+
+                if (s.fireTimer > 0) s.fireTimer -= dt;
+                const effRange = s.range * globalRangeMult;
+
+                // 사거리 내 적 탐색 (저격병은 보스/폭탄병 우선)
+                const target = s.role === 'sniper'
+                    ? findPriorityTarget(s.x, s.z, effRange)
+                    : findNearestZombie(s.x, s.z, effRange);
+
+                if (target) {
+                    const ang = Math.atan2(target.x - s.x, target.z - s.z);
+                    s.mesh.rotation.y = ang;
+                    const dist = Math.hypot(target.x - s.x, target.z - s.z);
+
+                    // 적정 교전 거리를 유지하며 전진 또는 산개
+                    const desiredDist = s.role === 'sniper' ? 14.0 : (s.role === 'heavy' ? 6.5 : 8.5);
+                    if (dist > desiredDist) {
+                        s.x += Math.sin(ang) * s.speed * dt;
+                        s.z += Math.cos(ang) * s.speed * dt;
+                        s.mesh.position.set(s.x, 0, s.z);
+                        s.walkCycle += dt * 13;
+                        const lLeg = s.mesh.getObjectByName('leftLeg');
+                        const rLeg = s.mesh.getObjectByName('rightLeg');
+                        if (lLeg && rLeg) {
+                            lLeg.rotation.x = Math.sin(s.walkCycle) * 0.5;
+                            rLeg.rotation.x = -Math.sin(s.walkCycle) * 0.5;
+                        }
+                    }
+
+                    if (s.fireTimer <= 0) {
+                        s.fireTimer = s.fireRate;
+                        if (s.role === 'sniper') sfx.playSniperCrack();
+                        else if (Math.random() < 0.35) sfx.playRifleShot(s.role === 'heavy');
+                        fireBullet(s.x, 1.12, s.z, target.x, 0.95, target.z, s.damage, s.bulletColor, s.piercing);
+                    }
+                } else {
+                    // 적이 없으면 소속 병영 주변 순찰 위치로 복귀
+                    const patrolAng = (s.id % 6.28) + state.timeElapsed * 0.25;
+                    const px = s.homeX + Math.cos(patrolAng) * 2.2;
+                    const pz = s.homeZ + Math.sin(patrolAng) * 2.2;
+                    const dx = px - s.x;
+                    const dz = pz - s.z;
+                    const d = Math.hypot(dx, dz);
+                    if (d > 0.35) {
+                        s.x += (dx / d) * s.speed * 0.65 * dt;
+                        s.z += (dz / d) * s.speed * 0.65 * dt;
+                        s.mesh.position.set(s.x, 0, s.z);
+                        s.mesh.rotation.y = Math.atan2(dx, dz);
+                        s.walkCycle += dt * 10;
+                        const lLeg = s.mesh.getObjectByName('leftLeg');
+                        const rLeg = s.mesh.getObjectByName('rightLeg');
+                        if (lLeg && rLeg) {
+                            lLeg.rotation.x = Math.sin(s.walkCycle) * 0.45;
+                            rLeg.rotation.x = -Math.sin(s.walkCycle) * 0.45;
+                        }
+                    }
+                }
+            }
+        }
+
+        function executeBossAbility(boss) {
+            const ab = boss.arch.ability;
+            sfx.playZombieRoar(true);
+
+            if (ab === 'SLAM' || ab === 'APEX') {
+                // 대지 분쇄 충격파: 주변 방벽 및 아군 병사 광역 피해
+                spawnExplosionParticles(boss.x, 0.5, boss.z, 0xf59e0b, 24, 6.5);
+                state.facilities.forEach(f => {
+                    if (Math.hypot(f.x - boss.x, f.z - boss.z) <= 8.0) {
+                        f.hp -= Math.round(boss.damage * 0.8);
+                    }
+                });
+                state.soldiers.forEach(s => {
+                    if (Math.hypot(s.x - boss.x, s.z - boss.z) <= 8.0) {
+                        s.hp -= Math.round(boss.damage * 0.65);
+                    }
+                });
+            }
+            if (ab === 'SUMMON' || ab === 'APEX') {
+                // 등에서 러너와 자폭 폭탄병 소환
+                spawnZombieUnit('runner', boss.x + 1.8, boss.z + 1.2);
+                spawnZombieUnit('bomber', boss.x - 1.8, boss.z - 1.2);
+                updateHUD();
+            }
+            if (ab === 'CHARGE' || ab === 'APEX') {
+                boss.chargeTimer = 1.8;
+            }
+        }
+
+        function createNapalmFirePool(x, z, radius, damage) {
+            const mesh = new THREE.Mesh(
+                new THREE.CircleGeometry(radius, 18),
+                new THREE.MeshBasicMaterial({ color: 0xea580c, transparent: true, opacity: 0.65 })
+            );
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.set(x, 0.14, z);
+            effectsGroup.add(mesh);
+            state.firePools.push({ x, z, radius, damage, life: 4.5, tick: 0.2, mesh });
+        }
+
+        function fireBullet(sx, sy, sz, tx, ty, tz, damage, colorHex, piercing = false) {
+            const dx = tx - sx;
+            const dz = tz - sz;
+            const len = Math.hypot(dx, dz) || 1;
+            const speed = piercing ? 48 : 36;
+
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(piercing ? 0.12 : 0.08, 0.08, piercing ? 0.85 : 0.45),
+                new THREE.MeshBasicMaterial({ color: colorHex })
+            );
+            mesh.position.set(sx, sy, sz);
+            mesh.rotation.y = Math.atan2(dx, dz);
+            effectsGroup.add(mesh);
+
+            state.projectiles.push({
+                kind: 'bullet',
+                x: sx, y: sy, z: sz,
+                vx: (dx / len) * speed,
+                vz: (dz / len) * speed,
+                damage,
+                piercing,
+                life: 0.75,
+                mesh
+            });
+        }
+
+        function fireAcidGlob(sx, sz, tx, tz, damage) {
+            const dx = tx - sx;
+            const dz = tz - sz;
+            const len = Math.hypot(dx, dz) || 1;
+            const speed = 13;
+
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.28, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0x84cc16 })
+            );
+            mesh.position.set(sx, 1.3, sz);
+            effectsGroup.add(mesh);
+
+            state.projectiles.push({
+                kind: 'acid',
+                x: sx, z: sz,
+                vx: (dx / len) * speed,
+                vz: (dz / len) * speed,
+                damage,
+                life: 1.5,
+                mesh
+            });
+        }
+
+        function launchArcProjectile(kind, sx, sz, tx, tz, duration, arcHeight, damage, radius) {
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(kind === 'rocket' ? 0.18 : 0.25, 8, 8),
+                new THREE.MeshStandardMaterial({ color: kind === 'rocket' ? 0xef4444 : 0x1c1917 })
+            );
+            mesh.position.set(sx, 1.2, sz);
+            effectsGroup.add(mesh);
+
+            state.projectiles.push({
+                kind, sx, sz, tx, tz,
+                progress: 0, duration, arcHeight,
+                damage, radius, mesh
+            });
+        }
+
+        function triggerExplosion(x, z, radius, damage, hurtStructures = false) {
+            sfx.playHeavyExplosion();
+            spawnExplosionParticles(x, 0.7, z, 0xf97316, 26, 7.0);
+            spawnExplosionParticles(x, 0.4, z, 0x292524, 15, 4.8);
+
+            state.zombies.forEach(zomb => {
+                const dist = Math.hypot(zomb.x - x, zomb.z - z);
+                if (dist <= radius) {
+                    const falloff = 1 - (dist / radius) * 0.4;
+                    zomb.hp -= Math.round(damage * falloff);
+                }
+            });
+
+            if (hurtStructures) {
+                state.facilities.forEach(f => {
+                    const dist = Math.hypot(f.x - x, f.z - z);
+                    if (dist <= radius) {
+                        f.hp -= Math.round(damage * 0.85);
+                    }
+                });
+                if (Math.hypot(x, z) <= radius + 3.0) {
+                    state.shelter.hp = Math.max(0, state.shelter.hp - Math.round(damage * 0.7));
+                    updateHUD();
+                    if (state.shelter.hp <= 0 && state.phase !== 'GAMEOVER') onGameOver();
+                }
+            }
+
+            // 인접 드럼통 연쇄 폭발
+            state.facilities.forEach(f => {
+                if (f.type === 'fuel_barrel' && f.hp > 0 && Math.hypot(f.x - x, f.z - z) <= radius * 0.85) {
+                    f.hp = 0;
+                }
+            });
+        }
+
+        function findNearestZombie(x, z, maxRange) {
+            let best = null, bestDist = maxRange;
+            for (const zomb of state.zombies) {
+                const d = Math.hypot(zomb.x - x, zomb.z - z);
+                if (d <= bestDist) { bestDist = d; best = zomb; }
+            }
+            return best;
+        }
+
+        function findPriorityTarget(x, z, maxRange) {
+            let best = null, bestScore = -1;
+            for (const zomb of state.zombies) {
+                const d = Math.hypot(zomb.x - x, zomb.z - z);
+                if (d <= maxRange) {
+                    const score = (zomb.isBoss ? 1000 : 0) + (zomb.arch.isBomber ? 500 : 0) + zomb.hp;
+                    if (score > bestScore) { bestScore = score; best = zomb; }
+                }
+            }
+            return best;
+        }
+
+        function spawnExplosionParticles(x, y, z, colorHex, count, spreadSpeed) {
+            const geo = new THREE.BoxGeometry(0.18, 0.18, 0.18);
+            const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+            for (let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y, z);
+                effectsGroup.add(mesh);
+                const ang = Math.random() * Math.PI * 2;
+                const spd = (0.3 + Math.random() * 0.7) * spreadSpeed;
+                state.particles.push({
+                    mesh,
+                    vx: Math.cos(ang) * spd,
+                    vy: 2.6 + Math.random() * spreadSpeed,
+                    vz: Math.sin(ang) * spd,
+                    life: 0.35 + Math.random() * 0.3
+                });
+            }
+        }
+
+        window.onload = function() {
+            initThreeScene();
+            renderBuildMenu();
+            lastFrameTime = performance.now();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>

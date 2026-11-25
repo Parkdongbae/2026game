@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>해리포터: 위저드 아케이드 파이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #09080f;
+            color: #f8fafc;
+            overflow: hidden;
+            user-select: none;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        /* 아케이드 글로우 & 버튼 스타일 */
+        .arcade-btn {
+            background: linear-gradient(135deg, #b45309 0%, #78350f 100%);
+            border: 2px solid #fbbf24;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .arcade-btn:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 22px rgba(251, 191, 36, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            filter: brightness(1.1);
+        }
+        .arcade-btn:active:not(:disabled) {
+            transform: translateY(1px) scale(0.98);
+        }
+        .arcade-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+        .glass-panel {
+            background: rgba(15, 13, 28, 0.78);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+        }
+        @keyframes spinSlow {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes spinReverse {
+            from { transform: translate(-50%, -50%) rotate(360deg); }
+            to { transform: translate(-50%, -50%) rotate(0deg); }
+        }
+        .magic-circle-outer {
+            animation: spinSlow 45s linear infinite;
+        }
+        .magic-circle-inner {
+            animation: spinReverse 30s linear infinite;
+        }
+        /* HP / MP 바 애니메이션 */
+        .bar-smooth {
+            transition: width 0.15s ease-out;
+        }
+        /* 커스텀 스크롤바 숨김 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative">
+
+    <!-- 글로벌 알림 토스트 (alert 대체) -->
+    <div id="toast-box" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-300">
+        <div id="toast-msg" class="px-6 py-2.5 rounded-full bg-amber-950/90 border border-amber-400 text-amber-200 font-bold text-sm shadow-2xl">
+            메시지
+        </div>
+    </div>
+
+    <!-- ==================== 1. 로비(타이틀) 화면 ==================== -->
+    <div id="screen-title" class="w-full h-full flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <!-- 신비로운 배경 & 회전 마법진 -->
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#2e1065_0%,_#110c24_45%,_#06050c_100%)] -z-20"></div>
+        <svg class="magic-circle-outer absolute top-1/2 left-1/2 w-[780px] h-[780px] opacity-15 pointer-events-none -z-10" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="95" fill="none" stroke="#fbbf24" stroke-width="0.8" stroke-dasharray="4 3"/>
+            <circle cx="100" cy="100" r="82" fill="none" stroke="#a855f7" stroke-width="1"/>
+            <polygon points="100,12 176,144 24,144" fill="none" stroke="#fbbf24" stroke-width="0.7"/>
+            <polygon points="100,188 176,56 24,56" fill="none" stroke="#fbbf24" stroke-width="0.7"/>
+        </svg>
+        <svg class="magic-circle-inner absolute top-1/2 left-1/2 w-[520px] h-[520px] opacity-20 pointer-events-none -z-10" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="90" fill="none" stroke="#38bdf8" stroke-width="0.8" stroke-dasharray="8 4"/>
+            <rect x="36" y="36" width="128" height="128" fill="none" stroke="#fbbf24" stroke-width="0.6"/>
+        </svg>
+
+        <!-- 로고 타이틀 -->
+        <div class="text-center mb-6">
+            <div class="inline-block px-4 py-1 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-300 text-xs font-bold tracking-widest mb-2">
+                ⚡ ARCADE WIZARD DUEL · ALL CHARACTERS UNLOCKED
+            </div>
+            <h1 class="font-cinzel text-4xl sm:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 drop-shadow-[0_4px_20px_rgba(251,191,36,0.45)]">
+                HARRY POTTER
+            </h1>
+            <h2 class="text-xl sm:text-2xl font-black text-purple-200 tracking-widest mt-1">
+                위저드 아케이드 파이터
+            </h2>
+        </div>
+
+        <!-- 로비 설정 허브 카드 -->
+        <div class="glass-panel w-full max-w-2xl rounded-3xl p-6 sm:p-8 flex flex-col gap-5">
+            <!-- 대전 방식 선택 -->
+            <div>
+                <label class="block text-xs font-bold text-amber-300/90 tracking-wider mb-2">① 대전 상대 선택</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-opponent-ai" onclick="setOpponentMode('ai')" class="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/20 text-white font-bold flex items-center justify-center gap-2 transition">
+                        <span>🤖</span> <span>1P vs AI 결투</span>
+                    </button>
+                    <button id="btn-opponent-2p" onclick="setOpponentMode('2p')" class="p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition">
+                        <span>👥</span> <span>1P vs 2P 로컬 대전</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 팀 인원수 선택 -->
+            <div>
+                <label class="block text-xs font-bold text-amber-300/90 tracking-wider mb-2">② 결투 규칙 선택</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-team-1v1" onclick="setTeamMode(1)" class="p-3.5 rounded-2xl border-2 border-purple-400 bg-purple-500/20 text-white font-bold flex items-center justify-center gap-2 transition">
+                        <span>⚔️</span> <span>1 vs 1 싱글 결투</span>
+                    </button>
+                    <button id="btn-team-2v2" onclick="setTeamMode(2)" class="p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition">
+                        <span>🔄</span> <span>2 vs 2 태그 팀 결투</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI 난이도 선택 -->
+            <div id="ai-difficulty-box">
+                <label class="block text-xs font-bold text-amber-300/90 tracking-wider mb-2">③ AI 난이도 설정</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setDifficulty('easy')" id="diff-easy" class="py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 text-xs sm:text-sm font-bold transition">
+                        🌱 쉬움
+                    </button>
+                    <button onclick="setDifficulty('normal')" id="diff-normal" class="py-2.5 px-2 rounded-xl border-2 border-sky-400 bg-sky-500/20 text-white text-xs sm:text-sm font-bold transition">
+                        📘 보통
+                    </button>
+                    <button onclick="setDifficulty('hard')" id="diff-hard" class="py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 text-xs sm:text-sm font-bold transition">
+                        🔥 어려움
+                    </button>
+                    <button onclick="setDifficulty('master')" id="diff-master" class="py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 text-xs sm:text-sm font-bold transition">
+                        👑 마스터
+                    </button>
+                </div>
+            </div>
+
+            <!-- 조작법 요약 -->
+            <div class="bg-slate-950/70 rounded-2xl p-3.5 border border-slate-800 text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                    <span class="text-amber-400 font-bold">[1P 조작]</span> 이동: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">A</kbd><kbd class="px-1.5 py-0.5 bg-slate-800 rounded">D</kbd> · 점프: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">Space</kbd> · 방어: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">S</kbd> · 대쉬: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">Q</kbd>
+                </div>
+                <div>
+                    <span class="text-sky-400 font-bold">[1P 주문]</span> 평타/약주문: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">좌클릭</kbd> · 강주문: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">우클릭</kbd> · 궁극기: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">R</kbd> · 태그: <kbd class="px-1.5 py-0.5 bg-slate-800 rounded">E</kbd>
+                </div>
+            </div>
+
+            <button onclick="startSelectScreen()" class="arcade-btn w-full py-4 rounded-2xl text-lg sm:text-xl font-black text-amber-100 tracking-wider">
+                ⚡ 마법사 선택 및 결투장 입장
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 2. 캐릭터 & 맵 선택 화면 ==================== -->
+    <div id="screen-select" class="hidden w-full h-full flex flex-col justify-between p-3 sm:p-5 bg-[radial-gradient(circle_at_top,_#1e1b4b_0%,_#09080f_80%)] overflow-y-auto">
+        <!-- 상단 헤더 -->
+        <div class="flex items-center justify-between max-w-6xl w-full mx-auto">
+            <button onclick="showScreen('screen-title')" class="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-bold text-slate-200">
+                ← 로비로 돌아가기
+            </button>
+            <div class="text-center">
+                <h2 class="text-lg sm:text-2xl font-black text-amber-300 tracking-wide">마법사 & 결투장 선택</h2>
+                <p id="select-guide-text" class="text-xs text-purple-200">1P 마법사를 선택하세요</p>
+            </div>
+            <button id="btn-reroll-ai" onclick="rerollAICharacters()" class="px-3.5 py-2 rounded-xl bg-purple-900/70 hover:bg-purple-800 border border-purple-500 text-xs font-bold text-purple-100">
+                🎲 AI 랜덤 재추첨
+            </button>
+        </div>
+
+        <!-- 선택된 캐릭터 상세 스탯 배너 & 팀 슬롯 -->
+        <div class="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 my-2">
+            <!-- 1P 슬롯 -->
+            <div class="lg:col-span-3 glass-panel rounded-2xl p-3 flex flex-col justify-between border-amber-400/50">
+                <div class="text-xs font-black text-amber-400 mb-1.5 flex justify-between">
+                    <span>PLAYER 1 TEAM</span>
+                    <button onclick="resetSelections()" class="text-[11px] text-slate-400 hover:text-white underline">초기화</button>
+                </div>
+                <div id="slots-p1" class="grid grid-cols-2 gap-2"></div>
+            </div>
+
+            <!-- 중앙 캐릭터 상세 스탯 프리뷰 -->
+            <div id="char-detail-banner" class="lg:col-span-6 glass-panel rounded-2xl p-3.5 flex items-center justify-between gap-4 border-purple-400/40">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="detail-badge" class="px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-300 border border-amber-400/40">⚡ 고속 공격형</span>
+                        <h3 id="detail-name" class="text-lg sm:text-xl font-black text-white">해리 포터</h3>
+                    </div>
+                    <p id="detail-spells" class="text-xs text-slate-300 mb-2">약: 스투페파이 · 강: 엑스펠리아르무스 · 궁극: 익스펙토 패트로눔</p>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                            <div class="flex justify-between text-rose-300 font-bold mb-0.5"><span>공격 ATK</span><span id="detail-atk-val">88</span></div>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div id="detail-atk-bar" class="h-full bg-rose-500 rounded-full" style="width:88%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sky-300 font-bold mb-0.5"><span>방어 DEF</span><span id="detail-def-val">58</span></div>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div id="detail-def-bar" class="h-full bg-sky-500 rounded-full" style="width:58%"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-emerald-300 font-bold mb-0.5"><span>속도 SPD</span><span id="detail-spd-val">90</span></div>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div id="detail-spd-bar" class="h-full bg-emerald-400 rounded-full" style="width:90%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2P / AI 슬롯 -->
+            <div class="lg:col-span-3 glass-panel rounded-2xl p-3 flex flex-col justify-between border-rose-500/50">
+                <div class="text-xs font-black text-rose-400 mb-1.5 flex justify-between">
+                    <span id="p2-slot-title">AI OPPONENT</span>
+                    <span id="p2-diff-badge" class="text-[11px] text-slate-300">보통</span>
+                </div>
+                <div id="slots-p2" class="grid grid-cols-2 gap-2"></div>
+            </div>
+        </div>
+
+        <!-- 7명 캐릭터 그리드 -->
+        <div id="character-grid" class="max-w-6xl w-full mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 my-1">
+            <!-- JS로 렌더링 -->
+        </div>
+
+        <!-- 스테이지(맵) 선택 + 전투 시작 버튼 -->
+        <div class="max-w-6xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
+            <div id="stage-grid" class="flex-1 w-full grid grid-cols-5 gap-2">
+                <!-- JS로 렌더링 -->
+            </div>
+            <button id="btn-start-fight" onclick="startBattle()" disabled class="arcade-btn w-full sm:w-auto px-8 py-4 rounded-2xl text-lg font-black text-amber-100 whitespace-nowrap">
+                🔥 결투 시작!
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== 3. 실시간 아케이드 전투 화면 ==================== -->
+    <div id="screen-battle" class="hidden w-full h-full relative bg-black">
+        <!-- 상단 HUD (체력바, 마력바, 타이머, 컨트롤 버튼) -->
+        <div class="absolute top-0 left-0 right-0 z-20 p-3 sm:p-4 pointer-events-none">
+            <div class="max-w-6xl mx-auto flex items-start justify-between gap-3">
+                <!-- 1P HUD -->
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2">
+                            <span id="hud-p1-name" class="font-black text-sm sm:text-lg text-amber-300 drop-shadow">해리 포터</span>
+                            <span id="hud-p1-tag" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-slate-900/80 border border-amber-400/50 text-amber-200 font-bold">파트너 대기</span>
+                        </div>
+                        <span id="hud-p1-hp-text" class="text-xs font-bold text-white">1000 / 1000</span>
+                    </div>
+                    <!-- HP 바 -->
+                    <div class="w-full h-4 sm:h-5 bg-slate-900/90 rounded-full p-0.5 border border-amber-400/60 shadow-lg">
+                        <div id="hud-p1-hp" class="bar-smooth h-full bg-gradient-to-r from-emerald-500 via-lime-400 to-amber-300 rounded-full" style="width: 100%"></div>
+                    </div>
+                    <!-- MP 바 -->
+                    <div class="w-4/5 h-2.5 bg-slate-900/90 rounded-full p-0.5 border border-sky-400/50 mt-1">
+                        <div id="hud-p1-mp" class="bar-smooth h-full bg-gradient-to-r from-blue-600 to-cyan-300 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="hud-p1-ult-ready" class="hidden text-[11px] font-black text-cyan-300 animate-pulse mt-0.5">⚡ [R] 궁극기 발동 가능!</div>
+                </div>
+
+                <!-- 중앙 타이머 & 일시정지/나가기 -->
+                <div class="flex flex-col items-center pointer-events-auto">
+                    <div class="px-4 py-1.5 rounded-2xl bg-slate-950/90 border-2 border-amber-400/70 text-center shadow-xl">
+                        <div class="text-[10px] font-bold text-amber-400 tracking-widest">TIME</div>
+                        <div id="hud-timer" class="font-cinzel text-2xl sm:text-3xl font-black text-white leading-none">99</div>
+                    </div>
+                    <button onclick="abortBattle()" class="mt-1.5 px-3 py-1 rounded-lg bg-slate-900/85 hover:bg-rose-900/80 border border-slate-600 text-[11px] font-bold text-slate-200">
+                        나가기
+                    </button>
+                </div>
+
+                <!-- 2P / AI HUD -->
+                <div class="flex-1 text-right">
+                    <div class="flex items-center justify-between mb-1">
+                        <span id="hud-p2-hp-text" class="text-xs font-bold text-white">1000 / 1000</span>
+                        <div class="flex items-center gap-2">
+                            <span id="hud-p2-tag" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-slate-900/80 border border-rose-400/50 text-rose-200 font-bold">파트너 대기</span>
+                            <span id="hud-p2-name" class="font-black text-sm sm:text-lg text-rose-400 drop-shadow">볼드모트</span>
+                        </div>
+                    </div>
+                    <!-- HP 바 -->
+                    <div class="w-full h-4 sm:h-5 bg-slate-900/90 rounded-full p-0.5 border border-rose-500/60 shadow-lg">
+                        <div id="hud-p2-hp" class="bar-smooth h-full bg-gradient-to-l from-rose-500 via-orange-400 to-amber-300 rounded-full ml-auto" style="width: 100%"></div>
+                    </div>
+                    <!-- MP 바 -->
+                    <div class="w-4/5 h-2.5 bg-slate-900/90 rounded-full p-0.5 border border-purple-400/50 mt-1 ml-auto">
+                        <div id="hud-p2-mp" class="bar-smooth h-full bg-gradient-to-l from-purple-600 to-fuchsia-400 rounded-full ml-auto" style="width: 0%"></div>
+                    </div>
+                    <div id="hud-p2-ult-ready" class="hidden text-[11px] font-black text-fuchsia-300 animate-pulse mt-0.5">⚡ 궁극기 MAX!</div>
+                </div>
+            </div>
+
+            <!-- 실시간 콤보 카운터 표시 -->
+            <div class="max-w-6xl mx-auto flex justify-between mt-3">
+                <div id="combo-p1" class="opacity-0 transition-opacity duration-150">
+                    <div class="text-3xl sm:text-4xl font-black italic text-amber-300 drop-shadow-[0_2px_10px_rgba(251,191,36,0.8)]">
+                        <span id="combo-p1-count">2</span> HITS!
+                    </div>
+                    <div id="combo-p1-dmg" class="text-xs font-bold text-white">120 DAMAGE</div>
+                    <div id="combo-p1-cancel" class="hidden text-xs font-black text-cyan-300">✨ MAGIC CANCEL!</div>
+                </div>
+                <div id="combo-p2" class="opacity-0 transition-opacity duration-150 text-right">
+                    <div class="text-3xl sm:text-4xl font-black italic text-rose-400 drop-shadow-[0_2px_10px_rgba(244,63,94,0.8)]">
+                        <span id="combo-p2-count">2</span> HITS!
+                    </div>
+                    <div id="combo-p2-dmg" class="text-xs font-bold text-white">120 DAMAGE</div>
+                    <div id="combo-p2-cancel" class="hidden text-xs font-black text-fuchsia-300">✨ MAGIC CANCEL!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 전투 메인 캔버스 -->
+        <canvas id="battle-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- 하단 조작 힌트 바 -->
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none px-4 py-1 rounded-full bg-black/60 border border-white/15 text-[11px] text-slate-300 whitespace-nowrap">
+            1P: [A/D] 이동 · [Space] 점프 · [S] 방어 · [Q] 대쉬 · [좌클릭] 연격/약주문 · [우클릭] 강주문 · [R] 궁극기 · [E] 태그
+        </div>
+
+        <!-- 경기 결과 오버레이 모달 -->
+        <div id="battle-result-modal" class="hidden absolute inset-0 z-30 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+            <div class="glass-panel max-w-md w-full rounded-3xl p-7 text-center border-2 border-amber-400">
+                <div class="text-4xl mb-2">🏆</div>
+                <h2 id="result-title" class="font-cinzel text-3xl sm:text-4xl font-black text-amber-300 mb-2">PLAYER 1 WIN!</h2>
+                <p id="result-subtitle" class="text-sm text-slate-300 mb-6">호그와트 결투장의 승자가 탄생했습니다!</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="startBattle()" class="arcade-btn py-3.5 rounded-2xl font-black text-amber-100">
+                        🔄 다시 대결하기
+                    </button>
+                    <button onclick="returnToSelect()" class="py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-500 font-bold text-white">
+                        🧙 마법사 변경
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 1. 게임 데이터 & 캐릭터 정의 ====================
+        const CHARACTERS = [
+            {
+                id: 'harry',
+                name: '해리 포터',
+                house: '그리핀도르',
+                roleBadge: '⚡ 고속 공격형',
+                atkStat: 88, defStat: 58, spdStat: 90,
+                maxHp: 960, speed: 340, attackPower: 1.08, defense: 0.88,
+                robeColor: '#18181b', sweaterColor: '#3f3f46', tiePrimary: '#b91c1c', tieSecondary: '#fbbf24',
+                skinColor: '#f5d0b5', hairColor: '#291d18', eyeColor: '#15803d',
+                glasses: true, scar: true, beard: false,
+                lightColor: '#ef4444', heavyColor: '#fbbf24', ultColor: '#38bdf8',
+                spells: { light: '스투페파이!', heavy: '엑스펠리아르무스!', ult: '익스펙토 패트로눔!' }
+            },
+            {
+                id: 'hermione',
+                name: '헤르미온느',
+                house: '그리핀도르',
+                roleBadge: '✨ 테크니컬 콤보',
+                atkStat: 82, defStat: 68, spdStat: 94,
+                maxHp: 940, speed: 355, attackPower: 1.02, defense: 0.94,
+                robeColor: '#18181b', sweaterColor: '#3f3f46', tiePrimary: '#b91c1c', tieSecondary: '#fbbf24',
+                skinColor: '#f7d7c0', hairColor: '#5c3a21', eyeColor: '#78350f',
+                glasses: false, scar: false, beard: false, longHair: true,
+                lightColor: '#f59e0b', heavyColor: '#fb7185', ultColor: '#c084fc',
+                spells: { light: '인센디오!', heavy: '봄바르다 맥시마!', ult: '아스트랄 매직 서클!' }
+            },
+            {
+                id: 'ron',
+                name: '론 위즐리',
+                house: '그리핀도르',
+                roleBadge: '🛡️ 중장갑 탱커',
+                atkStat: 74, defStat: 94, spdStat: 55,
+                maxHp: 1180, speed: 265, attackPower: 0.94, defense: 1.24,
+                robeColor: '#18181b', sweaterColor: '#3f3f46', tiePrimary: '#b91c1c', tieSecondary: '#fbbf24',
+                skinColor: '#fae0cc', hairColor: '#c2410c', eyeColor: '#2563eb',
+                glasses: false, scar: false, beard: false,
+                lightColor: '#fb923c', heavyColor: '#f43f5e', ultColor: '#facc15',
+                spells: { light: '플리펜도!', heavy: '콘프링고!', ult: '위즐리 와일드파이어!' }
+            },
+            {
+                id: 'malfoy',
+                name: '드레이코 말포이',
+                house: '슬리데린',
+                roleBadge: '🐍 초고속 암살형',
+                atkStat: 85, defStat: 52, spdStat: 98,
+                maxHp: 910, speed: 375, attackPower: 1.05, defense: 0.84,
+                robeColor: '#0f172a', sweaterColor: '#334155', tiePrimary: '#15803d', tieSecondary: '#cbd5e1',
+                skinColor: '#f8e3d4', hairColor: '#fef08a', eyeColor: '#64748b',
+                glasses: false, scar: false, beard: false, slickedHair: true,
+                lightColor: '#22c55e', heavyColor: '#10b981', ultColor: '#34d399',
+                spells: { light: '에버테 스타툼!', heavy: '세르펜소르티아!', ult: '바실리스크 팽!' }
+            },
+            {
+                id: 'snape',
+                name: '세베루스 스네이프',
+                house: '슬리데린',
+                roleBadge: '⚔️ 반격 공방밸런스',
+                atkStat: 90, defStat: 88, spdStat: 70,
+                maxHp: 1080, speed: 295, attackPower: 1.12, defense: 1.15,
+                robeColor: '#09090b', sweaterColor: '#18181b', tiePrimary: '#064e3b', tieSecondary: '#94a3b8',
+                skinColor: '#ebd5c5', hairColor: '#09090b', eyeColor: '#1e1b4b',
+                glasses: false, scar: false, beard: false, curtainHair: true,
+                lightColor: '#a855f7', heavyColor: '#e11d48', ultColor: '#be123c',
+                spells: { light: '레비코푸스!', heavy: '디핀도!', ult: '섹툼셈프라!' }
+            },
+            {
+                id: 'dumbledore',
+                name: '알버스 덤블도어',
+                house: '호그와트 교장',
+                roleBadge: '👑 대마법사 올라운더',
+                atkStat: 95, defStat: 92, spdStat: 66,
+                maxHp: 1140, speed: 285, attackPower: 1.18, defense: 1.20,
+                robeColor: '#312e81', sweaterColor: '#4338ca', tiePrimary: '#fbbf24', tieSecondary: '#fef08a',
+                skinColor: '#f3d2bc', hairColor: '#e2e8f0', eyeColor: '#0284c7',
+                glasses: true, scar: false, beard: true, wizardHat: true,
+                lightColor: '#fbbf24', heavyColor: '#f97316', ultColor: '#fde047',
+                spells: { light: '이그니스 스파크!', heavy: '피닉스 깃털 창!', ult: '불사조 폭스의 불꽃!' }
+            },
+            {
+                id: 'voldemort',
+                name: '볼드모트',
+                house: '어둠의 마왕',
+                roleBadge: '💀 극딜 파괴형',
+                atkStat: 100, defStat: 56, spdStat: 86,
+                maxHp: 950, speed: 330, attackPower: 1.26, defense: 0.86,
+                robeColor: '#09090b', sweaterColor: '#18181b', tiePrimary: '#14532d', tieSecondary: '#22c55e',
+                skinColor: '#cbd5e1', hairColor: '#cbd5e1', eyeColor: '#dc2626',
+                glasses: false, scar: false, beard: false, bald: true,
+                lightColor: '#4ade80', heavyColor: '#a3e635', ultColor: '#22c55e',
+                spells: { light: '크루시오!', heavy: '모르스모드레!', ult: '아바다 케다브라!' }
+            }
+        ];
+
+        const STAGES = [
+            { id: 'greathall', name: '호그와트 대연회장', icon: '🕯️', bgTop: '#1e1b4b', bgBot: '#31102f', floor: '#27201c' },
+            { id: 'quidditch', name: '퀴디치 경기장', icon: '🏆', bgTop: '#0369a1', bgBot: '#bae6fd', floor: '#15803d' },
+            { id: 'forest', name: '금지된 숲', icon: '🌲', bgTop: '#020617', bgBot: '#064e3b', floor: '#0f291e' },
+            { id: 'ministry', name: '마법부 아트리움', icon: '🏛️', bgTop: '#090d16', bgBot: '#1e293b', floor: '#111827' },
+            { id: 'astronomy', name: '천문대 탑', icon: '🌌', bgTop: '#090518', bgBot: '#2e1065', floor: '#1e1b4b' }
+        ];
+
+        // ==================== 2. 전역 상태 관리 ====================
+        const gameConfig = {
+            opponentMode: 'ai',   // 'ai' | '2p'
+            teamSize: 1,          // 1 | 2
+            difficulty: 'normal', // 'easy' | 'normal' | 'hard' | 'master'
+            selectedStage: 'greathall',
+            p1Team: [],
+            p2Team: []
+        };
+
+        let toastTimeout = null;
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            const text = document.getElementById('toast-msg');
+            text.textContent = msg;
+            box.classList.remove('opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => box.classList.add('opacity-0'), 2200);
+        }
+
+        function showScreen(id) {
+            ['screen-title', 'screen-select', 'screen-battle'].forEach(s => {
+                document.getElementById(s).classList.add('hidden');
+            });
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        // ==================== 3. Web Audio API 합성 마법 효과음 ====================
+        let audioCtx = null;
+        function playSound(type) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'melee') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(90, now + 0.09);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } else if (type === 'light') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(680, now);
+                    osc.frequency.exponentialRampToValueAtTime(240, now + 0.16);
+                    gain.gain.setValueAtTime(0.16, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                    osc.start(now);
+                    osc.stop(now + 0.16);
+                } else if (type === 'heavy') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(620, now + 0.12);
+                    osc.frequency.exponentialRampToValueAtTime(110, now + 0.28);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } else if (type === 'ult') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.45);
+                    gain.gain.setValueAtTime(0.26, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'hit') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(160, now);
+                    osc.frequency.exponentialRampToValueAtTime(45, now + 0.14);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+                    osc.start(now);
+                    osc.stop(now + 0.14);
+                } else if (type === 'dash') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(850, now + 0.11);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.11);
+                    osc.start(now);
+                    osc.stop(now + 0.11);
+                }
+            } catch (e) {}
+        }
+
+        // ==================== 4. 로비 설정 & 캐릭터 선택 로직 ====================
+        function setOpponentMode(mode) {
+            gameConfig.opponentMode = mode;
+            const btnAi = document.getElementById('btn-opponent-ai');
+            const btn2p = document.getElementById('btn-opponent-2p');
+            const diffBox = document.getElementById('ai-difficulty-box');
+
+            if (mode === 'ai') {
+                btnAi.className = 'p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/20 text-white font-bold flex items-center justify-center gap-2 transition';
+                btn2p.className = 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition';
+                diffBox.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                btn2p.className = 'p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-500/20 text-white font-bold flex items-center justify-center gap-2 transition';
+                btnAi.className = 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition';
+                diffBox.classList.add('opacity-40', 'pointer-events-none');
+            }
+        }
+
+        function setTeamMode(size) {
+            gameConfig.teamSize = size;
+            const btn1 = document.getElementById('btn-team-1v1');
+            const btn2 = document.getElementById('btn-team-2v2');
+            if (size === 1) {
+                btn1.className = 'p-3.5 rounded-2xl border-2 border-purple-400 bg-purple-500/20 text-white font-bold flex items-center justify-center gap-2 transition';
+                btn2.className = 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition';
+            } else {
+                btn2.className = 'p-3.5 rounded-2xl border-2 border-purple-400 bg-purple-500/20 text-white font-bold flex items-center justify-center gap-2 transition';
+                btn1.className = 'p-3.5 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-300 font-bold flex items-center justify-center gap-2 transition';
+            }
+        }
+
+        function setDifficulty(diff) {
+            gameConfig.difficulty = diff;
+            ['easy', 'normal', 'hard', 'master'].forEach(d => {
+                const el = document.getElementById('diff-' + d);
+                if (d === diff) {
+                    el.className = 'py-2.5 px-2 rounded-xl border-2 border-sky-400 bg-sky-500/25 text-white text-xs sm:text-sm font-bold transition';
+                } else {
+                    el.className = 'py-2.5 px-2 rounded-xl border border-slate-700 bg-slate-900/70 text-slate-300 text-xs sm:text-sm font-bold transition';
+                }
+            });
+        }
+
+        function startSelectScreen() {
+            gameConfig.p1Team = [];
+            gameConfig.p2Team = [];
+            if (gameConfig.opponentMode === 'ai') {
+                assignRandomAITeam();
+            }
+            showScreen('screen-select');
+            updateCharDetailBanner(CHARACTERS[0]);
+            renderCharacterGrid();
+            renderStageGrid();
+            updateSelectionSlots();
+        }
+
+        function assignRandomAITeam() {
+            const pool = [...CHARACTERS].sort(() => Math.random() - 0.5);
+            gameConfig.p2Team = pool.slice(0, gameConfig.teamSize);
+        }
+
+        function rerollAICharacters() {
+            if (gameConfig.opponentMode !== 'ai') return;
+            assignRandomAITeam();
+            updateSelectionSlots();
+            renderCharacterGrid();
+            showToast('🎲 AI 상대 마법사가 새로 배정되었습니다!');
+        }
+
+        function resetSelections() {
+            gameConfig.p1Team = [];
+            if (gameConfig.opponentMode === '2p') {
+                gameConfig.p2Team = [];
+            }
+            updateSelectionSlots();
+            renderCharacterGrid();
+        }
+
+        function updateCharDetailBanner(char) {
+            document.getElementById('detail-badge').textContent = char.roleBadge;
+            document.getElementById('detail-name').textContent = `${char.name} (${char.house})`;
+            document.getElementById('detail-spells').textContent = `약: ${char.spells.light} · 강: ${char.spells.heavy} · 궁극: ${char.spells.ult}`;
+            document.getElementById('detail-atk-val').textContent = char.atkStat;
+            document.getElementById('detail-atk-bar').style.width = char.atkStat + '%';
+            document.getElementById('detail-def-val').textContent = char.defStat;
+            document.getElementById('detail-def-bar').style.width = char.defStat + '%';
+            document.getElementById('detail-spd-val').textContent = char.spdStat;
+            document.getElementById('detail-spd-bar').style.width = char.spdStat + '%';
+        }
+
+        function handleCharacterClick(char) {
+            updateCharDetailBanner(char);
+            const size = gameConfig.teamSize;
+
+            if (gameConfig.p1Team.length < size) {
+                if (gameConfig.p1Team.some(c => c.id === char.id)) {
+                    showToast('이미 1P 팀에 선택된 마법사입니다!');
+                    return;
+                }
+                gameConfig.p1Team.push(char);
+            } else if (gameConfig.opponentMode === '2p' && gameConfig.p2Team.length < size) {
+                if (gameConfig.p2Team.some(c => c.id === char.id)) {
+                    showToast('이미 2P 팀에 선택된 마법사입니다!');
+                    return;
+                }
+                gameConfig.p2Team.push(char);
+            } else {
+                // 이미 다 찼으면 1P 팀을 새로 교체 시작
+                gameConfig.p1Team = [char];
+                if (gameConfig.opponentMode === '2p') gameConfig.p2Team = [];
+            }
+
+            updateSelectionSlots();
+            renderCharacterGrid();
+        }
+
+        function updateSelectionSlots() {
+            const size = gameConfig.teamSize;
+            const p1Container = document.getElementById('slots-p1');
+            const p2Container = document.getElementById('slots-p2');
+            const guide = document.getElementById('select-guide-text');
+            const rerollBtn = document.getElementById('btn-reroll-ai');
+            const p2Title = document.getElementById('p2-slot-title');
+            const p2Diff = document.getElementById('p2-diff-badge');
+
+            const diffLabels = { easy: '🌱 쉬움', normal: '📘 보통', hard: '🔥 어려움', master: '👑 마스터' };
+            if (gameConfig.opponentMode === 'ai') {
+                rerollBtn.classList.remove('hidden');
+                p2Title.textContent = 'AI OPPONENT';
+                p2Diff.textContent = diffLabels[gameConfig.difficulty];
+            } else {
+                rerollBtn.classList.add('hidden');
+                p2Title.textContent = 'PLAYER 2 TEAM';
+                p2Diff.textContent = 'LOCAL 2P';
+            }
+
+            p1Container.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const c = gameConfig.p1Team[i];
+                p1Container.innerHTML += `
+                    <div class="p-2 rounded-xl border ${c ? 'border-amber-400 bg-amber-500/15' : 'border-dashed border-slate-700 bg-slate-900/40'} text-center">
+                        <div class="text-[10px] text-amber-300 font-bold">${i === 0 ? '선봉' : '파트너'}</div>
+                        <div class="text-xs font-black text-white truncate">${c ? c.name : '선택 대기'}</div>
+                    </div>
+                `;
+            }
+
+            p2Container.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const c = gameConfig.p2Team[i];
+                p2Container.innerHTML += `
+                    <div class="p-2 rounded-xl border ${c ? 'border-rose-400 bg-rose-500/15' : 'border-dashed border-slate-700 bg-slate-900/40'} text-center">
+                        <div class="text-[10px] text-rose-300 font-bold">${i === 0 ? '선봉' : '파트너'}</div>
+                        <div class="text-xs font-black text-white truncate">${c ? c.name : '선택 대기'}</div>
+                    </div>
+                `;
+            }
+
+            const ready = gameConfig.p1Team.length === size && gameConfig.p2Team.length === size;
+            const startBtn = document.getElementById('btn-start-fight');
+            startBtn.disabled = !ready;
+
+            if (gameConfig.p1Team.length < size) {
+                guide.textContent = `1P 마법사를 선택하세요 (${gameConfig.p1Team.length}/${size})`;
+            } else if (gameConfig.opponentMode === '2p' && gameConfig.p2Team.length < size) {
+                guide.textContent = `2P 마법사를 선택하세요 (${gameConfig.p2Team.length}/${size})`;
+            } else {
+                guide.textContent = '모든 마법사 준비 완료! 결투를 시작하세요!';
+            }
+        }
+
+        function renderCharacterGrid() {
+            const grid = document.getElementById('character-grid');
+            grid.innerHTML = '';
+
+            CHARACTERS.forEach(char => {
+                const isP1 = gameConfig.p1Team.some(c => c.id === char.id);
+                const isP2 = gameConfig.p2Team.some(c => c.id === char.id);
+
+                let borderClass = 'border-slate-700/80 hover:border-amber-400/80';
+                let badgeHtml = '';
+                if (isP1 && isP2) {
+                    borderClass = 'border-purple-400 ring-2 ring-purple-400/50';
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-full bg-purple-600 text-[10px] font-black text-white">1P & 2P</span>';
+                } else if (isP1) {
+                    borderClass = 'border-amber-400 ring-2 ring-amber-400/50';
+                    badgeHtml = '<span class="px-2 py-0.5 rounded-full bg-amber-500 text-[10px] font-black text-slate-950">1P PICK</span>';
+                } else if (isP2) {
+                    borderClass = 'border-rose-500 ring-2 ring-rose-500/50';
+                    badgeHtml = `<span class="px-2 py-0.5 rounded-full bg-rose-600 text-[10px] font-black text-white">${gameConfig.opponentMode === 'ai' ? 'AI PICK' : '2P PICK'}</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-2xl p-2.5 flex flex-col items-center cursor-pointer transition transform hover:-translate-y-1 border-2 ${borderClass}`;
+                card.onclick = () => handleCharacterClick(char);
+                card.onmouseenter = () => updateCharDetailBanner(char);
+
+                card.innerHTML = `
+                    <div class="w-full flex justify-between items-center mb-1 min-h-[18px]">
+                        <span class="text-[10px] font-bold text-slate-400">${char.house}</span>
+                        ${badgeHtml}
+                    </div>
+                    <canvas width="110" height="120" class="rounded-xl bg-gradient-to-b from-slate-800/80 to-slate-950 border border-white/10 mb-2"></canvas>
+                    <div class="font-black text-sm text-white text-center">${char.name}</div>
+                    <div class="text-[10px] font-bold text-amber-300/90 mb-1.5">${char.roleBadge}</div>
+                    <div class="w-full space-y-1 text-[10px]">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-7 text-rose-300 font-bold">ATK</span>
+                            <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-rose-500" style="width:${char.atkStat}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-7 text-sky-300 font-bold">DEF</span>
+                            <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-sky-400" style="width:${char.defStat}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-7 text-emerald-300 font-bold">SPD</span>
+                            <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-400" style="width:${char.spdStat}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+
+                // 정적 고퀄리티 초상화 렌더링 (60FPS 최적화를 위해 1회 렌더)
+                const portraitCanvas = card.querySelector('canvas');
+                const pCtx = portraitCanvas.getContext('2d');
+                renderDetailedWizard(pCtx, char, {
+                    x: 55,
+                    y: 122,
+                    scale: 1.05,
+                    facing: 1,
+                    state: 'idle',
+                    animFrame: 2,
+                    mp: 0,
+                    isPortrait: true
+                });
+            });
+        }
+
+        function renderStageGrid() {
+            const grid = document.getElementById('stage-grid');
+            grid.innerHTML = '';
+            STAGES.forEach(st => {
+                const active = gameConfig.selectedStage === st.id;
+                const btn = document.createElement('button');
+                btn.className = `p-2.5 rounded-xl border-2 text-center transition ${
+                    active
+                        ? 'border-amber-400 bg-amber-500/20 text-white shadow-lg'
+                        : 'border-slate-700 bg-slate-900/70 text-slate-400 hover:border-slate-500'
+                }`;
+                btn.innerHTML = `
+                    <div class="text-lg">${st.icon}</div>
+                    <div class="text-[11px] font-bold truncate">${st.name}</div>
+                `;
+                btn.onclick = () => {
+                    gameConfig.selectedStage = st.id;
+                    renderStageGrid();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        // ==================== 5. 전투 엔진 & 입력 처리 ====================
+        const canvas = document.getElementById('battle-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const keys = {};
+        const justPressed = {};
+        const mouseJustPressed = { left: false, right: false };
+
+        window.addEventListener('keydown', e => {
+            const code = e.code;
+            if (!keys[code]) justPressed[code] = true;
+            keys[code] = true;
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0) mouseJustPressed.left = true;
+            if (e.button === 2) mouseJustPressed.right = true;
+        });
+
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        class Fighter {
+            constructor(charData, team, startX, facing) {
+                this.data = charData;
+                this.team = team; // 1 or 2
+                this.x = startX;
+                this.y = 0; // 지면 기준 높이 (0이 바닥)
+                this.vx = 0;
+                this.vy = 0;
+                this.facing = facing;
+                this.maxHp = charData.maxHp;
+                this.hp = charData.maxHp;
+                this.mp = 0;
+                this.state = 'idle'; // 'idle' | 'walk' | 'attack' | 'block' | 'hurt' | 'dash'
+                this.attackSubtype = '';
+                this.stateTimer = 0;
+                this.attackCooldown = 0;
+                this.dashCooldown = 0;
+                this.tagCooldown = 0;
+                this.meleeStep = 0;
+                this.meleeWindow = 0;
+                this.canCancel = false;
+                this.comboCount = 0;
+                this.comboDamage = 0;
+                this.comboTimer = 0;
+                this.animFrame = 0;
+                this.stridePhase = 0;
+                this.armAngle = -0.38;
+                this.squashX = 1;
+                this.squashY = 1;
+                this.tilt = 0;
+            }
+        }
+
+        let battleState = null;
+        let animFrameId = null;
+        let lastTime = 0;
+
+        function startBattle() {
+            resizeCanvas();
+            document.getElementById('battle-result-modal').classList.add('hidden');
+            showScreen('screen-battle');
+
+            const W = canvas.width;
+            const p1TeamObjs = gameConfig.p1Team.map((c, idx) => new Fighter(c, 1, W * 0.25 - idx * 40, 1));
+            const p2TeamObjs = gameConfig.p2Team.map((c, idx) => new Fighter(c, 2, W * 0.75 + idx * 40, -1));
+
+            battleState = {
+                p1Team: p1TeamObjs,
+                p2Team: p2TeamObjs,
+                p1ActiveIdx: 0,
+                p2ActiveIdx: 0,
+                projectiles: [],
+                particles: [],
+                shockwaves: [],
+                floatingTexts: [],
+                timer: 99,
+                timerAccum: 0,
+                isOver: false,
+                hitstop: 0,
+                shakeTimer: 0,
+                shakeIntensity: 0,
+                screenFlash: 0,
+                screenFlashColor: '#ffffff',
+                ultCutin: null,
+                aiThinkTimer: 0
+            };
+
+            updateBattleHUD();
+            stopBattleLoop();
+            lastTime = performance.now();
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function stopBattleLoop() {
+            if (animFrameId) {
+                cancelAnimationFrame(animFrameId);
+                animFrameId = null;
+            }
+        }
+
+        function abortBattle() {
+            stopBattleLoop();
+            showScreen('screen-select');
+        }
+
+        function returnToSelect() {
+            stopBattleLoop();
+            document.getElementById('battle-result-modal').classList.add('hidden');
+            showScreen('screen-select');
+        }
+
+        function getActiveFighters() {
+            return {
+                f1: battleState.p1Team[battleState.p1ActiveIdx],
+                f2: battleState.p2Team[battleState.p2ActiveIdx]
+            };
+        }
+
+        // ==================== 6. 전투 액션 & 콤보/궁극기 로직 ====================
+        function tryDash(fighter, dir) {
+            if (fighter.dashCooldown > 0 || fighter.state === 'hurt') return;
+            fighter.state = 'dash';
+            fighter.stateTimer = 0.16;
+            fighter.dashCooldown = 0.75;
+            fighter.vx = dir * 920;
+            fighter.squashX = 1.25;
+            fighter.squashY = 0.82;
+            playSound('dash');
+            const groundY = canvas.height - 85;
+            spawnParticles(fighter.x, groundY - fighter.y - 45, fighter.data.lightColor, 10);
+        }
+
+        function triggerPrimaryAttack(fighter, opponent) {
+            if (fighter.state === 'hurt' || fighter.state === 'block') return;
+            const dist = Math.abs(fighter.x - opponent.x);
+
+            // 근거리(135px 이내)에서는 지팡이 근접 3단 연격!
+            if (dist < 135 && (fighter.attackCooldown <= 0 || fighter.meleeWindow > 0)) {
+                fighter.meleeStep = (fighter.meleeStep % 3) + 1;
+                fighter.meleeWindow = 0.55;
+                fighter.state = 'attack';
+                fighter.attackSubtype = 'melee';
+                fighter.stateTimer = 0.18;
+                fighter.attackCooldown = 0.22;
+                fighter.vx = fighter.facing * 240;
+                playSound('melee');
+
+                const groundY = canvas.height - 85;
+                const hitX = fighter.x + fighter.facing * 58;
+                const hitY = groundY - fighter.y - 55;
+                spawnParticles(hitX, hitY, fighter.data.lightColor, 8);
+
+                if (dist < 115 && Math.abs(fighter.y - opponent.y) < 70) {
+                    const baseDmg = fighter.meleeStep === 3 ? 65 : 38;
+                    applyDamage(fighter, opponent, baseDmg, fighter.data.lightColor, fighter.meleeStep === 3);
+                    fighter.canCancel = true; // 적중 시 강주문/궁극기 즉시 캔슬 가능
+                }
+                return;
+            }
+
+            // 원거리 또는 일반 약주문 발사
+            if (fighter.attackCooldown <= 0) {
+                castSpell(fighter, 'light', false);
+            }
+        }
+
+        function castSpell(fighter, type, isCancel = false) {
+            if (fighter.state === 'hurt') return;
+            if (type === 'ult' && fighter.mp < 100) return;
+            if (type !== 'ult' && fighter.attackCooldown > 0 && !isCancel) return;
+
+            const isUlt = type === 'ult';
+            if (isUlt) fighter.mp = 0;
+
+            fighter.meleeStep = 0;
+            fighter.meleeWindow = 0;
+            fighter.canCancel = false;
+            fighter.state = 'attack';
+            fighter.attackSubtype = type;
+            fighter.stateTimer = type === 'light' ? 0.22 : (type === 'heavy' ? 0.32 : 0.72);
+            fighter.attackCooldown = type === 'light' ? 0.30 : (type === 'heavy' ? 0.50 : 0.85);
+
+            const H = canvas.height;
+            const groundY = H - 85;
+            const spawnX = fighter.x + fighter.facing * 45;
+            const spawnY = groundY - fighter.y - 68;
+
+            const color = type === 'light' ? fighter.data.lightColor : (type === 'heavy' ? fighter.data.heavyColor : fighter.data.ultColor);
+            const speed = (type === 'light' ? 760 : (type === 'heavy' ? 680 : 940)) * (isCancel ? 1.15 : 1);
+            const dmg = Math.round((type === 'light' ? 58 : (type === 'heavy' ? 105 : 235)) * (isCancel ? 1.15 : 1));
+            const radius = type === 'light' ? 16 : (type === 'heavy' ? 26 : 44);
+
+            battleState.projectiles.push({
+                owner: fighter,
+                charId: fighter.data.id,
+                type,
+                x: spawnX,
+                y: spawnY,
+                vx: fighter.facing * speed,
+                vy: 0,
+                radius,
+                color,
+                damage: dmg,
+                age: 0,
+                trail: []
+            });
+
+            spawnShockwave(spawnX, spawnY, color, isUlt ? 95 : 42);
+            spawnParticles(spawnX, spawnY, color, isUlt ? 24 : 10);
+            spawnFloatingText(fighter.x, groundY - fighter.y - 125, fighter.data.spells[type], color, isUlt ? 22 : 15);
+
+            if (isUlt) {
+                battleState.hitstop = 0.55;
+                battleState.ultCutin = {
+                    char: fighter.data,
+                    team: fighter.team,
+                    facing: fighter.facing,
+                    timer: 0.55,
+                    maxTimer: 0.55
+                };
+                battleState.shakeTimer = 0.42;
+                battleState.shakeIntensity = 13;
+                battleState.screenFlash = 0.32;
+                battleState.screenFlashColor = color;
+                playSound('ult');
+            } else if (type === 'heavy') {
+                playSound('heavy');
+            } else {
+                playSound('light');
+            }
+        }
+
+        function tryTagSwitch(teamNum) {
+            if (gameConfig.teamSize < 2) return;
+            const team = teamNum === 1 ? battleState.p1Team : battleState.p2Team;
+            const activeIdx = teamNum === 1 ? battleState.p1ActiveIdx : battleState.p2ActiveIdx;
+            const nextIdx = (activeIdx + 1) % team.length;
+            const current = team[activeIdx];
+            const next = team[nextIdx];
+
+            if (next.hp <= 0 || current.tagCooldown > 0) return;
+
+            next.x = current.x;
+            next.y = 0;
+            next.facing = current.facing;
+            next.tagCooldown = 3.0;
+            current.tagCooldown = 3.0;
+
+            if (teamNum === 1) battleState.p1ActiveIdx = nextIdx;
+            else battleState.p2ActiveIdx = nextIdx;
+
+            const groundY = canvas.height - 85;
+            spawnShockwave(next.x, groundY - 50, '#fbbf24', 75);
+            spawnParticles(next.x, groundY - 50, '#fbbf24', 18);
+            spawnFloatingText(next.x, groundY - 120, '🔄 TAG IN!', '#fde047', 18);
+            playSound('dash');
+        }
+
+        function applyDamage(attacker, defender, rawDamage, color, launchUp = false) {
+            const isBlocking = defender.state === 'block' && defender.facing !== attacker.facing;
+            const atkMult = attacker.data.attackPower || 1;
+            const defMult = defender.data.defense || 1;
+            let finalDmg = Math.max(8, Math.round((rawDamage * atkMult) / defMult));
+
+            const groundY = canvas.height - 85;
+            const hitY = groundY - defender.y - 55;
+
+            if (isBlocking) {
+                finalDmg = Math.round(finalDmg * 0.22);
+                defender.hp = Math.max(0, defender.hp - finalDmg);
+                defender.vx = attacker.facing * 180;
+                attacker.mp = Math.min(100, attacker.mp + 8);
+                defender.mp = Math.min(100, defender.mp + 10);
+                spawnShockwave(defender.x, hitY, '#38bdf8', 48);
+                spawnFloatingText(defender.x, hitY - 40, `🛡️ 프로테고! -${finalDmg}`, '#7dd3fc', 15);
+                playSound('melee');
+            } else {
+                defender.hp = Math.max(0, defender.hp - finalDmg);
+                defender.state = 'hurt';
+                defender.stateTimer = 0.22;
+                defender.vx = attacker.facing * (launchUp ? 360 : 220);
+                if (launchUp) defender.vy = 420;
+                defender.squashX = 0.82;
+                defender.squashY = 1.2;
+
+                attacker.mp = Math.min(100, attacker.mp + 18);
+                defender.mp = Math.min(100, defender.mp + 12);
+                attacker.canCancel = true;
+
+                // 콤보 갱신
+                attacker.comboCount += 1;
+                attacker.comboDamage += finalDmg;
+                attacker.comboTimer = 1.6;
+
+                battleState.shakeTimer = 0.14;
+                battleState.shakeIntensity = launchUp ? 9 : 5;
+                spawnShockwave(defender.x, hitY, color, launchUp ? 75 : 48);
+                spawnParticles(defender.x, hitY, color, launchUp ? 20 : 12);
+                spawnFloatingText(defender.x, hitY - 45, `-${finalDmg}`, '#ffffff', launchUp ? 24 : 18);
+                playSound('hit');
+            }
+
+            checkKO();
+        }
+
+        function checkKO() {
+            const { f1, f2 } = getActiveFighters();
+            if (f1.hp <= 0) {
+                const aliveIdx = battleState.p1Team.findIndex(f => f.hp > 0);
+                if (aliveIdx !== -1) {
+                    battleState.p1ActiveIdx = aliveIdx;
+                    battleState.p1Team[aliveIdx].x = f1.x;
+                    showToast(`🔄 ${battleState.p1Team[aliveIdx].name} 교대 출전!`);
+                } else {
+                    endBattle(gameConfig.opponentMode === 'ai' ? 'AI VICTORY!' : 'PLAYER 2 WIN!', `${f2.data.name}의 승리입니다!`);
+                }
+            } else if (f2.hp <= 0) {
+                const aliveIdx = battleState.p2Team.findIndex(f => f.hp > 0);
+                if (aliveIdx !== -1) {
+                    battleState.p2ActiveIdx = aliveIdx;
+                    battleState.p2Team[aliveIdx].x = f2.x;
+                    showToast(`🔄 상대 ${battleState.p2Team[aliveIdx].name} 교대 출전!`);
+                } else {
+                    endBattle('PLAYER 1 WIN!', `${f1.data.name}의 승리입니다!`);
+                }
+            }
+        }
+
+        function endBattle(title, subtitle) {
+            if (battleState.isOver) return;
+            battleState.isOver = true;
+            document.getElementById('result-title').textContent = title;
+            document.getElementById('result-subtitle').textContent = subtitle;
+            document.getElementById('battle-result-modal').classList.remove('hidden');
+        }
+
+        // ==================== 7. 입력 및 AI 업데이트 ====================
+        function handlePlayerInput(dt) {
+            const { f1, f2 } = getActiveFighters();
+
+            // 1P 조작 (A/D 이동, Space 점프, S 방어, Q 대쉬, 마우스 좌/우클릭 스킬, R 궁극기, E 태그)
+            if (f1.state !== 'hurt' && f1.state !== 'dash') {
+                f1.facing = f1.x <= f2.x ? 1 : -1;
+
+                if (keys['KeyS'] && f1.y === 0) {
+                    f1.state = 'block';
+                    f1.vx *= 0.7;
+                } else {
+                    if (f1.state === 'block') f1.state = 'idle';
+                    let moveDir = 0;
+                    if (keys['KeyA']) moveDir -= 1;
+                    if (keys['KeyD']) moveDir += 1;
+
+                    if (moveDir !== 0) {
+                        const targetVx = moveDir * f1.data.speed;
+                        f1.vx += (targetVx - f1.vx) * 0.25;
+                        if (f1.state !== 'attack' && f1.y === 0) f1.state = 'walk';
+                    } else {
+                        f1.vx *= 0.78;
+                        if (Math.abs(f1.vx) < 10 && f1.state === 'walk') f1.state = 'idle';
+                    }
+
+                    if (justPressed['Space'] && f1.y === 0) {
+                        f1.vy = 640;
+                        f1.squashX = 0.84;
+                        f1.squashY = 1.18;
+                    }
+
+                    if (justPressed['KeyQ']) {
+                        const dashDir = moveDir !== 0 ? moveDir : f1.facing;
+                        tryDash(f1, dashDir);
+                    }
+                }
+
+                if (mouseJustPressed.left) {
+                    triggerPrimaryAttack(f1, f2);
+                }
+                if (mouseJustPressed.right) {
+                    castSpell(f1, 'heavy', f1.canCancel);
+                }
+                if (justPressed['KeyR']) {
+                    castSpell(f1, 'ult', f1.canCancel);
+                }
+                if (justPressed['KeyE']) {
+                    tryTagSwitch(1);
+                }
+            }
+
+            // 2P 로컬 조작 (화살표 이동/점프/방어, N 약주문, M 강주문, Comma 궁극기, Slash 대쉬, Period 태그)
+            if (gameConfig.opponentMode === '2p' && f2.state !== 'hurt' && f2.state !== 'dash') {
+                f2.facing = f2.x <= f1.x ? 1 : -1;
+
+                if (keys['ArrowDown'] && f2.y === 0) {
+                    f2.state = 'block';
+                    f2.vx *= 0.7;
+                } else {
+                    if (f2.state === 'block') f2.state = 'idle';
+                    let moveDir = 0;
+                    if (keys['ArrowLeft']) moveDir -= 1;
+                    if (keys['ArrowRight']) moveDir += 1;
+
+                    if (moveDir !== 0) {
+                        const targetVx = moveDir * f2.data.speed;
+                        f2.vx += (targetVx - f2.vx) * 0.25;
+                        if (f2.state !== 'attack' && f2.y === 0) f2.state = 'walk';
+                    } else {
+                        f2.vx *= 0.78;
+                        if (Math.abs(f2.vx) < 10 && f2.state === 'walk') f2.state = 'idle';
+                    }
+
+                    if (justPressed['ArrowUp'] && f2.y === 0) {
+                        f2.vy = 640;
+                        f2.squashX = 0.84;
+                        f2.squashY = 1.18;
+                    }
+                    if (justPressed['Slash']) {
+                        tryDash(f2, moveDir !== 0 ? moveDir : f2.facing);
+                    }
+                }
+
+                if (justPressed['KeyN']) triggerPrimaryAttack(f2, f1);
+                if (justPressed['KeyM']) castSpell(f2, 'heavy', f2.canCancel);
+                if (justPressed['Comma']) castSpell(f2, 'ult', f2.canCancel);
+                if (justPressed['Period']) tryTagSwitch(2);
+            }
+        }
+
+        function updateAI(dt) {
+            const { f1, f2 } = getActiveFighters();
+            if (f2.state === 'hurt' || f2.state === 'dash') return;
+
+            f2.facing = f2.x <= f1.x ? 1 : -1;
+            battleState.aiThinkTimer -= dt;
+
+            const diffParams = {
+                easy:   { interval: 0.48, aggro: 0.35, blockChance: 0.15, ultChance: 0.45 },
+                normal: { interval: 0.30, aggro: 0.58, blockChance: 0.35, ultChance: 0.75 },
+                hard:   { interval: 0.18, aggro: 0.80, blockChance: 0.60, ultChance: 0.92 },
+                master: { interval: 0.10, aggro: 0.95, blockChance: 0.82, ultChance: 1.00 }
+            }[gameConfig.difficulty];
+
+            const dist = Math.abs(f2.x - f1.x);
+
+            // 위험한 투사체 감지 시 방어 또는 점프 회피
+            const incoming = battleState.projectiles.find(p => p.owner === f1 && Math.abs(p.x - f2.x) < 230);
+            if (incoming && Math.random() < diffParams.blockChance) {
+                if (f2.y === 0 && Math.random() < 0.35) {
+                    f2.vy = 620;
+                } else if (f2.y === 0) {
+                    f2.state = 'block';
+                    f2.vx *= 0.6;
+                    return;
+                }
+            } else if (f2.state === 'block') {
+                f2.state = 'idle';
+            }
+
+            if (battleState.aiThinkTimer <= 0) {
+                battleState.aiThinkTimer = diffParams.interval;
+
+                // 체력이 낮을 때 2vs2 파트너 태그 교체
+                if (gameConfig.teamSize === 2 && f2.hp < f2.maxHp * 0.32 && Math.random() < 0.4) {
+                    tryTagSwitch(2);
+                }
+
+                // 궁극기 우선 발동
+                if (f2.mp >= 100 && Math.random() < diffParams.ultChance) {
+                    castSpell(f2, 'ult', f2.canCancel);
+                    return;
+                }
+
+                // 거리 조절 이동
+                if (dist > 340) {
+                    f2.vx = f2.facing * f2.data.speed * 0.92;
+                    if (f2.state !== 'attack' && f2.y === 0) f2.state = 'walk';
+                    if (dist > 520 && Math.random() < 0.25) tryDash(f2, f2.facing);
+                } else if (dist < 110 && Math.random() < 0.35) {
+                    f2.vx = -f2.facing * f2.data.speed * 0.8;
+                    if (f2.state !== 'attack' && f2.y === 0) f2.state = 'walk';
+                } else {
+                    f2.vx *= 0.6;
+                    if (f2.state === 'walk') f2.state = 'idle';
+                }
+
+                // 공격 판단
+                if (Math.random() < diffParams.aggro) {
+                    if (dist < 130) {
+                        triggerPrimaryAttack(f2, f1);
+                    } else if (Math.random() < 0.38) {
+                        castSpell(f2, 'heavy', f2.canCancel);
+                    } else {
+                        castSpell(f2, 'light', f2.canCancel);
+                    }
+                }
+            }
+        }
+
+        // ==================== 8. 물리 & 투사체/이펙트 업데이트 ====================
+        function updatePhysicsAndCombat(dt) {
+            const W = canvas.width;
+            const groundY = W > 0 ? canvas.height - 85 : 500;
+            const { f1, f2 } = getActiveFighters();
+
+            battleState.timerAccum += dt;
+            if (battleState.timerAccum >= 1) {
+                battleState.timerAccum -= 1;
+                battleState.timer = Math.max(0, battleState.timer - 1);
+                if (battleState.timer === 0) {
+                    if (f1.hp >= f2.hp) endBattle('TIME UP · 1P WIN!', '남은 체력 우세로 1P 승리!');
+                    else endBattle('TIME UP · 2P WIN!', '남은 체력 우세로 상대 승리!');
+                }
+            }
+
+            if (battleState.shakeTimer > 0) battleState.shakeTimer -= dt;
+            if (battleState.screenFlash > 0) battleState.screenFlash -= dt * 1.4;
+
+            [f1, f2].forEach(f => {
+                f.animFrame += dt * 10;
+                if (f.attackCooldown > 0) f.attackCooldown -= dt;
+                if (f.dashCooldown > 0) f.dashCooldown -= dt;
+                if (f.tagCooldown > 0) f.tagCooldown -= dt;
+                if (f.meleeWindow > 0) {
+                    f.meleeWindow -= dt;
+                    if (f.meleeWindow <= 0) f.meleeStep = 0;
+                }
+
+                if (f.comboTimer > 0) {
+                    f.comboTimer -= dt;
+                    if (f.comboTimer <= 0) {
+                        f.comboCount = 0;
+                        f.comboDamage = 0;
+                        f.canCancel = false;
+                    }
+                }
+
+                if (f.stateTimer > 0) {
+                    f.stateTimer -= dt;
+                    if (f.stateTimer <= 0 && ['attack', 'hurt', 'dash'].includes(f.state)) {
+                        f.state = 'idle';
+                        f.attackSubtype = '';
+                    }
+                }
+
+                // 위치 및 중력 적용
+                f.x += f.vx * dt;
+                f.x = Math.max(55, Math.min(W - 55, f.x));
+
+                if (f.y > 0 || f.vy !== 0) {
+                    f.y += f.vy * dt;
+                    f.vy -= 1650 * dt;
+                    if (f.y <= 0) {
+                        f.y = 0;
+                        f.vy = 0;
+                        f.squashX = 1.18;
+                        f.squashY = 0.84;
+                    }
+                }
+
+                // 탄성 및 관절 이징 복원
+                f.squashX += (1 - f.squashX) * 0.22;
+                f.squashY += (1 - f.squashY) * 0.22;
+                const targetTilt = Math.max(-0.18, Math.min(0.18, f.vx * 0.00045));
+                f.tilt += (targetTilt - f.tilt) * 0.2;
+
+                if (f.state === 'walk') {
+                    f.stridePhase += dt * (Math.abs(f.vx) * 0.038);
+                } else {
+                    f.stridePhase *= 0.85;
+                }
+
+                const targetArm = f.state === 'attack' ? -0.02 :
+                                  (f.state === 'block' ? -1.18 :
+                                  (f.y > 0 ? -0.75 : -0.38 + Math.sin(f.animFrame * 0.45) * 0.05));
+                f.armAngle += (targetArm - f.armAngle) * 0.28;
+            });
+
+            // 투사체 업데이트
+            for (let i = battleState.projectiles.length - 1; i >= 0; i--) {
+                const p = battleState.projectiles[i];
+                p.age += dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                p.trail.push({ x: p.x, y: p.y });
+                if (p.trail.length > 10) p.trail.shift();
+
+                if (Math.random() < 0.55) {
+                    spawnParticles(p.x, p.y, p.color, 1);
+                }
+
+                const target = p.owner === f1 ? f2 : f1;
+                const targetCenterY = groundY - target.y - 58;
+                const dx = p.x - target.x;
+                const dy = p.y - targetCenterY;
+
+                // 투사체 충돌 체크
+                if (Math.abs(dx) < p.radius + 26 && Math.abs(dy) < p.radius + 52) {
+                    applyDamage(p.owner, target, p.damage, p.color, p.type !== 'light');
+                    battleState.projectiles.splice(i, 1);
+                    continue;
+                }
+
+                if (p.x < -120 || p.x > W + 120) {
+                    battleState.projectiles.splice(i, 1);
+                }
+            }
+
+            // 파티클, 쇼크웨이브, 플로팅 텍스트 업데이트
+            for (let i = battleState.particles.length - 1; i >= 0; i--) {
+                const pt = battleState.particles[i];
+                pt.x += pt.vx * dt;
+                pt.y += pt.vy * dt;
+                pt.life -= dt * 2.2;
+                if (pt.life <= 0) battleState.particles.splice(i, 1);
+            }
+
+            for (let i = battleState.shockwaves.length - 1; i >= 0; i--) {
+                const sw = battleState.shockwaves[i];
+                sw.r += (sw.maxR - sw.r) * 0.18;
+                sw.life -= dt * 3.0;
+                if (sw.life <= 0) battleState.shockwaves.splice(i, 1);
+            }
+
+            for (let i = battleState.floatingTexts.length - 1; i >= 0; i--) {
+                const ft = battleState.floatingTexts[i];
+                ft.y -= 42 * dt;
+                ft.life -= dt;
+                if (ft.life <= 0) battleState.floatingTexts.splice(i, 1);
+            }
+
+            updateBattleHUD();
+        }
+
+        function spawnParticles(x, y, color, count) {
+            if (battleState.particles.length > 90) return;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = 60 + Math.random() * 240;
+                battleState.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    size: 2.5 + Math.random() * 4,
+                    color,
+                    life: 0.45 + Math.random() * 0.35
+                });
+            }
+        }
+
+        function spawnShockwave(x, y, color, maxR) {
+            battleState.shockwaves.push({ x, y, r: 8, maxR, color, life: 1.0 });
+        }
+
+        function spawnFloatingText(x, y, text, color, size = 16) {
+            battleState.floatingTexts.push({ x, y, text, color, size, life: 0.95 });
+        }
+
+        function updateBattleHUD() {
+            const { f1, f2 } = getActiveFighters();
+
+            document.getElementById('hud-p1-name').textContent = f1.data.name;
+            document.getElementById('hud-p1-hp-text').textContent = `${f1.hp} / ${f1.maxHp}`;
+            document.getElementById('hud-p1-hp').style.width = `${(f1.hp / f1.maxHp) * 100}%`;
+            document.getElementById('hud-p1-mp').style.width = `${f1.mp}%`;
+            document.getElementById('hud-p1-ult-ready').classList.toggle('hidden', f1.mp < 100);
+
+            document.getElementById('hud-p2-name').textContent = f2.data.name;
+            document.getElementById('hud-p2-hp-text').textContent = `${f2.hp} / ${f2.maxHp}`;
+            document.getElementById('hud-p2-hp').style.width = `${(f2.hp / f2.maxHp) * 100}%`;
+            document.getElementById('hud-p2-mp').style.width = `${f2.mp}%`;
+            document.getElementById('hud-p2-ult-ready').classList.toggle('hidden', f2.mp < 100);
+
+            document.getElementById('hud-timer').textContent = battleState.timer;
+
+            // 2vs2 파트너 상태
+            const tag1 = document.getElementById('hud-p1-tag');
+            const tag2 = document.getElementById('hud-p2-tag');
+            if (gameConfig.teamSize === 2) {
+                const p1Partner = battleState.p1Team[(battleState.p1ActiveIdx + 1) % 2];
+                const p2Partner = battleState.p2Team[(battleState.p2ActiveIdx + 1) % 2];
+                tag1.classList.remove('hidden');
+                tag2.classList.remove('hidden');
+                tag1.textContent = p1Partner.hp > 0 ? `[E] ${p1Partner.data.name} (${p1Partner.hp})` : '파트너 전투불능';
+                tag2.textContent = p2Partner.hp > 0 ? `${p2Partner.data.name} (${p2Partner.hp})` : '파트너 전투불능';
+            } else {
+                tag1.classList.add('hidden');
+                tag2.classList.add('hidden');
+            }
+
+            // 콤보 HUD
+            const c1 = document.getElementById('combo-p1');
+            if (f1.comboCount >= 2) {
+                c1.classList.remove('opacity-0');
+                document.getElementById('combo-p1-count').textContent = f1.comboCount;
+                document.getElementById('combo-p1-dmg').textContent = `${f1.comboDamage} DAMAGE`;
+                document.getElementById('combo-p1-cancel').classList.toggle('hidden', !f1.canCancel);
+            } else {
+                c1.classList.add('opacity-0');
+            }
+
+            const c2 = document.getElementById('combo-p2');
+            if (f2.comboCount >= 2) {
+                c2.classList.remove('opacity-0');
+                document.getElementById('combo-p2-count').textContent = f2.comboCount;
+                document.getElementById('combo-p2-dmg').textContent = `${f2.comboDamage} DAMAGE`;
+                document.getElementById('combo-p2-cancel').classList.toggle('hidden', !f2.canCancel);
+            } else {
+                c2.classList.add('opacity-0');
+            }
+        }
+
+        // ==================== 9. 렌더링 (배경, 캐릭터, 고유 마법 스킬, 궁극기 컷인) ====================
+        function drawStageBackground() {
+            const W = canvas.width;
+            const H = canvas.height;
+            const groundY = H - 85;
+            const stage = STAGES.find(s => s.id === gameConfig.selectedStage) || STAGES[0];
+
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+            skyGrad.addColorStop(0, stage.bgTop);
+            skyGrad.addColorStop(1, stage.bgBot);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, groundY);
+
+            // 스테이지별 고유 건축/자연 디테일
+            ctx.save();
+            if (stage.id === 'greathall') {
+                // 고딕 아치형 창문 & 떠다니는 촛불
+                ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+                for (let wx = 120; wx < W; wx += 260) {
+                    ctx.beginPath();
+                    ctx.arc(wx, 180, 55, Math.PI, 0);
+                    ctx.lineTo(wx + 55, groundY - 40);
+                    ctx.lineTo(wx - 55, groundY - 40);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                const t = performance.now() * 0.002;
+                for (let c = 0; c < 14; c++) {
+                    const cx = ((c * 137) % W);
+                    const cy = 95 + Math.sin(t + c) * 14 + (c % 3) * 35;
+                    ctx.fillStyle = '#fef9c3';
+                    ctx.fillRect(cx - 2, cy, 4, 14);
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy - 4, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (stage.id === 'quidditch') {
+                // 퀴디치 황금 골대 고리 3개
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 4;
+                [0.25, 0.5, 0.75].forEach((ratio, idx) => {
+                    const gx = W * ratio;
+                    const gy = groundY - (idx === 1 ? 250 : 200);
+                    ctx.beginPath();
+                    ctx.moveTo(gx, groundY);
+                    ctx.lineTo(gx, gy + 26);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.ellipse(gx, gy, 18, 26, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                });
+            } else if (stage.id === 'forest') {
+                // 보름달 & 안개 낀 침엽수 실루엣
+                ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
+                ctx.beginPath();
+                ctx.arc(W * 0.75, 130, 48, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(2, 18, 12, 0.75)';
+                for (let tx = 40; tx < W; tx += 150) {
+                    ctx.beginPath();
+                    ctx.moveTo(tx, groundY);
+                    ctx.lineTo(tx + 45, groundY - 260);
+                    ctx.lineTo(tx + 90, groundY);
+                    ctx.fill();
+                }
+            } else if (stage.id === 'ministry') {
+                // 마법부 에메랄드 타일 벽난로 아치
+                for (let fx = 140; fx < W; fx += 320) {
+                    ctx.fillStyle = '#064e3b';
+                    ctx.fillRect(fx - 45, groundY - 170, 90, 170);
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(fx - 30, groundY - 140, 60, 140);
+                }
+            } else if (stage.id === 'astronomy') {
+                // 밤하늘 별자리 & 성운
+                ctx.fillStyle = '#ffffff';
+                for (let s = 0; s < 45; s++) {
+                    const sx = (s * 193) % W;
+                    const sy = (s * 89) % (groundY - 60);
+                    ctx.globalAlpha = 0.35 + (s % 5) * 0.12;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, (s % 2) + 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+            ctx.restore();
+
+            // 결투장 바닥 석재 타일
+            ctx.fillStyle = stage.floor;
+            ctx.fillRect(0, groundY, W, H - groundY);
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(W, groundY);
+            ctx.stroke();
+        }
+
+        function renderDetailedWizard(targetCtx, d, opts) {
+            const {
+                x, y, scale = 1, facing = 1, state = 'idle',
+                attackSubtype = '', animFrame = 0, mp = 0, squashX = 1, squashY = 1, tilt = 0,
+                stridePhase = 0, armAngle = -0.38, isPortrait = false
+            } = opts;
+
+            const isUltPose = state === 'attack' && attackSubtype === 'ult';
+
+            targetCtx.save();
+            targetCtx.translate(x, y);
+            targetCtx.scale(scale, scale);
+
+            if (!isPortrait) {
+                // 바닥 그림자
+                targetCtx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 4, 28, 7, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // MP 100% MAX 오라
+                if (mp >= 100) {
+                    targetCtx.save();
+                    targetCtx.globalCompositeOperation = 'lighter';
+                    const auraR = 46 + Math.sin(performance.now() * 0.015) * 5;
+                    targetCtx.strokeStyle = d.ultColor;
+                    targetCtx.lineWidth = 2.5;
+                    targetCtx.beginPath();
+                    targetCtx.ellipse(0, -52, auraR * 0.65, auraR * 1.15, 0, 0, Math.PI * 2);
+                    targetCtx.stroke();
+                    targetCtx.restore();
+                }
+            }
+
+            targetCtx.scale(facing * squashX, squashY);
+
+            const walkBounce = state === 'walk' ? Math.abs(Math.sin(stridePhase)) * 3.0 : 0;
+            const breathBob = state === 'idle' ? Math.sin(animFrame * 0.35) * 1.4 : 0;
+            const ultLift = isUltPose && !isPortrait ? -10 : 0;
+            const bob = walkBounce + breathBob + ultLift;
+            const cloakWave = Math.sin(animFrame * 0.55 + stridePhase * 0.4) * (isUltPose ? 14 : (state === 'walk' ? 7.5 : 4.2));
+            const hairWave = Math.sin(animFrame * 0.65) * (isUltPose ? 3.5 : 1.8);
+            const dynamicLean = (tilt * facing) + (isUltPose ? -0.14 : (state === 'attack' ? 0.12 : 0));
+
+            targetCtx.rotate(dynamicLean);
+
+            // 궁극기 전용 발밑 회전 마법진 & 상승 기류 이펙트
+            if (isUltPose && !isPortrait) {
+                targetCtx.save();
+                targetCtx.globalCompositeOperation = 'lighter';
+                const pulse = 0.75 + 0.25 * Math.sin(performance.now() * 0.025);
+                targetCtx.strokeStyle = d.ultColor;
+                targetCtx.lineWidth = 3;
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, 2, 48 * pulse, 13 * pulse, 0, 0, Math.PI * 2);
+                targetCtx.stroke();
+
+                targetCtx.fillStyle = d.ultColor + '33';
+                targetCtx.beginPath();
+                targetCtx.moveTo(-36, 0);
+                targetCtx.lineTo(-22, -135);
+                targetCtx.lineTo(22, -135);
+                targetCtx.lineTo(36, 0);
+                targetCtx.closePath();
+                targetCtx.fill();
+                targetCtx.restore();
+            }
+
+            // 1. 망토 뒷자락
+            targetCtx.fillStyle = d.robeColor;
+            targetCtx.beginPath();
+            targetCtx.moveTo(-8, -82 + bob);
+            targetCtx.quadraticCurveTo(-24 - cloakWave * 0.5, -44 + bob, -22 - cloakWave, -6);
+            targetCtx.lineTo(14, -8);
+            targetCtx.lineTo(10, -82 + bob);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 2. 후방 팔 (궁극기 시 캐릭터별 전용 시전 포즈)
+            let backArmSwing = state === 'walk' ? -Math.sin(stridePhase) * 0.32 : 0.18;
+            if (isUltPose) {
+                if (d.id === 'harry' || d.id === 'dumbledore') backArmSwing = -2.2;
+                else if (d.id === 'voldemort' || d.id === 'snape') backArmSwing = -1.45;
+                else if (d.id === 'hermione' || d.id === 'malfoy') backArmSwing = 0.85;
+                else backArmSwing = -1.9;
+            }
+            targetCtx.save();
+            targetCtx.translate(-7, -76 + bob);
+            targetCtx.rotate(backArmSwing);
+            targetCtx.strokeStyle = d.robeColor;
+            targetCtx.lineWidth = 7.5;
+            targetCtx.lineCap = 'round';
+            targetCtx.beginPath();
+            targetCtx.moveTo(0, 0);
+            targetCtx.lineTo(-5, 20);
+            targetCtx.stroke();
+            targetCtx.fillStyle = d.skinColor;
+            targetCtx.beginPath();
+            targetCtx.arc(-5, 21, 3.0, 0, Math.PI * 2);
+            targetCtx.fill();
+            targetCtx.restore();
+
+            // 3. 2관절 다리 (전투 스프라이트에서만 표시)
+            if (!isPortrait) {
+                const legAngle = state === 'walk' ? Math.sin(stridePhase) * 0.42 : 0.08;
+                [-1, 1].forEach((side, idx) => {
+                    const a = idx === 0 ? -legAngle : legAngle;
+                    targetCtx.save();
+                    targetCtx.translate(side * 4, -40 + bob);
+                    targetCtx.rotate(a);
+                    targetCtx.strokeStyle = '#18181b';
+                    targetCtx.lineWidth = 7;
+                    targetCtx.lineCap = 'round';
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, 0);
+                    targetCtx.lineTo(0, 36);
+                    targetCtx.stroke();
+                    // 구두
+                    targetCtx.fillStyle = '#09090b';
+                    targetCtx.beginPath();
+                    targetCtx.ellipse(3, 38, 6.5, 3.2, 0, 0, Math.PI * 2);
+                    targetCtx.fill();
+                    targetCtx.restore();
+                });
+            }
+
+            // 4. V넥 스웨터 & 셔츠 칼라 & 넥타이
+            targetCtx.fillStyle = d.sweaterColor;
+            targetCtx.beginPath();
+            targetCtx.moveTo(-12, -82 + bob);
+            targetCtx.lineTo(12, -82 + bob);
+            targetCtx.lineTo(14, -38 + bob);
+            targetCtx.lineTo(-14, -38 + bob);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 셔츠 V넥 & 넥타이
+            targetCtx.fillStyle = '#f8fafc';
+            targetCtx.beginPath();
+            targetCtx.moveTo(-5, -83 + bob);
+            targetCtx.lineTo(6, -83 + bob);
+            targetCtx.lineTo(1, -69 + bob);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            targetCtx.fillStyle = d.tiePrimary;
+            targetCtx.beginPath();
+            targetCtx.moveTo(0, -80 + bob);
+            targetCtx.lineTo(3, -68 + bob);
+            targetCtx.lineTo(1, -55 + bob);
+            targetCtx.lineTo(-2, -68 + bob);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 넥타이 사선 줄무늬
+            targetCtx.strokeStyle = d.tieSecondary;
+            targetCtx.lineWidth = 1.4;
+            targetCtx.beginPath();
+            targetCtx.moveTo(-1, -74 + bob);
+            targetCtx.lineTo(2, -72 + bob);
+            targetCtx.moveTo(-1, -67 + bob);
+            targetCtx.lineTo(2, -65 + bob);
+            targetCtx.stroke();
+
+            // 5. 앞 망토 여밈 드레이프
+            targetCtx.fillStyle = d.robeColor;
+            targetCtx.beginPath();
+            targetCtx.moveTo(-14, -83 + bob);
+            targetCtx.lineTo(-5, -83 + bob);
+            targetCtx.lineTo(-4, -12);
+            targetCtx.lineTo(-18, -14);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(7, -83 + bob);
+            targetCtx.lineTo(14, -83 + bob);
+            targetCtx.lineTo(17, -14);
+            targetCtx.lineTo(8, -12);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 6. 목 & 사실적인 인물 두상 (차분하고 진지한 눈매)
+            targetCtx.fillStyle = d.skinColor;
+            targetCtx.fillRect(-3.5, -89 + bob, 7, 8);
+
+            // 헤르미온느 풍성한 웨이브 뒷머리 레이어 (얼굴 뒤쪽으로 배치)
+            if (d.longHair && !d.bald) {
+                targetCtx.fillStyle = '#432818';
+                targetCtx.beginPath();
+                targetCtx.moveTo(-12, -106 + bob);
+                targetCtx.quadraticCurveTo(-18, -90 + bob, -16 - hairWave * 0.6, -72 + bob);
+                targetCtx.quadraticCurveTo(-8, -68 + bob, 0, -72 + bob);
+                targetCtx.quadraticCurveTo(8, -68 + bob, 14 + hairWave * 0.6, -74 + bob);
+                targetCtx.quadraticCurveTo(15, -92 + bob, 10, -106 + bob);
+                targetCtx.closePath();
+                targetCtx.fill();
+            }
+
+            // 얼굴 윤곽
+            targetCtx.fillStyle = d.skinColor;
+            targetCtx.beginPath();
+            targetCtx.moveTo(-11, -104 + bob);
+            targetCtx.quadraticCurveTo(-12, -91 + bob, 1, -86 + bob);
+            targetCtx.quadraticCurveTo(12, -91 + bob, 11, -104 + bob);
+            targetCtx.quadraticCurveTo(11, -116 + bob, 0, -116 + bob);
+            targetCtx.quadraticCurveTo(-11, -116 + bob, -11, -104 + bob);
+            targetCtx.fill();
+
+            // 차분하고 진지한 눈매 (과한 초롱초롱함 제거)
+            const eyeY = -101 + bob;
+            [-2.5, 6.2].forEach((ex, idx) => {
+                const ew = idx === 0 ? 3.2 : 3.6;
+                // 흰자
+                targetCtx.fillStyle = '#f1f5f9';
+                targetCtx.beginPath();
+                targetCtx.ellipse(ex, eyeY, ew, 1.85, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // 홍채
+                targetCtx.fillStyle = d.eyeColor;
+                targetCtx.beginPath();
+                targetCtx.arc(ex + 0.4, eyeY, 1.55, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                // 동공 & 은은한 반사점
+                targetCtx.fillStyle = '#09090b';
+                targetCtx.beginPath();
+                targetCtx.arc(ex + 0.4, eyeY, 0.8, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.fillStyle = 'rgba(255,255,255,0.6)';
+                targetCtx.fillRect(ex - 0.2, eyeY - 0.8, 0.7, 0.7);
+
+                // 차분한 상단 눈꺼풀 라인 & 눈썹
+                targetCtx.strokeStyle = '#1e1b18';
+                targetCtx.lineWidth = 1.1;
+                targetCtx.beginPath();
+                targetCtx.moveTo(ex - ew, eyeY - 1.2);
+                targetCtx.lineTo(ex + ew, eyeY - 1.0);
+                targetCtx.stroke();
+
+                targetCtx.strokeStyle = d.bald ? '#94a3b8' : d.hairColor;
+                targetCtx.lineWidth = 1.4;
+                targetCtx.beginPath();
+                targetCtx.moveTo(ex - ew, eyeY - 3.3);
+                targetCtx.lineTo(ex + ew, eyeY - 2.9);
+                targetCtx.stroke();
+            });
+
+            // 콧대 & 입선
+            targetCtx.strokeStyle = 'rgba(120, 72, 50, 0.55)';
+            targetCtx.lineWidth = 1;
+            targetCtx.beginPath();
+            targetCtx.moveTo(2.2, -100 + bob);
+            targetCtx.lineTo(3.4, -95.5 + bob);
+            targetCtx.moveTo(0.2, -91.5 + bob);
+            targetCtx.lineTo(4.0, -91.5 + bob);
+            targetCtx.stroke();
+
+            // 번개 흉터 (해리)
+            if (d.scar) {
+                targetCtx.strokeStyle = '#b91c1c';
+                targetCtx.lineWidth = 1.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(3.5, -110 + bob);
+                targetCtx.lineTo(2.0, -107.5 + bob);
+                targetCtx.lineTo(4.0, -106.5 + bob);
+                targetCtx.lineTo(2.5, -104.5 + bob);
+                targetCtx.stroke();
+            }
+
+            // 금속 안경테 (해리 / 덤블도어)
+            if (d.glasses) {
+                targetCtx.strokeStyle = '#27272a';
+                targetCtx.lineWidth = 1.15;
+                targetCtx.beginPath();
+                targetCtx.arc(-2.5, eyeY, 4.1, 0, Math.PI * 2);
+                targetCtx.moveTo(1.6, eyeY);
+                targetCtx.lineTo(2.1, eyeY);
+                targetCtx.stroke();
+                targetCtx.beginPath();
+                targetCtx.arc(6.2, eyeY, 4.3, 0, Math.PI * 2);
+                targetCtx.stroke();
+            }
+
+            // 7. 캐릭터별 헤어스타일 / 수염 / 모자
+            if (!d.bald) {
+                targetCtx.fillStyle = d.hairColor;
+                if (d.longHair) {
+                    // 헤르미온느 앞머리 가르마 & 옆머리 웨이브 (얼굴을 가리지 않도록 윤곽 따라 배치)
+                    targetCtx.beginPath();
+                    targetCtx.arc(-0.5, -105 + bob, 12.6, Math.PI * 0.92, Math.PI * 2.08);
+                    targetCtx.quadraticCurveTo(11, -96 + bob, 9.5, -86 + bob + hairWave * 0.4);
+                    targetCtx.lineTo(7.5, -99 + bob);
+                    targetCtx.quadraticCurveTo(3, -106 + bob, -1, -103 + bob);
+                    targetCtx.quadraticCurveTo(-5, -106 + bob, -8.5, -99 + bob);
+                    targetCtx.lineTo(-10.5, -75 + bob - hairWave * 0.5);
+                    targetCtx.quadraticCurveTo(-15, -88 + bob, -12.8, -104 + bob);
+                    targetCtx.closePath();
+                    targetCtx.fill();
+                } else if (d.curtainHair) {
+                    // 스네이프 커튼 단발
+                    targetCtx.beginPath();
+                    targetCtx.arc(0, -105 + bob, 13, Math.PI, 0);
+                    targetCtx.lineTo(12, -84 + bob);
+                    targetCtx.lineTo(7, -84 + bob);
+                    targetCtx.lineTo(7, -104 + bob);
+                    targetCtx.lineTo(-7, -104 + bob);
+                    targetCtx.lineTo(-7, -84 + bob);
+                    targetCtx.lineTo(-13, -84 + bob);
+                    targetCtx.closePath();
+                    targetCtx.fill();
+                } else if (d.slickedHair) {
+                    // 말포이 금발 포마드 헤어
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-12, -102 + bob);
+                    targetCtx.quadraticCurveTo(-13, -118 + bob, 2, -118 + bob);
+                    targetCtx.quadraticCurveTo(12, -116 + bob, 11, -106 + bob);
+                    targetCtx.quadraticCurveTo(0, -110 + bob, -12, -102 + bob);
+                    targetCtx.fill();
+                } else {
+                    // 해리 / 론 / 덤블도어 자연스러운 앞머리 가르마 헤어
+                    targetCtx.beginPath();
+                    targetCtx.arc(-1, -105 + bob, 12.8, Math.PI * 0.85, Math.PI * 2.1);
+                    targetCtx.lineTo(10, -104 + bob);
+                    targetCtx.lineTo(5, -108 + bob + hairWave * 0.4);
+                    targetCtx.lineTo(1, -103 + bob);
+                    targetCtx.lineTo(-4, -107 + bob);
+                    targetCtx.lineTo(-10, -96 + bob);
+                    targetCtx.closePath();
+                    targetCtx.fill();
+                }
+            }
+
+            if (d.beard) {
+                // 덤블도어 긴 은빛 수염
+                targetCtx.fillStyle = '#e2e8f0';
+                targetCtx.beginPath();
+                targetCtx.moveTo(-7, -92 + bob);
+                targetCtx.lineTo(7, -92 + bob);
+                targetCtx.lineTo(3, -55 + bob + hairWave);
+                targetCtx.lineTo(-2, -55 + bob + hairWave);
+                targetCtx.closePath();
+                targetCtx.fill();
+            }
+
+            if (d.wizardHat) {
+                // 덤블도어 마법사 모자
+                targetCtx.fillStyle = '#312e81';
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, -114 + bob, 18, 4, -0.08, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.beginPath();
+                targetCtx.moveTo(-11, -114 + bob);
+                targetCtx.lineTo(-2, -138 + bob);
+                targetCtx.lineTo(10, -114 + bob);
+                targetCtx.closePath();
+                targetCtx.fill();
+            }
+
+            // 8. 오른팔 & 마법 지팡이 (궁극기 전용 모션 각도 적용)
+            let finalArmAngle = armAngle;
+            if (isUltPose) {
+                if (d.id === 'harry') finalArmAngle = -0.35;
+                else if (d.id === 'hermione') finalArmAngle = -0.85;
+                else if (d.id === 'ron') finalArmAngle = -0.65;
+                else if (d.id === 'malfoy') finalArmAngle = 0.12;
+                else if (d.id === 'snape') finalArmAngle = -0.55;
+                else if (d.id === 'dumbledore') finalArmAngle = -1.05;
+                else if (d.id === 'voldemort') finalArmAngle = -0.15;
+            }
+
+            targetCtx.save();
+            targetCtx.translate(5, -75 + bob);
+            targetCtx.rotate(finalArmAngle);
+            targetCtx.strokeStyle = d.robeColor;
+            targetCtx.lineWidth = 8;
+            targetCtx.lineCap = 'round';
+            targetCtx.beginPath();
+            targetCtx.moveTo(0, 0);
+            targetCtx.lineTo(20, 4);
+            targetCtx.stroke();
+
+            // 손
+            targetCtx.fillStyle = d.skinColor;
+            targetCtx.beginPath();
+            targetCtx.arc(21, 4, 3.2, 0, Math.PI * 2);
+            targetCtx.fill();
+
+            // 지팡이
+            targetCtx.strokeStyle = '#78350f';
+            targetCtx.lineWidth = 2.6;
+            targetCtx.beginPath();
+            targetCtx.moveTo(22, 4);
+            targetCtx.lineTo(44, 1);
+            targetCtx.stroke();
+
+            // 지팡이 끝 마력 발광
+            if (state === 'attack' || mp >= 100) {
+                targetCtx.save();
+                targetCtx.globalCompositeOperation = 'lighter';
+                targetCtx.fillStyle = isUltPose ? d.ultColor : d.lightColor;
+                targetCtx.beginPath();
+                targetCtx.arc(45, 1, isUltPose ? 9 : 5, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.restore();
+            }
+            targetCtx.restore();
+
+            targetCtx.restore();
+        }
+
+        function drawProjectilesAndEffects() {
+            // 1. 투사체 꼬리 궤적 & 캐릭터별 고유 스킬 형태 렌더링
+            battleState.projectiles.forEach(p => {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                // 에너지 꼬리 트레일
+                if (p.trail.length > 1) {
+                    for (let i = 1; i < p.trail.length; i++) {
+                        const alpha = (i / p.trail.length) * 0.45;
+                        ctx.strokeStyle = p.color;
+                        ctx.globalAlpha = alpha;
+                        ctx.lineWidth = p.radius * (i / p.trail.length) * 1.1;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(p.trail[i - 1].x, p.trail[i - 1].y);
+                        ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.globalAlpha = 1;
+                ctx.translate(p.x, p.y);
+                const dir = p.vx >= 0 ? 1 : -1;
+                ctx.scale(dir, 1);
+
+                // 외곽 후광
+                ctx.fillStyle = p.color + '44';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius * 1.45, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 캐릭터별 차별화된 스킬 형상
+                if (p.charId === 'harry') {
+                    if (p.type === 'ult') {
+                        // 수사슴 패트로누스 실루엣 & 뿔
+                        ctx.strokeStyle = '#e0f2fe';
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 4, 34, 16, -0.1, 0, Math.PI * 2);
+                        ctx.fill();
+                        // 목 & 머리 & 나뭇가지 뿔
+                        ctx.beginPath();
+                        ctx.moveTo(22, -2);
+                        ctx.lineTo(34, -22);
+                        ctx.lineTo(46, -18);
+                        ctx.moveTo(32, -22);
+                        ctx.lineTo(26, -42);
+                        ctx.moveTo(29, -33);
+                        ctx.lineTo(38, -38);
+                        ctx.stroke();
+                    } else {
+                        // 번개 화살 창
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.moveTo(p.radius * 1.6, 0);
+                        ctx.lineTo(-p.radius, -p.radius * 0.55);
+                        ctx.lineTo(-p.radius * 0.4, 0);
+                        ctx.lineTo(-p.radius, p.radius * 0.55);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                } else if (p.charId === 'malfoy') {
+                    // 구불구불 헤엄치는 독사 뱀 형태
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = p.type === 'ult' ? 9 : 5;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    for (let sx = -p.radius * 1.6; sx <= p.radius * 1.4; sx += 6) {
+                        const sy = Math.sin(sx * 0.18 - p.age * 22) * (p.type === 'ult' ? 14 : 7);
+                        if (sx === -p.radius * 1.6) ctx.moveTo(sx, sy);
+                        else ctx.lineTo(sx, sy);
+                    }
+                    ctx.stroke();
+                } else if (p.charId === 'snape') {
+                    // 초승달 검기 참격파 (섹툼셈프라)
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(-8, 0, p.radius * 1.4, -Math.PI * 0.45, Math.PI * 0.45);
+                    ctx.quadraticCurveTo(4, 0, -8, -p.radius * 1.4);
+                    ctx.fill();
+                } else if (p.charId === 'dumbledore') {
+                    // 불사조 날개 & 마름모 화염 창
+                    ctx.fillStyle = '#fef08a';
+                    ctx.beginPath();
+                    ctx.moveTo(p.radius * 1.7, 0);
+                    ctx.lineTo(0, -p.radius * 1.1);
+                    ctx.lineTo(-p.radius * 1.2, 0);
+                    ctx.lineTo(0, p.radius * 1.1);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (p.charId === 'voldemort') {
+                    // 지그재그 살인 저주 번개 빔
+                    ctx.strokeStyle = '#dcfce7';
+                    ctx.lineWidth = p.type === 'ult' ? 8 : 4;
+                    ctx.beginPath();
+                    ctx.moveTo(-p.radius * 1.8, 0);
+                    ctx.lineTo(-p.radius * 0.6, -12);
+                    ctx.lineTo(p.radius * 0.4, 12);
+                    ctx.lineTo(p.radius * 1.8, 0);
+                    ctx.stroke();
+                } else if (p.charId === 'hermione') {
+                    // 회전하는 육망성 아스트랄 룬
+                    ctx.rotate(p.age * 12);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(-p.radius * 0.85, -p.radius * 0.85, p.radius * 1.7, p.radius * 1.7);
+                    ctx.rotate(Math.PI / 4);
+                    ctx.strokeRect(-p.radius * 0.85, -p.radius * 0.85, p.radius * 1.7, p.radius * 1.7);
+                } else {
+                    // 론 위즐리 폭죽 다면체 & 불꽃 꼬리
+                    ctx.rotate(p.age * 10);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    for (let k = 0; k < 5; k++) {
+                        const a = (k * Math.PI * 2) / 5;
+                        const rx = Math.cos(a) * p.radius * 1.2;
+                        const ry = Math.sin(a) * p.radius * 1.2;
+                        if (k === 0) ctx.moveTo(rx, ry);
+                        else ctx.lineTo(rx, ry);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+
+            // 2. 쇼크웨이브 충격파 링
+            battleState.shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = Math.max(0, sw.life);
+                ctx.strokeStyle = sw.color;
+                ctx.lineWidth = 4 * sw.life;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 3. 마법 입자 파티클
+            battleState.particles.forEach(pt => {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = Math.max(0, pt.life);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 4. 화면 플래시 효과
+            if (battleState.screenFlash > 0) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(0.45, battleState.screenFlash);
+                ctx.fillStyle = battleState.screenFlashColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+
+            // 5. 주문 이름 & 데미지 플로팅 텍스트 렌더링
+            battleState.floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, Math.min(1, ft.life * 1.3));
+                ctx.font = `900 ${ft.size}px 'Noto Sans KR', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            // 6. 궁극기 전용 시네마틱 컷인 & 캐릭터 포즈 클로즈업 연출
+            if (battleState.ultCutin && battleState.ultCutin.timer > 0) {
+                const cut = battleState.ultCutin;
+                const W = canvas.width;
+                const H = canvas.height;
+                const progress = 1 - (cut.timer / cut.maxTimer);
+                const slideEase = Math.min(1, progress * 5);
+                const fadeOut = cut.timer < 0.12 ? (cut.timer / 0.12) : 1;
+
+                ctx.save();
+                ctx.globalAlpha = fadeOut;
+
+                ctx.fillStyle = 'rgba(4, 3, 10, 0.72)';
+                ctx.fillRect(0, 0, W, H);
+
+                const bandY = H * 0.5;
+                const bandH = 195;
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(0, bandY - bandH * 0.55);
+                ctx.lineTo(W, bandY - bandH * 0.35);
+                ctx.lineTo(W, bandY + bandH * 0.55);
+                ctx.lineTo(0, bandY + bandH * 0.35);
+                ctx.closePath();
+                ctx.clip();
+
+                const panelGrad = ctx.createLinearGradient(0, bandY - bandH, W, bandY + bandH);
+                panelGrad.addColorStop(0, '#09090b');
+                panelGrad.addColorStop(0.5, cut.char.ultColor + '88');
+                panelGrad.addColorStop(1, '#09090b');
+                ctx.fillStyle = panelGrad;
+                ctx.fillRect(0, 0, W, H);
+
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = '#ffffff';
+                for (let s = 0; s < 18; s++) {
+                    const ly = bandY - bandH * 0.5 + (s / 18) * bandH;
+                    const offset = ((performance.now() * 1.8 + s * 95) % (W + 300)) - 150;
+                    ctx.globalAlpha = 0.25 * fadeOut;
+                    ctx.lineWidth = (s % 3) + 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(offset, ly);
+                    ctx.lineTo(offset + 180 * cut.facing, ly + 8);
+                    ctx.stroke();
+                }
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = fadeOut;
+
+                const charX = cut.team === 1
+                    ? (-120 + (W * 0.26 + 120) * slideEase)
+                    : (W + 120 - (W * 0.26 + 120) * slideEase);
+
+                renderDetailedWizard(ctx, cut.char, {
+                    x: charX,
+                    y: bandY + 185,
+                    scale: 2.35,
+                    facing: cut.team === 1 ? 1 : -1,
+                    state: 'attack',
+                    attackSubtype: 'ult',
+                    animFrame: performance.now() * 0.015,
+                    mp: 100,
+                    isPortrait: true
+                });
+
+                const textX = cut.team === 1 ? W * 0.62 : W * 0.38;
+                ctx.textAlign = 'center';
+                ctx.font = "900 15px 'Cinzel', 'Noto Sans KR', sans-serif";
+                ctx.fillStyle = '#fde68a';
+                ctx.fillText(`⚡ ULTIMATE SPELL · ${cut.char.name.toUpperCase()}`, textX, bandY - 26);
+
+                ctx.font = "900 34px 'Noto Sans KR', sans-serif";
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 7;
+                ctx.strokeText(cut.char.spells.ult, textX, bandY + 18);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(cut.char.spells.ult, textX, bandY + 18);
+
+                ctx.restore();
+
+                ctx.strokeStyle = cut.char.ultColor;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(0, bandY - bandH * 0.55);
+                ctx.lineTo(W, bandY - bandH * 0.35);
+                ctx.moveTo(0, bandY + bandH * 0.35);
+                ctx.lineTo(W, bandY + bandH * 0.55);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        function renderBattle() {
+            ctx.save();
+            if (battleState.shakeTimer > 0) {
+                const sx = (Math.random() - 0.5) * battleState.shakeIntensity * 2;
+                const sy = (Math.random() - 0.5) * battleState.shakeIntensity * 2;
+                ctx.translate(sx, sy);
+            }
+
+            drawStageBackground();
+
+            const groundY = canvas.height - 85;
+            const { f1, f2 } = getActiveFighters();
+
+            [f1, f2].forEach(fighter => {
+                renderDetailedWizard(ctx, fighter.data, {
+                    x: fighter.x,
+                    y: groundY - fighter.y,
+                    scale: 1,
+                    facing: fighter.facing,
+                    state: fighter.state,
+                    attackSubtype: fighter.attackSubtype,
+                    animFrame: fighter.animFrame,
+                    mp: fighter.mp,
+                    squashX: fighter.squashX,
+                    squashY: fighter.squashY,
+                    tilt: fighter.tilt,
+                    stridePhase: fighter.stridePhase,
+                    armAngle: fighter.armAngle
+                });
+
+                // 프로테고 방어막 그래픽
+                if (fighter.state === 'block') {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(fighter.x + fighter.facing * 24, groundY - fighter.y - 56, 46, -Math.PI * 0.45, Math.PI * 0.45);
+                    ctx.stroke();
+                    ctx.fill();
+                    ctx.restore();
+                }
+            });
+
+            drawProjectilesAndEffects();
+            ctx.restore();
+        }
+
+        // ==================== 10. 메인 게임 루프 ====================
+        function gameLoop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            if (!battleState.isOver) {
+                if (battleState.ultCutin && battleState.ultCutin.timer > 0) {
+                    battleState.ultCutin.timer -= dt;
+                }
+                if (battleState.hitstop > 0) {
+                    battleState.hitstop -= dt;
+                } else {
+                    handlePlayerInput(dt);
+                    if (gameConfig.opponentMode === 'ai') {
+                        updateAI(dt);
+                    }
+                    updatePhysicsAndCombat(dt);
+                }
+            }
+
+            renderBattle();
+
+            // 단일 프레임 입력 플래그 초기화
+            for (const k in justPressed) justPressed[k] = false;
+            mouseJustPressed.left = false;
+            mouseJustPressed.right = false;
+
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>

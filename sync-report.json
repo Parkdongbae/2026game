@@ -1,6 +1,13 @@
 {
-  "updatedAt": "2026-11-25T02:18:28.987Z",
+  "updatedAt": "2026-11-25T03:12:05.307Z",
   "skipped": [
+    {
+      "sourceName": "3d - 3207심윤호.html",
+      "driveId": "1s-stOLlNK_AXIKABsg5fUkGBB0p1PGgs",
+      "reason": "새 버전으로 교체됨 (옛 파일)",
+      "studentNo": "3207",
+      "name": "심윤호"
+    },
     {
       "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
       "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
@@ -33,20 +40,6 @@
       "sourceName": "seashell-game (3) - 3303김성민.html",
       "driveId": "1mduf7ngtizPRNB9hyPzldvbaWSARihto",
       "reason": "새 버전으로 교체됨 (옛 파일)",
-      "studentNo": "3303",
-      "name": "김성민"
-    },
-    {
-      "sourceName": "seashell-game (4) - 3303김성민.html",
-      "driveId": "1gEUwPmaK8-vssvEhK8yz9QDAN6PxLCvv",
-      "reason": "새 버전으로 교체됨 (옛 파일)",
-      "studentNo": "3303",
-      "name": "김성민"
-    },
-    {
-      "sourceName": "seashell-game (6) - 3303김성민.html",
-      "driveId": "1zpcg7Co-hCqeJPG2UF9opO65wB8rHdwr",
-      "reason": "같은 파일을 두 번 올림 (한 번만 게시)",
       "studentNo": "3303",
       "name": "김성민"
     }

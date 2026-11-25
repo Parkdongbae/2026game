@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DYNAMIC BOXING - 아케이드 복싱 게임</title>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 기본 레이아웃 및 폰트 설정 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #0b0e14;
+            color: #ffffff;
+            font-family: 'Noto Sans KR', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 메인 게임 컨테이너 */
+        #game-wrapper {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        /* 상단 헤더 및 사운드 버튼 */
+        .top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .game-title {
+            font-family: 'Black Han Sans', sans-serif;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #38bdf8, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .sound-btn {
+            background: #1e293b;
+            border: 2px solid #334155;
+            color: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .sound-btn:hover {
+            background: #334155;
+            transform: translateY(-1px);
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* 캔버스 컨테이너 (반응형 비율 유지) */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 62vh;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 0 3px #1e293b;
+            background: #111827;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 오버레이 UI (시작, 라운드, KO/결과 화면) */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 14, 20, 0.86);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 10;
+            transition: opacity 0.25s ease;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay h1 {
+            font-family: 'Black Han Sans', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 10px;
+            color: #fbbf24;
+            text-shadow: 0 4px 15px rgba(251, 191, 36, 0.5);
+        }
+
+        .overlay p {
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            color: #cbd5e1;
+            max-width: 560px;
+            line-height: 1.55;
+            margin-bottom: 22px;
+        }
+
+        .action-btn {
+            font-family: 'Black Han Sans', sans-serif;
+            font-size: 1.4rem;
+            padding: 14px 36px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #991b1b, 0 10px 20px rgba(239, 68, 68, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #991b1b, 0 14px 24px rgba(239, 68, 68, 0.5);
+        }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #991b1b;
+        }
+
+        .mode-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+        }
+
+        .action-btn.btn-1p {
+            background: linear-gradient(135deg, #2563eb, #0284c7);
+            box-shadow: 0 6px 0 #1e3a8a, 0 10px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .action-btn.btn-1p:hover {
+            box-shadow: 0 8px 0 #1e3a8a, 0 14px 24px rgba(37, 99, 235, 0.5);
+        }
+
+        .action-btn.btn-2p {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            box-shadow: 0 6px 0 #991b1b, 0 10px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 하단 컨트롤 패널 (키보드 가이드 + 터치 버튼) */
+        .controls-panel {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.25fr 1.25fr;
+            gap: 10px;
+            background: #131926;
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid #1e293b;
+        }
+
+        .p1-box {
+            border-left: 3px solid #3b82f6;
+            padding-left: 6px;
+        }
+
+        .p2-box {
+            border-left: 3px solid #ef4444;
+            padding-left: 6px;
+        }
+
+        .p2-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        .p2-grid .ctrl-btn {
+            padding: 7px 3px;
+        }
+
+        @media (max-width: 720px) {
+            .controls-panel {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                padding: 8px;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .group-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-left: 4px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .ctrl-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 4px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Noto Sans KR', sans-serif;
+            font-weight: 900;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.08s, filter 0.1s;
+            position: relative;
+        }
+
+        .ctrl-btn:active, .ctrl-btn.pressed {
+            transform: scale(0.94) translateY(2px);
+            filter: brightness(1.25);
+        }
+
+        .ctrl-btn .key-badge {
+            font-size: 0.7rem;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 3px;
+            color: #e2e8f0;
+            font-weight: 700;
+        }
+
+        .ctrl-btn .move-name {
+            font-size: 0.9rem;
+        }
+
+        .ctrl-btn .move-sub {
+            font-size: 0.65rem;
+            opacity: 0.85;
+            font-weight: 400;
+        }
+
+        /* 버튼별 테마 컬러 */
+        .btn-move  { background: linear-gradient(180deg, #475569, #334155); box-shadow: 0 3px 0 #1e293b; }
+        .btn-weave { background: linear-gradient(180deg, #0284c7, #0369a1); box-shadow: 0 3px 0 #075985; }
+        .btn-guard { background: linear-gradient(180deg, #10b981, #059669); box-shadow: 0 3px 0 #065f46; }
+        .btn-jab   { background: linear-gradient(180deg, #6366f1, #4f46e5); box-shadow: 0 3px 0 #3730a3; }
+        .btn-cross { background: linear-gradient(180deg, #8b5cf6, #7c3aed); box-shadow: 0 3px 0 #5b21b6; }
+        .btn-hook  { background: linear-gradient(180deg, #f59e0b, #d97706); box-shadow: 0 3px 0 #92400e; }
+        .btn-upper { background: linear-gradient(180deg, #ef4444, #dc2626); box-shadow: 0 3px 0 #991b1b; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <!-- 상단 바 -->
+    <div class="top-bar">
+        <div class="game-title">🥊 DYNAMIC RING: 아케이드 복싱</div>
+        <div class="top-actions">
+            <button id="menu-btn" class="sound-btn">🏠 모드 선택</button>
+            <button id="sound-toggle" class="sound-btn">🔊 사운드 ON</button>
+        </div>
+    </div>
+
+    <!-- 게임 캔버스 영역 -->
+    <div id="canvas-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 시작 및 결과 오버레이 -->
+        <div id="overlay" class="overlay">
+            <h1 id="overlay-title">DYNAMIC RING</h1>
+            <p id="overlay-desc">
+                총 <strong>5라운드</strong> 챔피언십 매치! 싱글 모드 또는 친구와 함께 <strong>2인용 대전</strong>을 즐기세요.<br>
+                <strong>1P (BLUE):</strong> 이동 <code>A/D</code> · 가드 <code>S/Space</code> · 위빙 <code>L-Shift</code> · 공격 <code>Z X C V</code><br>
+                <strong>2P (RED):</strong> 이동 <code>←/→</code> · 가드 <code>↓</code> · 위빙 <code>R-Shift</code> · 공격 <code>J K L ;</code>
+            </p>
+            <div id="mode-select-group" class="mode-btn-row">
+                <button id="start-1p-btn" class="action-btn btn-1p">🥊 1P vs AI (5R)</button>
+                <button id="start-2p-btn" class="action-btn btn-2p">👥 1P vs 2P (5R)</button>
+            </div>
+            <button id="next-round-btn" class="action-btn hidden">다음 라운드 시작</button>
+        </div>
+    </div>
+
+    <!-- 1인용 하단 컨트롤 패드 -->
+    <div id="controls-1p" class="controls-panel">
+        <!-- 이동, 방어 및 회피 -->
+        <div class="control-group">
+            <div class="group-label">풋워크 이동 & 방어 (Footwork & Defense)</div>
+            <div class="btn-row">
+                <button class="ctrl-btn btn-move" data-player="1" data-action="moveLeft">
+                    <span class="key-badge">← / A</span>
+                    <span class="move-name">후퇴 (좌)</span>
+                    <span class="move-sub">거리 벌리기</span>
+                </button>
+                <button class="ctrl-btn btn-move" data-player="1" data-action="moveRight">
+                    <span class="key-badge">→ / D</span>
+                    <span class="move-name">전진 (우)</span>
+                    <span class="move-sub">인파이팅</span>
+                </button>
+                <button class="ctrl-btn btn-weave" data-player="1" data-action="weave">
+                    <span class="key-badge">SHIFT</span>
+                    <span class="move-name">위빙</span>
+                    <span class="move-sub">회피/카운터</span>
+                </button>
+                <button class="ctrl-btn btn-guard" data-player="1" data-action="guard">
+                    <span class="key-badge">SPACE / ↓</span>
+                    <span class="move-name">가드</span>
+                    <span class="move-sub">피해 감소</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 펀치 공격 -->
+        <div class="control-group">
+            <div class="group-label">펀치 콤보 (Punch Attacks - 사거리 주의)</div>
+            <div class="btn-row">
+                <button class="ctrl-btn btn-jab" data-player="1" data-action="jab">
+                    <span class="key-badge">Z</span>
+                    <span class="move-name">잽 (JAB)</span>
+                    <span class="move-sub">긴 사거리</span>
+                </button>
+                <button class="ctrl-btn btn-cross" data-player="1" data-action="cross">
+                    <span class="key-badge">X</span>
+                    <span class="move-name">투 (CROSS)</span>
+                    <span class="move-sub">중장거리</span>
+                </button>
+                <button class="ctrl-btn btn-hook" data-player="1" data-action="hook">
+                    <span class="key-badge">C</span>
+                    <span class="move-name">훅 (HOOK)</span>
+                    <span class="move-sub">근접 측면</span>
+                </button>
+                <button class="ctrl-btn btn-upper" data-player="1" data-action="uppercut">
+                    <span class="key-badge">V</span>
+                    <span class="move-name">어퍼컷</span>
+                    <span class="move-sub">초근접/파괴</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2인용 하단 컨트롤 패드 (1P & 2P 동시 표기) -->
+    <div id="controls-2p" class="controls-panel hidden">
+        <!-- 1P (BLUE) 컨트롤 -->
+        <div class="control-group p1-box">
+            <div class="group-label" style="color: #60a5fa;">🔵 1P (BLUE) 조작키</div>
+            <div class="p2-grid">
+                <button class="ctrl-btn btn-move" data-player="1" data-action="moveLeft">
+                    <span class="key-badge">A</span>
+                    <span class="move-name">좌 이동</span>
+                </button>
+                <button class="ctrl-btn btn-move" data-player="1" data-action="moveRight">
+                    <span class="key-badge">D</span>
+                    <span class="move-name">우 이동</span>
+                </button>
+                <button class="ctrl-btn btn-weave" data-player="1" data-action="weave">
+                    <span class="key-badge">L-SHIFT</span>
+                    <span class="move-name">위빙</span>
+                </button>
+                <button class="ctrl-btn btn-guard" data-player="1" data-action="guard">
+                    <span class="key-badge">S / SPACE</span>
+                    <span class="move-name">가드</span>
+                </button>
+                <button class="ctrl-btn btn-jab" data-player="1" data-action="jab">
+                    <span class="key-badge">Z</span>
+                    <span class="move-name">잽</span>
+                </button>
+                <button class="ctrl-btn btn-cross" data-player="1" data-action="cross">
+                    <span class="key-badge">X</span>
+                    <span class="move-name">투</span>
+                </button>
+                <button class="ctrl-btn btn-hook" data-player="1" data-action="hook">
+                    <span class="key-badge">C</span>
+                    <span class="move-name">훅</span>
+                </button>
+                <button class="ctrl-btn btn-upper" data-player="1" data-action="uppercut">
+                    <span class="key-badge">V</span>
+                    <span class="move-name">어퍼컷</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2P (RED) 컨트롤 -->
+        <div class="control-group p2-box">
+            <div class="group-label" style="color: #f87171;">🔴 2P (RED) 조작키</div>
+            <div class="p2-grid">
+                <button class="ctrl-btn btn-move" data-player="2" data-action="moveLeft">
+                    <span class="key-badge">←</span>
+                    <span class="move-name">좌 이동</span>
+                </button>
+                <button class="ctrl-btn btn-move" data-player="2" data-action="moveRight">
+                    <span class="key-badge">→</span>
+                    <span class="move-name">우 이동</span>
+                </button>
+                <button class="ctrl-btn btn-weave" data-player="2" data-action="weave">
+                    <span class="key-badge">R-SHIFT</span>
+                    <span class="move-name">위빙</span>
+                </button>
+                <button class="ctrl-btn btn-guard" data-player="2" data-action="guard">
+                    <span class="key-badge">↓</span>
+                    <span class="move-name">가드</span>
+                </button>
+                <button class="ctrl-btn btn-jab" data-player="2" data-action="jab">
+                    <span class="key-badge">J</span>
+                    <span class="move-name">잽</span>
+                </button>
+                <button class="ctrl-btn btn-cross" data-player="2" data-action="cross">
+                    <span class="key-badge">K</span>
+                    <span class="move-name">투</span>
+                </button>
+                <button class="ctrl-btn btn-hook" data-player="2" data-action="hook">
+                    <span class="key-badge">L</span>
+                    <span class="move-name">훅</span>
+                </button>
+                <button class="ctrl-btn btn-upper" data-player="2" data-action="uppercut">
+                    <span class="key-badge">; (세미콜론)</span>
+                    <span class="move-name">어퍼컷</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ============================================================================
+ * 1. 웹 오디오 사운드 엔진 (외부 파일 없이 역동적인 타격/공/바람 소리 합성)
+ * ============================================================================
+ */
+class SoundSystem {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+    }
+
+    // 바람 가르는 소리 (Whoosh)
+    playWhoosh(pitch = 300) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(pitch, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.14);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    }
+
+    // 타격음 (가벼운 펀치 ~ 무거운 펀치)
+    playHit(power = 1) {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140 + power * 30, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 0.18 + power * 0.05);
+
+        gain.gain.setValueAtTime(Math.min(0.6, 0.25 + power * 0.12), now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22 + power * 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25 + power * 0.05);
+
+        const bufferSize = this.ctx.sampleRate * 0.12;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 900 + power * 200;
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.3 * power, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        noise.start(now);
+    }
+
+    // 가드 막음 소리
+    playGuard() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.1);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.11);
+    }
+
+    // 위빙 회피 사운드
+    playDodge() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(640, now + 0.12);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+    }
+
+    // 라운드 시작 공 소리 (Ding!)
+    playBell() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [880, 1318.5, 1760];
+        freqs.forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now);
+
+            gain.gain.setValueAtTime(0.22 / (idx + 1), now);
+            gain.gain.exponentialRampToValueAtTime(0.0008, now + 1.4);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 1.45);
+        });
+    }
+}
+
+const sound = new SoundSystem();
+
+/**
+ * ============================================================================
+ * 2. 기술 데이터 및 상수 정의 (밸런스 조정된 대미지 및 사거리 reach 포함)
+ * ============================================================================
+ */
+const MOVES = {
+    jab: {
+        name: 'JAB!',
+        windup: 0.08,
+        active: 0.09,
+        recovery: 0.14,
+        damage: 3,
+        staminaCost: 8,
+        power: 0.8,
+        reach: 215,
+        breaksGuard: false,
+        catchesWeave: false,
+        color: '#60a5fa'
+    },
+    cross: {
+        name: 'STRAIGHT!',
+        windup: 0.14,
+        active: 0.11,
+        recovery: 0.20,
+        damage: 6,
+        staminaCost: 14,
+        power: 1.2,
+        reach: 205,
+        breaksGuard: false,
+        catchesWeave: false,
+        color: '#a78bfa'
+    },
+    hook: {
+        name: 'HOOK!',
+        windup: 0.22,
+        active: 0.12,
+        recovery: 0.26,
+        damage: 9,
+        staminaCost: 22,
+        power: 1.6,
+        reach: 165,
+        breaksGuard: false,
+        catchesWeave: true,
+        color: '#fbbf24'
+    },
+    uppercut: {
+        name: 'UPPERCUT!',
+        windup: 0.29,
+        active: 0.13,
+        recovery: 0.33,
+        damage: 13,
+        staminaCost: 30,
+        power: 2.1,
+        reach: 152,
+        breaksGuard: true,
+        catchesWeave: false,
+        color: '#f87171'
+    }
+};
+
+/**
+ * ============================================================================
+ * 3. 시각 효과 클래스 (타격 스파크, 땀방울, 플로팅 텍스트)
+ * ============================================================================
+ */
+class Particle {
+    constructor(x, y, color, speedScale = 1) {
+        this.x = x;
+        this.y = y;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (90 + Math.random() * 240) * speedScale;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed - 60;
+        this.color = color;
+        this.size = 3 + Math.random() * 4.5;
+        this.life = 0.35 + Math.random() * 0.25;
+        this.maxLife = this.life;
+    }
+
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 580 * dt; // 중력 효과
+        this.life -= dt;
+    }
+
+    draw(ctx) {
+        const alpha = Math.max(0, this.life / this.maxLife);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class FloatingText {
+    constructor(x, y, text, color, scale = 1) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.scale = scale;
+        this.life = 0.85;
+        this.maxLife = 0.85;
+    }
+
+    update(dt) {
+        this.y -= 55 * dt;
+        this.life -= dt;
+    }
+
+    draw(ctx) {
+        const alpha = Math.min(1, (this.life / this.maxLife) * 1.4);
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, alpha);
+        ctx.font = `900 ${Math.round(22 * this.scale)}px 'Black Han Sans', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#090d16';
+        ctx.strokeText(this.text, this.x, this.y);
+        ctx.fillStyle = this.color;
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.restore();
+    }
+}
+
+/**
+ * ============================================================================
+ * 4. 복서(캐릭터) 클래스 - 역동적 애니메이션, 이동, 위빙, 콤보 구현
+ * ============================================================================
+ */
+class Boxer {
+    constructor(options) {
+        this.playerNum = options.playerNum; // 1 or 2
+        this.name = options.name;
+        this.gloveColor = options.gloveColor;
+        this.gloveDark = options.gloveDark;
+        this.shortsColor = options.shortsColor;
+        this.skinColor = options.skinColor;
+        this.hairColor = options.hairColor;
+
+        this.maxHp = 100;
+        this.hp = 100;
+        this.displayHp = 100; // 부드럽게 줄어드는 잔상 체력바용
+        this.maxStamina = 100;
+        this.stamina = 100;
+        this.exhausted = false;
+
+        this.x = options.x;
+        this.y = options.y;
+        this.dir = options.dir; // 1: 오른쪽 바라봄, -1: 왼쪽 바라봄
+
+        this.state = 'idle'; // idle, windup, active, recovery, guard, weave, hurt, ko
+        this.stateTimer = 0;
+        this.currentMove = null;
+        this.lastMoveKey = null;
+        this.hasHitThisSwing = false;
+
+        this.vx = 0;
+        this.moveInput = 0; // -1: 좌, 0: 정지, 1: 우
+        this.guardInput = false;
+
+        this.bobPhase = Math.random() * Math.PI * 2;
+        this.walkCycle = 0;
+        this.weaveDir = 1;
+        this.counterWindow = 0;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.afterimages = [];
+        this.roundWins = 0;
+    }
+
+    resetForRound(x, y, dir) {
+        this.x = x;
+        this.y = y;
+        this.dir = dir;
+        this.hp = this.maxHp;
+        this.displayHp = this.maxHp;
+        this.stamina = this.maxStamina;
+        this.exhausted = false;
+        this.state = 'idle';
+        this.stateTimer = 0;
+        this.currentMove = null;
+        this.lastMoveKey = null;
+        this.hasHitThisSwing = false;
+        this.vx = 0;
+        this.moveInput = 0;
+        this.guardInput = false;
+        this.counterWindow = 0;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.afterimages = [];
+    }
+
+    healBetweenRounds() {
+        // 라운드 종료 후 코너 휴식으로 체력 35% 회복, 스태미나 100% 회복
+        this.hp = Math.min(this.maxHp, this.hp + 35);
+        this.displayHp = this.hp;
+        this.stamina = this.maxStamina;
+        this.exhausted = false;
+        this.state = 'idle';
+        this.stateTimer = 0;
+        this.currentMove = null;
+        this.vx = 0;
+        this.moveInput = 0;
+        this.guardInput = false;
+        this.counterWindow = 0;
+        this.combo = 0;
+        this.afterimages = [];
+    }
+
+    // 펀치 기술 시전
+    startMove(moveKey) {
+        if (this.state === 'hurt' || this.state === 'ko') return false;
+        if (this.state === 'windup' || this.state === 'active') return false;
+        // 리커버리 중에는 잽 -> 투 콤보 연계만 허용
+        if (this.state === 'recovery' && !(this.lastMoveKey === 'jab' && moveKey === 'cross')) {
+            return false;
+        }
+
+        const move = MOVES[moveKey];
+        if (!move) return false;
+
+        if (this.exhausted || this.stamina < move.staminaCost) {
+            return false;
+        }
+
+        this.stamina = Math.max(0, this.stamina - move.staminaCost);
+        if (this.stamina === 0) {
+            this.exhausted = true;
+        }
+
+        // 잽 이후 투 연계 시 선딜레이 30% 단축
+        const isOneTwoCombo = (this.lastMoveKey === 'jab' && moveKey === 'cross');
+        this.currentMove = { key: moveKey, ...move };
+        this.lastMoveKey = moveKey;
+        this.state = 'windup';
+        this.stateTimer = isOneTwoCombo ? move.windup * 0.7 : move.windup;
+        this.hasHitThisSwing = false;
+
+        // 공격 시 살짝 전진 스텝
+        this.vx = this.dir * (moveKey === 'jab' ? 95 : 145);
+        sound.playWhoosh(moveKey === 'jab' ? 380 : 260);
+        return true;
+    }
+
+    // 위빙 회피 시전
+    startWeave() {
+        if (this.state === 'hurt' || this.state === 'ko' || this.state === 'weave') return false;
+        if (this.state === 'windup' || this.state === 'active') return false;
+        if (this.exhausted || this.stamina < 12) return false;
+
+        this.stamina = Math.max(0, this.stamina - 12);
+        this.state = 'weave';
+        this.stateTimer = 0.34;
+        this.weaveDir = this.moveInput !== 0 ? this.moveInput : -this.dir;
+        this.vx = this.weaveDir * 210;
+        sound.playDodge();
+
+        // 잔상 추가
+        for (let i = 0; i < 3; i++) {
+            this.afterimages.push({
+                x: this.x - this.weaveDir * i * 12,
+                y: this.y + 24,
+                alpha: 0.45 - i * 0.12
+            });
+        }
+        return true;
+    }
+
+    update(dt, opponent, minX, maxX) {
+        // 잔상 체력바 부드러운 추종
+        if (this.displayHp > this.hp) {
+            this.displayHp = Math.max(this.hp, this.displayHp - 42 * dt);
+        } else {
+            this.displayHp = this.hp;
+        }
+
+        // 콤보 및 카운터 창 타이머 감소
+        if (this.comboTimer > 0) {
+            this.comboTimer -= dt;
+            if (this.comboTimer <= 0) this.combo = 0;
+        }
+        if (this.counterWindow > 0) {
+            this.counterWindow = Math.max(0, this.counterWindow - dt);
+        }
+
+        // 잔상 페이드 아웃
+        for (let i = this.afterimages.length - 1; i >= 0; i--) {
+            this.afterimages[i].alpha -= dt * 1.6;
+            if (this.afterimages[i].alpha <= 0) {
+                this.afterimages.splice(i, 1);
+            }
+        }
+
+        // 스태미나 자연 회복
+        const staminaRegen = this.state === 'guard' ? 12 : (this.state === 'idle' ? 24 : 8);
+        if (this.state !== 'windup' && this.state !== 'active' && this.state !== 'ko') {
+            this.stamina = Math.min(this.maxStamina, this.stamina + staminaRegen * dt);
+            if (this.exhausted && this.stamina >= 35) {
+                this.exhausted = false;
+            }
+        }
+
+        // 리듬감 있는 풋워크 바운스
+        this.bobPhase += dt * (this.moveInput !== 0 ? 13 : 7.5);
+
+        // 상태 머신 업데이트
+        if (this.state === 'windup') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = 'active';
+                this.stateTimer = this.currentMove.active;
+            }
+        } else if (this.state === 'active') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = 'recovery';
+                this.stateTimer = this.currentMove.recovery;
+            }
+        } else if (this.state === 'recovery') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = this.guardInput && !this.exhausted ? 'guard' : 'idle';
+                this.currentMove = null;
+                this.lastMoveKey = null;
+            }
+        } else if (this.state === 'weave') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = this.guardInput && !this.exhausted ? 'guard' : 'idle';
+            }
+        } else if (this.state === 'hurt') {
+            this.stateTimer -= dt;
+            if (this.stateTimer <= 0) {
+                this.state = this.guardInput && !this.exhausted ? 'guard' : 'idle';
+            }
+        } else if (this.state === 'idle' || this.state === 'guard') {
+            if (this.guardInput && !this.exhausted) {
+                this.state = 'guard';
+            } else {
+                this.state = 'idle';
+            }
+        }
+
+        // 좌우 직접 이동 처리 (공격 중이거나 피격/KO 상태가 아닐 때)
+        if ((this.state === 'idle' || this.state === 'guard') && this.moveInput !== 0) {
+            const moveSpeed = this.state === 'guard' ? 145 : 235;
+            this.x += this.moveInput * moveSpeed * dt;
+            this.walkCycle += dt * 14;
+        }
+
+        // 관성 속도 적용 및 감쇠
+        this.x += this.vx * dt;
+        this.vx *= Math.pow(0.001, dt);
+        if (Math.abs(this.vx) < 4) this.vx = 0;
+
+        // 링 로프 경계 제한
+        this.x = Math.max(minX, Math.min(maxX, this.x));
+
+        // 상대 복서와 겹치지 않도록 최소 거리 유지
+        if (opponent) {
+            const minSep = 92;
+            const dist = Math.abs(this.x - opponent.x);
+            if (dist < minSep) {
+                const overlap = (minSep - dist) * 0.5;
+                if (this.x < opponent.x) {
+                    this.x = Math.max(minX, this.x - overlap);
+                    opponent.x = Math.min(maxX, opponent.x + overlap);
+                } else {
+                    this.x = Math.min(maxX, this.x + overlap);
+                    opponent.x = Math.max(minX, opponent.x - overlap);
+                }
+            }
+            // 항상 상대를 마주보도록 방향 갱신 (KO 상태 제외)
+            if (this.state !== 'ko') {
+                this.dir = this.x <= opponent.x ? 1 : -1;
+            }
+        }
+    }
+
+    draw(ctx) {
+        // 위빙 잔상 먼저 그리기
+        this.afterimages.forEach(img => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, img.alpha * 0.5);
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.ellipse(img.x, img.y - 75, 28, 52, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // 바닥 그림자
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 46, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // KO 상태일 경우 쓰러진 포즈
+        if (this.state === 'ko') {
+            ctx.rotate(-this.dir * Math.PI * 0.46);
+            ctx.translate(0, -18);
+        }
+
+        // 바운스 및 위빙 웅크림 계산
+        const bobY = this.state === 'ko' ? 0 : Math.abs(Math.sin(this.bobPhase)) * 6;
+        const weaveOffsetY = this.state === 'weave' ? 30 : 0;
+        const leanAngle =
+            this.state === 'weave' ? this.dir * 0.28 :
+            this.state === 'hurt' ? -this.dir * 0.25 :
+            this.state === 'active' ? this.dir * 0.16 :
+            this.moveInput * 0.08;
+
+        // 1. 다리 & 복싱화 애니메이션
+        const stepOffset = Math.sin(this.walkCycle) * (this.moveInput !== 0 ? 12 : 3);
+        const backFootX = -this.dir * 20 - stepOffset;
+        const frontFootX = this.dir * 22 + stepOffset;
+
+        ctx.strokeStyle = this.skinColor;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+
+        // 뒷다리
+        ctx.beginPath();
+        ctx.moveTo(-this.dir * 10, -52 + bobY + weaveOffsetY * 0.5);
+        ctx.lineTo(backFootX, -6);
+        ctx.stroke();
+
+        // 앞다리
+        ctx.beginPath();
+        ctx.moveTo(this.dir * 10, -52 + bobY + weaveOffsetY * 0.5);
+        ctx.lineTo(frontFootX, -4);
+        ctx.stroke();
+
+        // 복싱 부츠
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(backFootX - 10, -12, 22, 12, 5);
+        ctx.roundRect(frontFootX - 10, -10, 24, 12, 5);
+        ctx.fill();
+
+        // 상체 회전 기준점
+        ctx.translate(0, -56 + bobY + weaveOffsetY);
+        ctx.rotate(leanAngle);
+
+        // 2. 트렁크(복싱 반바지)
+        ctx.fillStyle = this.shortsColor;
+        ctx.beginPath();
+        ctx.roundRect(-22, -10, 44, 28, 6);
+        ctx.fill();
+        // 벨트 라인
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(-22, -10, 44, 6);
+
+        // 3. 상체(근육질 토르소)
+        ctx.fillStyle = this.skinColor;
+        ctx.beginPath();
+        ctx.roundRect(-25, -62, 50, 54, 14);
+        ctx.fill();
+
+        // 4. 머리 & 표정
+        const headX = this.dir * 4;
+        const headY = -82;
+
+        // 위빙 무적 오라 효과
+        if (this.state === 'weave') {
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(headX, headY, 24, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // 얼굴
+        ctx.fillStyle = this.skinColor;
+        ctx.beginPath();
+        ctx.arc(headX, headY, 19, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 머리카락 / 헤드기어 스타일
+        ctx.fillStyle = this.hairColor;
+        ctx.beginPath();
+        ctx.arc(headX - this.dir * 2, headY - 6, 18, Math.PI, Math.PI * 2);
+        ctx.fill();
+
+        // 눈 & 눈썹 (상태별 역동적 표정)
+        const eyeX = headX + this.dir * 8;
+        ctx.fillStyle = '#0f172a';
+        if (this.state === 'hurt' || this.state === 'ko') {
+            // 피격 시 >< 표정
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(eyeX - 4, headY - 5);
+            ctx.lineTo(eyeX + 3, headY - 1);
+            ctx.lineTo(eyeX - 4, headY + 3);
+            ctx.stroke();
+        } else {
+            // 매서운 눈빛
+            ctx.beginPath();
+            ctx.arc(eyeX, headY - 2, 2.8, 0, Math.PI * 2);
+            ctx.fill();
+            // 눈썹
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = this.hairColor;
+            ctx.beginPath();
+            ctx.moveTo(eyeX - 5 * this.dir, headY - 8);
+            ctx.lineTo(eyeX + 5 * this.dir, headY - 5);
+            ctx.stroke();
+        }
+
+        // 5. 양팔 및 글러브 위치 계산
+        let leadGlove = { x: this.dir * 28, y: -48 }; // 앞손
+        let rearGlove = { x: this.dir * 12, y: -52 }; // 뒷손
+
+        if (this.state === 'guard') {
+            leadGlove = { x: this.dir * 24, y: -74 };
+            rearGlove = { x: this.dir * 16, y: -76 };
+        } else if (this.state === 'windup' && this.currentMove) {
+            const k = this.currentMove.key;
+            if (k === 'jab') {
+                leadGlove = { x: this.dir * 14, y: -54 };
+            } else if (k === 'cross') {
+                rearGlove = { x: -this.dir * 14, y: -56 };
+            } else if (k === 'hook') {
+                leadGlove = { x: -this.dir * 18, y: -50 };
+            } else if (k === 'uppercut') {
+                rearGlove = { x: this.dir * 6, y: -22 };
+            }
+        } else if (this.state === 'active' && this.currentMove) {
+            const k = this.currentMove.key;
+            if (k === 'jab') {
+                leadGlove = { x: this.dir * 92, y: -68 };
+            } else if (k === 'cross') {
+                rearGlove = { x: this.dir * 98, y: -66 };
+            } else if (k === 'hook') {
+                leadGlove = { x: this.dir * 76, y: -68 };
+            } else if (k === 'uppercut') {
+                rearGlove = { x: this.dir * 66, y: -96 };
+            }
+        }
+
+        // 공격 궤적 이펙트 (Active 프레임)
+        if (this.state === 'active' && this.currentMove) {
+            ctx.save();
+            ctx.strokeStyle = this.currentMove.color;
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.globalAlpha = 0.65;
+            ctx.beginPath();
+            if (this.currentMove.key === 'hook') {
+                ctx.arc(this.dir * 25, -62, 54, -Math.PI * 0.4, Math.PI * 0.35);
+            } else if (this.currentMove.key === 'uppercut') {
+                ctx.moveTo(this.dir * 20, -25);
+                ctx.quadraticCurveTo(this.dir * 72, -55, this.dir * 66, -96);
+            } else {
+                ctx.moveTo(this.dir * 18, -64);
+                ctx.lineTo(this.dir * 95, -67);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 뒷손 팔 + 글러브
+        this.drawArmAndGlove(ctx, -this.dir * 8, -46, rearGlove.x, rearGlove.y, 15);
+        // 앞손 팔 + 글러브
+        this.drawArmAndGlove(ctx, this.dir * 12, -46, leadGlove.x, leadGlove.y, 16);
+
+        // 가드 방패 시각 표시
+        if (this.state === 'guard') {
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.75)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.dir * 24, -68, 26, -Math.PI * 0.45, Math.PI * 0.45);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    drawArmAndGlove(ctx, shoulderX, shoulderY, handX, handY, radius) {
+        // 팔뚝
+        ctx.strokeStyle = this.skinColor;
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+
+        // 복싱 글러브
+        ctx.fillStyle = this.gloveColor;
+        ctx.strokeStyle = this.gloveDark;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(handX, handY, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 글러브 하이라이트
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+        ctx.beginPath();
+        ctx.arc(handX - 3, handY - 4, radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+/**
+ * ============================================================================
+ * 5. AI 컨트롤러 클래스 (1P vs AI 모드 전용)
+ * ============================================================================
+ */
+class AIController {
+    constructor(aiBoxer, playerBoxer) {
+        this.ai = aiBoxer;
+        this.player = playerBoxer;
+        this.thinkTimer = 0.25;
+    }
+
+    update(dt, round) {
+        if (this.ai.state === 'ko' || this.player.state === 'ko') return;
+
+        const dist = Math.abs(this.ai.x - this.player.x);
+        const aggression = Math.min(1.4, 0.85 + round * 0.1);
+
+        // 플레이어가 강공격을 준비 중이면 일정 확률로 가드 또는 위빙 반응
+        if (this.player.state === 'windup' && this.thinkTimer <= 0.08) {
+            const r = Math.random();
+            if (r < 0.32 * aggression && this.ai.stamina > 20) {
+                this.ai.guardInput = false;
+                this.ai.startWeave();
+                this.thinkTimer = 0.35;
+                return;
+            } else if (r < 0.65) {
+                this.ai.guardInput = true;
+            }
+        }
+
+        this.thinkTimer -= dt * aggression;
+        if (this.thinkTimer > 0) return;
+
+        this.thinkTimer = 0.22 + Math.random() * 0.25;
+        this.ai.guardInput = false;
+
+        // 스태미나가 너무 낮으면 뒤로 물러나며 회복
+        if (this.ai.exhausted || this.ai.stamina < 22) {
+            this.ai.moveInput = -this.ai.dir;
+            if (Math.random() < 0.45) this.ai.guardInput = true;
+            return;
+        }
+
+        // 거리에 따른 AI 행동 결정
+        if (dist > 195) {
+            // 사거리 밖이면 전진
+            this.ai.moveInput = this.ai.dir;
+        } else if (dist > 155) {
+            // 중장거리: 잽/투 견제 또는 인파이팅 접근
+            this.ai.moveInput = Math.random() < 0.5 ? this.ai.dir : 0;
+            const r = Math.random();
+            if (r < 0.42) {
+                this.ai.startMove('jab');
+            } else if (r < 0.72) {
+                this.ai.startMove('cross');
+            }
+        } else {
+            // 근접전: 콤보 및 훅/어퍼컷
+            this.ai.moveInput = Math.random() < 0.25 ? -this.ai.dir : 0;
+            const r = Math.random();
+            if (this.ai.lastMoveKey === 'jab' && r < 0.7) {
+                this.ai.startMove('cross');
+            } else if (r < 0.32) {
+                this.ai.startMove('jab');
+            } else if (r < 0.62) {
+                this.ai.startMove('hook');
+            } else if (r < 0.85) {
+                this.ai.startMove('uppercut');
+            } else {
+                this.ai.startWeave();
+            }
+        }
+    }
+}
+
+/**
+ * ============================================================================
+ * 6. 메인 게임 엔진 클래스 (5라운드 진행, 1P/2P 지원, 판정 및 렌더링)
+ * ============================================================================
+ */
+class BoxingGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.container = document.getElementById('canvas-container');
+
+        // 논리 해상도 (16:9)
+        this.width = 960;
+        this.height = 540;
+
+        this.mode = '1p'; // '1p' or '2p'
+        this.gameState = 'menu'; // 'menu', 'playing', 'roundOver', 'matchOver'
+        this.round = 1;
+        this.maxRounds = 5;
+        this.roundDuration = 60;
+        this.roundTimer = this.roundDuration;
+
+        this.hitStopTimer = 0;
+        this.shakeTimer = 0;
+        this.shakeIntensity = 0;
+
+        this.particles = [];
+        this.floatingTexts = [];
+
+        // 1P (BLUE) & 2P/AI (RED) 생성
+        this.player = new Boxer({
+            playerNum: 1,
+            name: '1P BLUE',
+            gloveColor: '#3b82f6',
+            gloveDark: '#1d4ed8',
+            shortsColor: '#2563eb',
+            skinColor: '#f1c27d',
+            hairColor: '#1e293b',
+            x: 320,
+            y: 445,
+            dir: 1
+        });
+
+        this.enemy = new Boxer({
+            playerNum: 2,
+            name: 'CPU RED',
+            gloveColor: '#ef4444',
+            gloveDark: '#b91c1c',
+            shortsColor: '#dc2626',
+            skinColor: '#e0ac69',
+            hairColor: '#090d16',
+            x: 640,
+            y: 445,
+            dir: -1
+        });
+
+        this.aiController = new AIController(this.enemy, this.player);
+
+        // 키 입력 상태 추적
+        this.keys = {};
+
+        this.setupCanvasResize();
+        this.bindEvents();
+    }
+
+    setupCanvasResize() {
+        const resize = () => {
+            const rect = this.container.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            this.canvas.width = Math.round(rect.width * dpr);
+            this.canvas.height = Math.round(rect.height * dpr);
+            this.ctx.setTransform(
+                this.canvas.width / this.width,
+                0,
+                0,
+                this.canvas.height / this.height,
+                0,
+                0
+            );
+        };
+        resize();
+        window.addEventListener('resize', resize);
+    }
+
+    bindEvents() {
+        const overlay = document.getElementById('overlay');
+        const start1pBtn = document.getElementById('start-1p-btn');
+        const start2pBtn = document.getElementById('start-2p-btn');
+        const nextRoundBtn = document.getElementById('next-round-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        const soundToggle = document.getElementById('sound-toggle');
+
+        // 1P vs AI 시작
+        start1pBtn.addEventListener('click', () => {
+            sound.init();
+            this.startNewMatch('1p');
+        });
+
+        // 1P vs 2P 시작
+        start2pBtn.addEventListener('click', () => {
+            sound.init();
+            this.startNewMatch('2p');
+        });
+
+        // 다음 라운드 / 재시작 버튼
+        nextRoundBtn.addEventListener('click', () => {
+            sound.init();
+            if (this.gameState === 'roundOver') {
+                this.startNextRound();
+            } else if (this.gameState === 'matchOver') {
+                this.startNewMatch(this.mode);
+            }
+        });
+
+        // 모드 선택 화면으로 돌아가기
+        menuBtn.addEventListener('click', () => {
+            this.showMainMenu();
+        });
+
+        // 사운드 토글
+        soundToggle.addEventListener('click', () => {
+            sound.init();
+            const muted = sound.toggleMute();
+            soundToggle.textContent = muted ? '🔇 사운드 OFF' : '🔊 사운드 ON';
+        });
+
+        // 키보드 입력 처리
+        window.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+            if (e.repeat) return;
+
+            this.keys[e.code] = true;
+            this.updateContinuousInputs();
+
+            if (this.gameState !== 'playing') return;
+            sound.init();
+
+            // 1P 액션 (공격 및 위빙)
+            if (e.code === 'KeyZ') this.player.startMove('jab');
+            if (e.code === 'KeyX') this.player.startMove('cross');
+            if (e.code === 'KeyC') this.player.startMove('hook');
+            if (e.code === 'KeyV') this.player.startMove('uppercut');
+            if (e.code === 'ShiftLeft') this.player.startWeave();
+
+            // 1인용 모드에서는 Right Shift도 1P 위빙으로 허용
+            if (this.mode === '1p' && e.code === 'ShiftRight') {
+                this.player.startWeave();
+            }
+
+            // 2P 액션 (2인용 모드일 때)
+            if (this.mode === '2p') {
+                if (e.code === 'KeyJ') this.enemy.startMove('jab');
+                if (e.code === 'KeyK') this.enemy.startMove('cross');
+                if (e.code === 'KeyL') this.enemy.startMove('hook');
+                if (e.code === 'Semicolon') this.enemy.startMove('uppercut');
+                if (e.code === 'ShiftRight') this.enemy.startWeave();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+            this.updateContinuousInputs();
+        });
+
+        // 하단 터치/마우스 컨트롤 버튼 바인딩
+        const ctrlButtons = document.querySelectorAll('.ctrl-btn');
+        ctrlButtons.forEach(btn => {
+            const playerNum = parseInt(btn.dataset.player, 10);
+            const action = btn.dataset.action;
+
+            const handlePress = (e) => {
+                e.preventDefault();
+                if (this.gameState !== 'playing') return;
+                sound.init();
+                btn.classList.add('pressed');
+
+                const targetBoxer = playerNum === 1 ? this.player : this.enemy;
+                if (action === 'moveLeft') targetBoxer.moveInput = -1;
+                else if (action === 'moveRight') targetBoxer.moveInput = 1;
+                else if (action === 'guard') targetBoxer.guardInput = true;
+                else if (action === 'weave') targetBoxer.startWeave();
+                else if (MOVES[action]) targetBoxer.startMove(action);
+            };
+
+            const handleRelease = (e) => {
+                e.preventDefault();
+                btn.classList.remove('pressed');
+                const targetBoxer = playerNum === 1 ? this.player : this.enemy;
+                if (action === 'moveLeft' && targetBoxer.moveInput === -1) targetBoxer.moveInput = 0;
+                else if (action === 'moveRight' && targetBoxer.moveInput === 1) targetBoxer.moveInput = 0;
+                else if (action === 'guard') targetBoxer.guardInput = false;
+            };
+
+            btn.addEventListener('pointerdown', handlePress);
+            btn.addEventListener('pointerup', handleRelease);
+            btn.addEventListener('pointerleave', handleRelease);
+            btn.addEventListener('pointercancel', handleRelease);
+        });
+    }
+
+    updateContinuousInputs() {
+        // 1P 이동 및 가드
+        if (this.mode === '1p') {
+            const left = this.keys['KeyA'] || this.keys['ArrowLeft'];
+            const right = this.keys['KeyD'] || this.keys['ArrowRight'];
+            this.player.moveInput = (right ? 1 : 0) - (left ? 1 : 0);
+            this.player.guardInput = Boolean(this.keys['Space'] || this.keys['KeyS'] || this.keys['ArrowDown']);
+        } else {
+            // 2P 모드: 1P는 A/D, S/Space / 2P는 좌우 화살표, 아래 화살표
+            const p1Left = this.keys['KeyA'];
+            const p1Right = this.keys['KeyD'];
+            this.player.moveInput = (p1Right ? 1 : 0) - (p1Left ? 1 : 0);
+            this.player.guardInput = Boolean(this.keys['Space'] || this.keys['KeyS']);
+
+            const p2Left = this.keys['ArrowLeft'];
+            const p2Right = this.keys['ArrowRight'];
+            this.enemy.moveInput = (p2Right ? 1 : 0) - (p2Left ? 1 : 0);
+            this.enemy.guardInput = Boolean(this.keys['ArrowDown']);
+        }
+    }
+
+    showMainMenu() {
+        this.gameState = 'menu';
+        const overlay = document.getElementById('overlay');
+        document.getElementById('overlay-title').textContent = 'DYNAMIC RING';
+        document.getElementById('overlay-desc').innerHTML = `
+            총 <strong>5라운드</strong> 챔피언십 매치! 싱글 모드 또는 친구와 함께 <strong>2인용 대전</strong>을 즐기세요.<br>
+            <strong>1P (BLUE):</strong> 이동 <code>A/D</code> · 가드 <code>S/Space</code> · 위빙 <code>L-Shift</code> · 공격 <code>Z X C V</code><br>
+            <strong>2P (RED):</strong> 이동 <code>←/→</code> · 가드 <code>↓</code> · 위빙 <code>R-Shift</code> · 공격 <code>J K L ;</code>
+        `;
+        document.getElementById('mode-select-group').classList.remove('hidden');
+        document.getElementById('next-round-btn').classList.add('hidden');
+        overlay.classList.remove('hidden');
+    }
+
+    startNewMatch(mode) {
+        this.mode = mode;
+        this.round = 1;
+        this.player.roundWins = 0;
+        this.enemy.roundWins = 0;
+        this.enemy.name = mode === '1p' ? 'CPU RED' : '2P RED';
+
+        // 하단 컨트롤 패드 전환
+        const ctrl1p = document.getElementById('controls-1p');
+        const ctrl2p = document.getElementById('controls-2p');
+        if (mode === '1p') {
+            ctrl1p.classList.remove('hidden');
+            ctrl2p.classList.add('hidden');
+        } else {
+            ctrl1p.classList.add('hidden');
+            ctrl2p.classList.remove('hidden');
+        }
+
+        this.player.resetForRound(320, 445, 1);
+        this.enemy.resetForRound(640, 445, -1);
+        this.roundTimer = this.roundDuration;
+        this.particles = [];
+        this.floatingTexts = [];
+        this.gameState = 'playing';
+
+        document.getElementById('overlay').classList.add('hidden');
+        sound.playBell();
+        this.spawnFloatingText(this.width / 2, 210, `ROUND 1 - FIGHT!`, '#fbbf24', 1.45);
+    }
+
+    startNextRound() {
+        this.round += 1;
+        this.player.x = 320;
+        this.player.dir = 1;
+        this.player.healBetweenRounds();
+
+        this.enemy.x = 640;
+        this.enemy.dir = -1;
+        this.enemy.healBetweenRounds();
+
+        this.roundTimer = this.roundDuration;
+        this.particles = [];
+        this.floatingTexts = [];
+        this.gameState = 'playing';
+
+        document.getElementById('overlay').classList.add('hidden');
+        sound.playBell();
+        this.spawnFloatingText(this.width / 2, 210, `ROUND ${this.round} - FIGHT!`, '#fbbf24', 1.45);
+    }
+
+    spawnHitParticles(x, y, color, count = 14) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push(new Particle(x, y, color, 1));
+        }
+    }
+
+    spawnFloatingText(x, y, text, color, scale = 1) {
+        this.floatingTexts.push(new FloatingText(x, y, text, color, scale));
+    }
+
+    resolveHit(attacker, defender, move) {
+        const dist = Math.abs(attacker.x - defender.x);
+        const targetX = defender.x;
+        const targetY = defender.y - 110;
+
+        // 1. 사거리 판정
+        if (dist > move.reach) {
+            this.spawnFloatingText(attacker.x + attacker.dir * 60, targetY - 30, 'OUT OF RANGE!', '#64748b', 0.85);
+            return;
+        }
+
+        // 2. 위빙 회피 판정 (훅은 위빙도 포착 가능)
+        if (defender.state === 'weave' && !move.catchesWeave) {
+            sound.playDodge();
+            defender.counterWindow = 1.15;
+            this.spawnFloatingText(targetX, targetY - 60, 'DODGE! COUNTER READY!', '#38bdf8', 1.05);
+            return;
+        }
+
+        // 3. 가드 방어 판정 (어퍼컷은 가드 파괴)
+        if (defender.state === 'guard' && !move.breaksGuard) {
+            sound.playGuard();
+            const blockedDmg = Math.max(1, Math.round(move.damage * 0.15));
+            defender.hp = Math.max(0, defender.hp - blockedDmg);
+            defender.stamina = Math.max(0, defender.stamina - move.staminaCost * 0.65);
+
+            defender.vx = attacker.dir * 130;
+
+            if (defender.stamina <= 0) {
+                defender.exhausted = true;
+                defender.state = 'hurt';
+                defender.stateTimer = 0.45;
+                this.spawnFloatingText(targetX, targetY - 70, 'GUARD CRUSH!', '#f43f5e', 1.2);
+            } else {
+                this.spawnFloatingText(targetX, targetY - 65, 'BLOCKED!', '#94a3b8', 0.95);
+            }
+
+            this.spawnHitParticles(targetX, targetY - 30, '#cbd5e1', 8);
+            this.checkRoundEnd();
+            return;
+        }
+
+        // 4. 클린 히트 판정 및 보너스 계산
+        let finalDamage = move.damage;
+        let label = move.name;
+        let labelColor = move.color;
+        let isCounter = false;
+
+        if (attacker.counterWindow > 0 || defender.state === 'windup' || defender.state === 'active') {
+            finalDamage = Math.round(finalDamage * 1.35);
+            attacker.counterWindow = 0;
+            isCounter = true;
+            label = `COUNTER ${move.name}`;
+            labelColor = '#fde047';
+        }
+
+        if (defender.state === 'guard' && move.breaksGuard) {
+            finalDamage = Math.round(finalDamage * 1.1);
+            label = 'GUARD BREAK!';
+            labelColor = '#f43f5e';
+        }
+
+        attacker.combo += 1;
+        attacker.comboTimer = 1.6;
+        if (attacker.combo >= 3) {
+            finalDamage += Math.min(3, Math.floor(attacker.combo / 2));
+        }
+
+        defender.hp = Math.max(0, defender.hp - finalDamage);
+        defender.vx = attacker.dir * (160 + move.power * 95);
+        defender.combo = 0;
+
+        // 피격 경직 적용
+        if (defender.hp > 0) {
+            defender.state = 'hurt';
+            defender.stateTimer = 0.18 + move.power * 0.08;
+        } else {
+            defender.state = 'ko';
+        }
+
+        // 타격감 연출 (사운드, 파티클, 히트스톱, 화면 흔들림)
+        sound.playHit(move.power * (isCounter ? 1.25 : 1));
+        this.spawnHitParticles(targetX, targetY - 35, isCounter ? '#fde047' : '#ffffff', Math.round(12 + move.power * 6));
+        this.spawnHitParticles(targetX, targetY - 35, '#f87171', 7);
+        this.spawnFloatingText(targetX, targetY - 72, `${label} -${finalDamage}`, labelColor, isCounter ? 1.25 : 1.05);
+
+        if (move.power >= 1.5 || isCounter) {
+            this.hitStopTimer = 0.055;
+            this.shakeTimer = 0.18;
+            this.shakeIntensity = 6 + move.power * 3;
+        } else {
+            this.shakeTimer = 0.1;
+            this.shakeIntensity = 3.5;
+        }
+
+        this.checkRoundEnd();
+    }
+
+    checkRoundEnd() {
+        if (this.gameState !== 'playing') return;
+
+        if (this.player.hp <= 0) {
+            this.player.state = 'ko';
+            this.enemy.roundWins += 1;
+            this.endRound('KO', this.enemy);
+        } else if (this.enemy.hp <= 0) {
+            this.enemy.state = 'ko';
+            this.player.roundWins += 1;
+            this.endRound('KO', this.player);
+        }
+    }
+
+    endRound(reason, winner) {
+        sound.playBell();
+        const overlay = document.getElementById('overlay');
+        const title = document.getElementById('overlay-title');
+        const desc = document.getElementById('overlay-desc');
+        const modeGroup = document.getElementById('mode-select-group');
+        const nextBtn = document.getElementById('next-round-btn');
+
+        modeGroup.classList.add('hidden');
+        nextBtn.classList.remove('hidden');
+
+        // KO 승리 또는 5라운드 종료 시 매치 최종 종료
+        if (reason === 'KO' || this.round >= this.maxRounds) {
+            this.gameState = 'matchOver';
+            let finalWinner = winner;
+            if (!finalWinner) {
+                if (this.player.roundWins > this.enemy.roundWins) finalWinner = this.player;
+                else if (this.enemy.roundWins > this.player.roundWins) finalWinner = this.enemy;
+            }
+
+            if (finalWinner) {
+                title.textContent = `🏆 ${finalWinner.name} CHAMPION!`;
+                desc.innerHTML = `
+                    <strong>${reason === 'KO' ? '화려한 KO 승부!' : '5라운드 판정 승부!'}</strong><br>
+                    최종 라운드 스코어: <strong>${this.player.name} ${this.player.roundWins}</strong> vs <strong>${this.enemy.roundWins} ${this.enemy.name}</strong>
+                `;
+            } else {
+                title.textContent = '🤝 DRAW MATCH!';
+                desc.innerHTML = `
+                    5라운드 혈투 끝에 무승부를 기록했습니다!<br>
+                    최종 라운드 스코어: <strong>${this.player.roundWins} : ${this.enemy.roundWins}</strong>
+                `;
+            }
+            nextBtn.textContent = '🔄 같은 모드로 다시 하기';
+        } else {
+            // 다음 라운드로 이어짐
+            this.gameState = 'roundOver';
+            title.textContent = `ROUND ${this.round} 종료!`;
+            const roundMsg = winner
+                ? `<strong>${winner.name}</strong> 선수가 ${this.round}라운드를 가져갑니다!`
+                : `${this.round}라운드 무승부!`;
+            desc.innerHTML = `
+                ${roundMsg}<br>
+                현재 스코어: <strong>${this.player.name} ${this.player.roundWins}</strong> vs <strong>${this.enemy.roundWins} ${this.enemy.name}</strong><br>
+                <span style="font-size: 0.9rem; color: #94a3b8;">코너 휴식으로 체력이 일부 회복됩니다.</span>
+            `;
+            nextBtn.textContent = `🥊 ROUND ${this.round + 1} 시작`;
+        }
+
+        overlay.classList.remove('hidden');
+    }
+
+    update(dt) {
+        if (this.shakeTimer > 0) {
+            this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+        }
+
+        // 파티클 및 플로팅 텍스트는 항상 업데이트
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            this.particles[i].update(dt);
+            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+        }
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+            this.floatingTexts[i].update(dt);
+            if (this.floatingTexts[i].life <= 0) this.floatingTexts.splice(i, 1);
+        }
+
+        if (this.gameState !== 'playing') return;
+
+        // 역경직(Hit-stop) 처리
+        if (this.hitStopTimer > 0) {
+            this.hitStopTimer -= dt;
+            return;
+        }
+
+        // 라운드 타이머 감소
+        this.roundTimer -= dt;
+        if (this.roundTimer <= 0) {
+            this.roundTimer = 0;
+            let roundWinner = null;
+            if (this.player.hp > this.enemy.hp) {
+                this.player.roundWins += 1;
+                roundWinner = this.player;
+            } else if (this.enemy.hp > this.player.hp) {
+                this.enemy.roundWins += 1;
+                roundWinner = this.enemy;
+            }
+            this.endRound('TIME UP', roundWinner);
+            return;
+        }
+
+        // AI 업데이트 (1P vs AI 모드일 때만)
+        if (this.mode === '1p') {
+            this.aiController.update(dt, this.round);
+        }
+
+        const minX = 115;
+        const maxX = this.width - 115;
+
+        this.player.update(dt, this.enemy, minX, maxX);
+        this.enemy.update(dt, this.player, minX, maxX);
+
+        // 공격 활성 프레임 판정 (스윙당 1회)
+        if (this.player.state === 'active' && !this.player.hasHitThisSwing && this.player.currentMove) {
+            this.player.hasHitThisSwing = true;
+            this.resolveHit(this.player, this.enemy, this.player.currentMove);
+        }
+
+        if (this.enemy.state === 'active' && !this.enemy.hasHitThisSwing && this.enemy.currentMove) {
+            this.enemy.hasHitThisSwing = true;
+            this.resolveHit(this.enemy, this.player, this.enemy.currentMove);
+        }
+    }
+
+    drawRing() {
+        const ctx = this.ctx;
+
+        // 어두운 아레나 배경
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, this.height);
+        bgGrad.addColorStop(0, '#090d16');
+        bgGrad.addColorStop(0.65, '#111827');
+        bgGrad.addColorStop(1, '#1e293b');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        // 경기장 스포트라이트 조명 효과
+        ctx.save();
+        const spot1 = ctx.createRadialGradient(300, 90, 10, 300, 260, 340);
+        spot1.addColorStop(0, 'rgba(56, 189, 248, 0.14)');
+        spot1.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = spot1;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        const spot2 = ctx.createRadialGradient(660, 90, 10, 660, 260, 340);
+        spot2.addColorStop(0, 'rgba(244, 63, 94, 0.14)');
+        spot2.addColorStop(1, 'rgba(244, 63, 94, 0)');
+        ctx.fillStyle = spot2;
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.restore();
+
+        // 관중 실루엣
+        ctx.fillStyle = '#070a12';
+        for (let i = 0; i < 28; i++) {
+            const cx = i * 36 + 10;
+            const cy = 285 + Math.sin(i * 1.7) * 8;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 링 캔버스 바닥 매트
+        ctx.fillStyle = '#1e3a5f';
+        ctx.beginPath();
+        ctx.moveTo(45, 375);
+        ctx.lineTo(this.width - 45, 375);
+        ctx.lineTo(this.width - 10, 495);
+        ctx.lineTo(10, 495);
+        ctx.closePath();
+        ctx.fill();
+
+        // 링 테두리 에이프런
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(10, 495, this.width - 20, 45);
+
+        // 코너 포스트 (좌: 블루, 우: 레드)
+        ctx.fillStyle = '#2563eb';
+        ctx.fillRect(58, 250, 18, 145);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(this.width - 76, 250, 18, 145);
+
+        // 3단 링 로프
+        const ropeHeights = [275, 312, 348];
+        const ropeColors = ['#ef4444', '#f8fafc', '#3b82f6'];
+        ropeHeights.forEach((ry, idx) => {
+            ctx.strokeStyle = ropeColors[idx];
+            ctx.lineWidth = 4.5;
+            ctx.beginPath();
+            ctx.moveTo(68, ry);
+            ctx.lineTo(this.width - 68, ry);
+            ctx.stroke();
+        });
+
+        // 두 복서 사이 거리 및 유효 사거리 가이드 라인
+        const dist = Math.abs(this.player.x - this.enemy.x);
+        const inJabRange = dist <= MOVES.jab.reach;
+        const inHookRange = dist <= MOVES.hook.reach;
+
+        ctx.save();
+        ctx.strokeStyle = inHookRange
+            ? 'rgba(251, 191, 36, 0.5)'
+            : inJabRange
+                ? 'rgba(56, 189, 248, 0.4)'
+                : 'rgba(148, 163, 184, 0.2)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(this.player.x, 456);
+        ctx.lineTo(this.enemy.x, 456);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    drawHUD() {
+        const ctx = this.ctx;
+        const barWidth = 330;
+        const hpHeight = 24;
+        const stamHeight = 11;
+
+        // 1P 체력바 (좌측 상단)
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(28, 26, barWidth + 4, hpHeight + 4, 8);
+        ctx.fill();
+
+        // 잔상 체력
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.roundRect(30, 28, barWidth * (this.player.displayHp / this.player.maxHp), hpHeight, 6);
+        ctx.fill();
+
+        // 현재 체력
+        const p1HpGrad = ctx.createLinearGradient(30, 28, 30 + barWidth, 28);
+        p1HpGrad.addColorStop(0, '#2563eb');
+        p1HpGrad.addColorStop(1, '#38bdf8');
+        ctx.fillStyle = p1HpGrad;
+        ctx.beginPath();
+        ctx.roundRect(30, 28, barWidth * (this.player.hp / this.player.maxHp), hpHeight, 6);
+        ctx.fill();
+
+        // 1P 스태미나바
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(28, 56, barWidth * 0.78 + 4, stamHeight + 4, 6);
+        ctx.fill();
+
+        ctx.fillStyle = this.player.exhausted ? '#ef4444' : '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(30, 58, (barWidth * 0.78) * (this.player.stamina / this.player.maxStamina), stamHeight, 4);
+        ctx.fill();
+
+        // 1P 이름 & 라운드 승리 별
+        ctx.font = "900 16px 'Noto Sans KR', sans-serif";
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${this.player.name} (${Math.ceil(this.player.hp)})`, 32, 88);
+
+        for (let i = 0; i < this.maxRounds; i++) {
+            ctx.fillStyle = i < this.player.roundWins ? '#fbbf24' : '#334155';
+            ctx.beginPath();
+            ctx.arc(175 + i * 16, 83, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 2P / CPU 체력바 (우측 상단)
+        const rightBarX = this.width - 30 - barWidth;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(rightBarX - 2, 26, barWidth + 4, hpHeight + 4, 8);
+        ctx.fill();
+
+        const eDispW = barWidth * (this.enemy.displayHp / this.enemy.maxHp);
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.roundRect(rightBarX + (barWidth - eDispW), 28, eDispW, hpHeight, 6);
+        ctx.fill();
+
+        const eHpW = barWidth * (this.enemy.hp / this.enemy.maxHp);
+        const p2HpGrad = ctx.createLinearGradient(rightBarX, 28, rightBarX + barWidth, 28);
+        p2HpGrad.addColorStop(0, '#f43f5e');
+        p2HpGrad.addColorStop(1, '#dc2626');
+        ctx.fillStyle = p2HpGrad;
+        ctx.beginPath();
+        ctx.roundRect(rightBarX + (barWidth - eHpW), 28, eHpW, hpHeight, 6);
+        ctx.fill();
+
+        // 2P 스태미나바
+        const eStamMaxW = barWidth * 0.78;
+        const eStamW = eStamMaxW * (this.enemy.stamina / this.enemy.maxStamina);
+        const rightStamX = this.width - 30 - eStamMaxW;
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(rightStamX - 2, 56, eStamMaxW + 4, stamHeight + 4, 6);
+        ctx.fill();
+
+        ctx.fillStyle = this.enemy.exhausted ? '#ef4444' : '#10b981';
+        ctx.beginPath();
+        ctx.roundRect(rightStamX + (eStamMaxW - eStamW), 58, eStamW, stamHeight, 4);
+        ctx.fill();
+
+        // 2P 이름 & 라운드 승리 별
+        ctx.font = "900 16px 'Noto Sans KR', sans-serif";
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'right';
+        ctx.fillText(`(${Math.ceil(this.enemy.hp)}) ${this.enemy.name}`, this.width - 32, 88);
+
+        for (let i = 0; i < this.maxRounds; i++) {
+            ctx.fillStyle = i < this.enemy.roundWins ? '#fbbf24' : '#334155';
+            ctx.beginPath();
+            ctx.arc(this.width - 175 - i * 16, 83, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 중앙 라운드 및 타이머 박스
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(this.width / 2 - 68, 18, 136, 72, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = "900 15px 'Black Han Sans', sans-serif";
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillText(`ROUND ${this.round} / ${this.maxRounds}`, this.width / 2, 40);
+
+        ctx.font = "900 34px 'Black Han Sans', sans-serif";
+        ctx.fillStyle = this.roundTimer <= 10 ? '#ef4444' : '#ffffff';
+        ctx.fillText(`${Math.ceil(this.roundTimer)}`, this.width / 2, 78);
+
+        // 1P 콤보 & 카운터 표시
+        if (this.player.combo >= 2) {
+            ctx.save();
+            ctx.font = "900 26px 'Black Han Sans', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#38bdf8';
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 5;
+            const comboText = `${this.player.combo} HITS COMBO!`;
+            ctx.strokeText(comboText, 30, 115);
+            ctx.fillText(comboText, 30, 115);
+            ctx.restore();
+        }
+
+        if (this.player.counterWindow > 0) {
+            ctx.save();
+            ctx.font = "900 18px 'Black Han Sans', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('⚡ 1P COUNTER CHANCE! (1.35x)', 30, 140);
+            ctx.restore();
+        }
+
+        // 2P 콤보 & 카운터 표시
+        if (this.enemy.combo >= 2) {
+            ctx.save();
+            ctx.font = "900 26px 'Black Han Sans', sans-serif";
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#f87171';
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 5;
+            const comboText = `${this.enemy.combo} HITS COMBO!`;
+            ctx.strokeText(comboText, this.width - 30, 115);
+            ctx.fillText(comboText, this.width - 30, 115);
+            ctx.restore();
+        }
+
+        if (this.enemy.counterWindow > 0) {
+            ctx.save();
+            ctx.font = "900 18px 'Black Han Sans', sans-serif";
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('⚡ 2P COUNTER CHANCE! (1.35x)', this.width - 30, 140);
+            ctx.restore();
+        }
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.save();
+
+        // 화면 흔들림 적용
+        if (this.shakeTimer > 0) {
+            const dx = (Math.random() - 0.5) * 2 * this.shakeIntensity;
+            const dy = (Math.random() - 0.5) * 2 * this.shakeIntensity;
+            ctx.translate(dx, dy);
+        }
+
+        this.drawRing();
+
+        // 공격 중인 복서가 앞에 보이도록 렌더링 순서 조정
+        if (this.player.state === 'active') {
+            this.enemy.draw(ctx);
+            this.player.draw(ctx);
+        } else {
+            this.player.draw(ctx);
+            this.enemy.draw(ctx);
+        }
+
+        // 파티클 & 플로팅 텍스트 그리기
+        this.particles.forEach(p => p.draw(ctx));
+        this.floatingTexts.forEach(t => t.draw(ctx));
+
+        this.drawHUD();
+        ctx.restore();
+    }
+}
+
+/**
+ * ============================================================================
+ * 7. 게임 초기화 및 메인 루프 시작
+ * ============================================================================
+ */
+window.onload = function () {
+    const game = new BoxingGame();
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        game.update(dt);
+        game.draw();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>

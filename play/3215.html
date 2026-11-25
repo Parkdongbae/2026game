@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="ko"><head><script data-bard-client-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwNjM4ODA3MjQ0NTA0MDYzNDUyMCIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjX2E0YjRlMDFjZTdlZThkMWRfaW5kZXguaHRtbC05OSJ9LCJleHAiOjE3OTU1NzkyNjEsImlhdCI6MTc5NTU3NTY2MSwiYWxnIjoiUlMyNTYifQ.FHyhFmW7NQqgtIn-9SRHg9WwZb7H5M-zit7_Mm0b45CvgSadMIUuw3xOYurXtaALYN5LygUn1bBD200uY1zfNUNV-SsEnEPn3z9eFxrOnuWb1eD6yU6lcsRUVDeA36in0yAmgsaYd6CimavPM0VTPblkJQMGslmoqLEU43w3R6G_GwRVLR_ZQHmrl5huHawnfuWzqeiYVG5p5EkzhodMzT3N-aboqJjUwRY23pR4FOXqq2LSj_KTvVo0jqoHHVNHrCE6RyEH12U-R12ZD2XBvYnHy3j_niTwb2tMazgYGGNSbsF4D_SYegiv9aqyIqAx1ouHNgqkbiN8ncRXcVh7Gw","c_a4b4e01ce7ee8d1d_index.html-99")</script><script data-bard-client-injected="true">
+  document.addEventListener('input', (event) => {
+    if (event.target && (event.target.isContentEditable || event.target.hasAttribute('contenteditable'))) {
+      const clonedDoc = document.cloneNode(true);
+      const injectedScripts = clonedDoc.querySelectorAll('[data-bard-client-injected="true"]');
+      injectedScripts.forEach(el => el.remove());
+      window.parent.postMessage({
+        type: 'inlineEdit',
+        html: '<!DOCTYPE html>\n' + clonedDoc.documentElement.outerHTML
+      }, '*');
+    }
+  });
+</script><script data-bard-client-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const SCROLL_KEYS = new Set([
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    ' ', 'Spacebar', 'PageUp', 'PageDown', 'Home', 'End',
+  ]);
+  const HORIZONTAL_KEYS = new Set(['ArrowLeft', 'ArrowRight']);
+
+  function isTextEntryTarget(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return tagName === 'INPUT' || tagName === 'TEXTAREA' ||
+        tagName === 'SELECT' || target.isContentEditable === true;
+  }
+
+  // An element absorbs the key only if it both overflows on the axis being
+  // scrolled and is configured to scroll on that axis. The cheap dimension
+  // test runs first because getComputedStyle forces a style recalc, and this
+  // runs on every keypress. Each axis is read from its own longhand: the
+  // 'overflow' shorthand serializes as two values when the axes differ, which
+  // is the common 'overflow-x: hidden; overflow-y: auto' pane.
+  function canScroll(node, horizontal) {
+    const overflows = horizontal ? node.scrollWidth > node.clientWidth
+                                 : node.scrollHeight > node.clientHeight;
+    if (!overflows) return false;
+    const style = window.getComputedStyle(node);
+    const overflow = horizontal ? style.overflowX : style.overflowY;
+    return overflow === 'auto' || overflow === 'scroll';
+  }
+
+  // Walks up from the event target so nested scrollers keep their behavior.
+  // <body> is included because pages that pin the root height make it the
+  // scroll container.
+  function hasScrollableAncestor(target, horizontal) {
+    let node = target;
+    while (node && node !== document.documentElement) {
+      if (canScroll(node, horizontal)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function rootCanScroll(horizontal) {
+    const scroller = document.scrollingElement || document.documentElement;
+    if (!scroller) return false;
+    // Tolerate a pixel of rounding so subpixel layouts do not look scrollable.
+    return horizontal ? scroller.scrollWidth > window.innerWidth + 1
+                      : scroller.scrollHeight > window.innerHeight + 1;
+  }
+
+  window.addEventListener('keydown', function(event) {
+    if (!SCROLL_KEYS.has(event.key)) return;
+    if (event.defaultPrevented) return;
+    // Alt and Meta turn arrows into browser history navigation, and Ctrl is
+    // reserved for shortcuts, so none of them are scroll intent.
+    if (event.altKey || event.metaKey || event.ctrlKey) return;
+
+    const target = event.target;
+    if (isTextEntryTarget(target)) return;
+
+    // Anything that can still absorb the scroll gets to keep it.
+    const horizontal = HORIZONTAL_KEYS.has(event.key);
+    if (rootCanScroll(horizontal)) return;
+    if (hasScrollableAncestor(target, horizontal)) return;
+
+    event.preventDefault();
+  }, {capture: true, passive: false});
+})();</script><script data-bard-client-injected="true">(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script data-bard-client-injected="true">
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-client-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.h=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.extensions="";var l=0,t=null,r=null,q=[],F=new TextEncoder,
+G=new TextDecoder;c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*
+16|0;return(f==="x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;
+(g=t)==null||g.postMessage(a)}};Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script data-bard-client-injected="true">((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-client-injected="true">(function() {
+  const OVERLAY_SELECTOR =
+    'dialog[open], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [role="combobox"]';
+
+  function isVisibleOverlay(element) {
+    if (element.closest('[hidden], [aria-hidden="true"], [inert]')) {
+      return false;
+    }
+    if (window.getComputedStyle(element).visibility === 'hidden') {
+      return false;
+    }
+    for (let cur = element; cur; cur = cur.parentElement) {
+      if (window.getComputedStyle(cur).display === 'none') {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function hasOpenOverlay() {
+    const candidates = document.querySelectorAll(OVERLAY_SELECTOR);
+    for (let i = 0; i < candidates.length; i++) {
+      if (isVisibleOverlay(candidates[i])) {
+        return true;
+      }
+    }
+    try {
+      if (document.querySelector('[popover]:popover-open')) {
+        return true;
+      }
+    } catch (e) {
+      // Ignore engines that do not support :popover-open.
+    }
+    return false;
+  }
+
+  function isNonEmptySearchInput(target) {
+    return (
+      Boolean(target) &&
+      target.tagName === 'INPUT' &&
+      typeof target.type === 'string' &&
+      target.type.toLowerCase() === 'search' &&
+      typeof target.value === 'string' &&
+      target.value.length > 0
+    );
+  }
+
+  function shouldIgnoreEscape(event) {
+    return (
+      event.key !== 'Escape' ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing ||
+      event.repeat ||
+      event.keyCode === 229 ||
+      isNonEmptySearchInput(event.target)
+    );
+  }
+
+  let shouldIgnoreCaptureState = false;
+
+  window.addEventListener(
+    'keydown',
+    function(event) {
+      if (event.key === 'Escape') {
+        shouldIgnoreCaptureState =
+          hasOpenOverlay() || isNonEmptySearchInput(event.target);
+      }
+    },
+    {capture: true},
+  );
+
+  window.addEventListener('keydown', function(event) {
+    if (
+      shouldIgnoreEscape(event) ||
+      event.defaultPrevented ||
+      shouldIgnoreCaptureState
+    ) {
+      return;
+    }
+    const wasBlockedOnCapture = shouldIgnoreCaptureState;
+    queueMicrotask(function() {
+      if (event.defaultPrevented || wasBlockedOnCapture) {
+        return;
+      }
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({'type': 'escapeKey'}, '*');
+      }
+    });
+  });
+})();</script><script data-bard-client-injected="true">(function() {
+  function normalizeSlug(str) {
+    try {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^p{L}p{N}s_-]/gu, '')
+        .replace(/s+/g, '-');
+    } catch (e) {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9s_-]/g, '')
+        .replace(/s+/g, '-');
+    }
+  }
+
+  function findTargetElement(hash) {
+    if (!hash || hash === '#') {
+      return null;
+    }
+    const rawId = hash.startsWith('#') ? hash.slice(1) : hash;
+    let decodedId = rawId;
+    try {
+      decodedId = decodeURIComponent(rawId);
+    } catch (e) {
+      // Ignore URI malformed errors.
+    }
+
+    // 1. Direct ID match (raw and decoded).
+    let target = document.getElementById(rawId) || document.getElementById(decodedId);
+    if (target) {
+      return target;
+    }
+
+    // 2. Name attribute match (<a name="...">).
+    try {
+      if (typeof CSS !== 'undefined' && CSS.escape) {
+        target =
+          document.querySelector('[name="' + CSS.escape(rawId) + '"]') ||
+          document.querySelector('[name="' + CSS.escape(decodedId) + '"]');
+      } else {
+        const namedElements = document.getElementsByName(rawId);
+        if (namedElements && namedElements.length > 0) {
+          return namedElements[0];
+        }
+      }
+    } catch (e) {
+      // Ignore querySelector syntax errors.
+    }
+    if (target) {
+      return target;
+    }
+
+    // 3. Match heading text by slug (for Markdown TOCs where headings lack explicit IDs).
+    const targetSlug = normalizeSlug(decodedId);
+    if (targetSlug) {
+      for (const heading of document.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+        if (normalizeSlug(heading.textContent || '') === targetSlug) {
+          return heading;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
+    if (!anchor) {
+      return;
+    }
+
+    const href = anchor.getAttribute('href');
+    if (
+      !href ||
+      href.trim().toLowerCase().startsWith('javascript:') ||
+      anchor.hasAttribute('download')
+    ) {
+      return;
+    }
+
+    // Check if the link is an in-page hash / anchor link.
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      const targetElement = findTargetElement(href);
+      if (targetElement) {
+        targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+      return;
+    }
+
+    // Check if the URL has the same origin/pathname but with a hash.
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      if (
+        url.hash &&
+        url.origin === window.location.origin &&
+        url.pathname === window.location.pathname
+      ) {
+        event.preventDefault();
+        const targetElement = findTargetElement(url.hash);
+        if (targetElement) {
+          targetElement.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+        return;
+      }
+    } catch (e) {
+      // Fall through if URL parsing fails.
+    }
+
+    // For all external or full navigation links, prevent iframe-level navigation
+    // (which breaks in AGSA WebView or sandboxed iframes) and ensure they open
+    // safely in a new tab/window.
+    if (anchor.target !== '_blank') {
+      event.preventDefault();
+      window.open(anchor.href, '_blank', 'noopener,noreferrer');
+    }
+  }, {capture: true});
+})();</script><script data-bard-client-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script data-bard-client-injected="true">(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>무기 마스터 RPG - 검 · 활 · 마법의 지팡이</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0d1117;
+      color: #f0f6fc;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    /* 상단 HUD */
+    #top-hud {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .hud-panel {
+      background: rgba(16, 20, 28, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: 8px 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+      pointer-events: auto;
+    }
+
+    /* 좌측 캐릭터 상태 */
+    #player-stats {
+      min-width: 230px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .level-badge {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .class-badge {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #93c5fd;
+    }
+
+    .bar-wrap {
+      position: relative;
+      width: 100%;
+      height: 14px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .bar-fill {
+      height: 100%;
+      transition: width 0.15s ease-out;
+    }
+
+    #hp-bar {
+      background: linear-gradient(90deg, #ef4444, #f87171);
+      width: 100%;
+    }
+
+    #exp-bar {
+      background: linear-gradient(90deg, #10b981, #34d399);
+      width: 0%;
+    }
+
+    .bar-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .sub-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #cbd5e1;
+      margin-top: 2px;
+    }
+
+    /* 중앙 웨이브 및 쉬는 시간 표시 */
+    #wave-panel {
+      text-align: center;
+      min-width: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #wave-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #f8fafc;
+    }
+
+    #wave-sub {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    #break-controls {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    #break-timer-text {
+      font-size: 13px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+
+    .mini-btn {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.15s;
+    }
+
+    .mini-btn:hover {
+      filter: brightness(1.15);
+    }
+
+    .mini-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* 보스 체력바 */
+    #boss-hud {
+      position: absolute;
+      top: 86px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(460px, 88vw);
+      background: rgba(24, 10, 16, 0.9);
+      border: 1px solid rgba(244, 63, 94, 0.5);
+      border-radius: 10px;
+      padding: 6px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 10;
+      box-shadow: 0 0 25px rgba(225, 29, 72, 0.35);
+      pointer-events: none;
+    }
+
+    #boss-name {
+      font-size: 13px;
+      font-weight: 900;
+      color: #fda4af;
+      text-align: center;
+    }
+
+    #boss-bar-wrap {
+      position: relative;
+      width: 100%;
+      height: 16px;
+      background: #1f0910;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    #boss-hp-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #be123c, #f43f5e, #fb7185);
+      transition: width 0.1s linear;
+    }
+
+    /* 우측 유틸 버튼 */
+    #top-right-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* 하단 컴팩트 대용량 가방 패널 */
+    #bottom-inventory-wrapper {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(940px, 96vw);
+      background: rgba(13, 17, 25, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      padding: 6px 10px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.6);
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* 가방 상단 툴바 (장착 정보 + 강화/합성 액션) */
+    #inv-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 4px;
+    }
+
+    #equipped-summary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    #selected-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      border: none;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .action-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .btn-equip { background: #0284c7; }
+    .btn-equip:hover:not(:disabled) { background: #0369a1; }
+
+    .btn-enhance { background: #d97706; }
+    .btn-enhance:hover:not(:disabled) { background: #b45309; }
+
+    .btn-synth { background: #7c3aed; }
+    .btn-synth:hover:not(:disabled) { background: #6d28d9; }
+
+    .btn-auto { background: #059669; }
+    .btn-auto:hover:not(:disabled) { background: #047857; }
+
+    /* 컴팩트 대용량 슬롯 그리드 (높이 작게 유지하면서 많은 슬롯 수용) */
+    #inv-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+      gap: 4px;
+      max-height: 92px; /* 화면을 가리지 않도록 작게 제한 */
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    #inv-grid::-webkit-scrollbar {
+      width: 5px;
+    }
+    #inv-grid::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+    }
+
+    .inv-slot {
+      position: relative;
+      height: 42px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 7px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.08s, border-color 0.15s, background 0.15s;
+    }
+
+    .inv-slot:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .inv-slot.selected {
+      outline: 2px solid #facc15;
+      outline-offset: -2px;
+      background: rgba(250, 204, 21, 0.12);
+    }
+
+    .inv-slot.equipped::after {
+      content: '장착';
+      position: absolute;
+      top: 1px;
+      left: 2px;
+      font-size: 8px;
+      font-weight: 900;
+      background: #10b981;
+      color: #052e16;
+      padding: 0 3px;
+      border-radius: 3px;
+    }
+
+    .slot-icon {
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .slot-plus {
+      position: absolute;
+      bottom: 1px;
+      right: 3px;
+      font-size: 9px;
+      font-weight: 900;
+      color: #fde047;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .slot-rarity-dot {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    /* 등급별 테두리 및 색상 */
+    .rarity-rare { border-color: #3b82f6; box-shadow: inset 0 0 8px rgba(59, 130, 246, 0.25); }
+    .rarity-epic { border-color: #a855f7; box-shadow: inset 0 0 8px rgba(168, 85, 247, 0.3); }
+    .rarity-legendary { border-color: #f59e0b; box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.35); }
+    .rarity-mythic {
+      border-color: #ef4444;
+      box-shadow: inset 0 0 12px rgba(239, 68, 68, 0.5);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(234, 179, 8, 0.12));
+    }
+
+    .text-rare { color: #60a5fa; }
+    .text-epic { color: #c084fc; }
+    .text-legendary { color: #fbbf24; }
+    .text-mythic { color: #f87171; text-shadow: 0 0 6px rgba(248, 113, 113, 0.6); }
+
+    /* 토스트 알림 */
+    #toast-container {
+      position: absolute;
+      top: 135px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .toast-msg {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      animation: fadeUpOut 2.2s forwards;
+    }
+
+    @keyframes fadeUpOut {
+      0% { opacity: 0; transform: translateY(8px); }
+      15% { opacity: 1; transform: translateY(0); }
+      80% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+
+    /* 게임 오버 모달 */
+    #gameover-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-box {
+      background: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 24px 32px;
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-box h2 {
+      font-size: 24px;
+      font-weight: 900;
+      color: #f87171;
+      margin-bottom: 8px;
+    }
+
+    .modal-box p {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .restart-btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      padding: 10px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="948" height="828"></canvas>
+
+    <!-- 상단 HUD -->
+    <div id="top-hud">
+      <!-- 플레이어 정보 -->
+      <div id="player-stats" class="hud-panel">
+        <div class="stat-header">
+          <div>
+            <span class="level-badge" id="ui-level">Lv.2</span>
+            <span style="margin-left:4px;">모험가</span>
+          </div>
+          <span class="class-badge" id="ui-class-name">전사 (검)</span>
+        </div>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="hp-bar" style="width: 91.3514%;"></div>
+          <div class="bar-text" id="hp-text">169 / 185</div>
+        </div>
+        <div class="bar-wrap" style="height: 10px;">
+          <div class="bar-fill" id="exp-bar" style="width: 69.697%;"></div>
+          <div class="bar-text" id="exp-text" style="font-size:9px;">EXP 46 / 66</div>
+        </div>
+        <div class="sub-stats">
+          <span>⚔️ 공격력: <strong id="ui-atk" style="color:#fbbf24;">33</strong></span>
+          <span>⚡ 공속: <strong id="ui-spd" style="color:#38bdf8;">2.3/s</strong></span>
+          <span>👟 이속: <strong id="ui-mspd">240</strong></span>
+        </div>
+      </div>
+
+      <!-- 중앙 웨이브 / 쉬는 시간 패널 -->
+      <div id="wave-panel" class="hud-panel">
+        <div id="wave-title">WAVE 1</div>
+        <div id="wave-sub">남은 몬스터: 2마리</div>
+        <div id="break-controls" style="display: none;">
+          <span id="break-timer-text">⏳ 쉬는 시간: 15.0초</span>
+          <button class="mini-btn" id="btn-skip-break">다음 웨이브 ▶</button>
+        </div>
+      </div>
+
+      <!-- 우측 조작 안내 & HTML 다운로드 버튼 -->
+      <div id="top-right-controls" class="hud-panel" style="flex-direction: column; align-items: flex-end; gap: 4px;">
+        <div style="font-size:11px; color:#cbd5e1;">
+          이동: <strong>WASD / 방향키</strong> · 공격: <strong>좌클릭(홀드)</strong>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="mini-btn" style="background:#334155;" id="btn-download-html">💾 index.html 저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 보스 체력바 (5웨이브마다 등장) -->
+    <div id="boss-hud">
+      <div id="boss-name">👑 심연의 군주 (BOSS)</div>
+      <div id="boss-bar-wrap">
+        <div id="boss-hp-bar"></div>
+        <div class="bar-text" id="boss-hp-text">2000 / 2000</div>
+      </div>
+    </div>
+
+    <!-- 토스트 메시지 -->
+    <div id="toast-container"></div>
+
+    <!-- 하단 컴팩트 대용량 가방 -->
+    <div id="bottom-inventory-wrapper">
+      <div id="inv-toolbar">
+        <div id="equipped-summary">
+          <span>🎒 가방 (<span id="inv-count">2</span>/<span id="inv-cap">60</span>)</span>
+          <span style="color:#64748b;">|</span>
+          <span>장착중: <span id="eq-weapon-label" class="text-rare">[희귀] 강철 검 +0</span></span>
+        </div>
+
+        <div id="selected-item-actions">
+          <span id="sel-item-info" style="color:#e2e8f0; margin-right:4px;"><strong class="text-rare">[희귀] 강철 검 +0</strong> (공격 +24, 공속 2.3/s)</span>
+          <button class="action-btn btn-equip" id="btn-equip" disabled="">장착</button>
+          <button class="action-btn btn-enhance" id="btn-enhance" disabled="" title="같은 종류+등급 중복 무기를 재료로 강화(+1)">중복 강화 (0)</button>
+          <button class="action-btn btn-synth" id="btn-synth" disabled="" title="같은 종류+등급 무기 2개를 합성해 상위 등급 획득">중복 합성 (1/2)</button>
+          <button class="action-btn btn-auto" id="btn-auto-synth" title="장착중인 무기를 제외한 모든 중복 아이템을 자동 합성합니다">⚡ 중복 일괄 합성</button>
+        </div>
+      </div>
+
+      <!-- 60칸 대용량 컴팩트 슬롯 그리드 -->
+      <div id="inv-grid"><div class="inv-slot rarity-rare equipped selected" title="[희귀] 강철 검 +0 (클릭: 선택 / 더블클릭: 즉시 장착)">
+          <span class="slot-rarity-dot" style="background:#3b82f6;"></span>
+          <span class="slot-icon">⚔️</span>
+          
+        </div><div class="inv-slot rarity-epic" title="[영웅] 비전 마법의 지팡이 +0 (클릭: 선택 / 더블클릭: 즉시 장착)">
+          <span class="slot-rarity-dot" style="background:#a855f7;"></span>
+          <span class="slot-icon">🪄</span>
+          
+        </div></div>
+    </div>
+
+    <!-- 게임 오버 모달 -->
+    <div id="gameover-modal">
+      <div class="modal-box">
+        <h2>전투 불능!</h2>
+        <p id="gameover-summary">도달 웨이브: 1<br>최종 레벨: 1</p>
+        <button class="restart-btn" id="btn-restart">다시 도전하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * 무기 마스터 RPG - 완전 단일 파일 게임 엔진
+     * ============================================================================
+     */
+
+    // 1. 무기 및 등급 상수 정의
+    const WEAPON_TYPES = {
+      sword: {
+        id: 'sword',
+        name: '검',
+        className: '전사 (검)',
+        icon: '⚔️',
+        baseAtk: 24,
+        baseSpeed: 2.3, // 초당 공격 횟수
+        range: 92,
+        projSpeed: 0,
+        desc: '넓은 부채꼴 참격으로 근접 적을 베어냅니다.'
+      },
+      bow: {
+        id: 'bow',
+        name: '활',
+        className: '궁수 (활)',
+        icon: '🏹',
+        baseAtk: 19,
+        baseSpeed: 2.9,
+        range: 560,
+        projSpeed: 760,
+        desc: '빠른 화살을 발사하여 원거리 적을 관통 사격합니다.'
+      },
+      staff: {
+        id: 'staff',
+        name: '마법의 지팡이',
+        className: '마법사 (지팡이)',
+        icon: '🪄',
+        baseAtk: 29,
+        baseSpeed: 1.75,
+        range: 500,
+        projSpeed: 520,
+        desc: '적중 시 폭발하는 비전 마법구를 발사합니다.'
+      }
+    };
+
+    const RARITIES = [
+      {
+        id: 'rare',
+        name: '희귀',
+        order: 0,
+        mult: 1.0,
+        color: '#3b82f6',
+        glow: 'rgba(59, 130, 246, 0.7)',
+        cssClass: 'rarity-rare',
+        textClass: 'text-rare',
+        dropWeight: 56
+      },
+      {
+        id: 'epic',
+        name: '영웅',
+        order: 1,
+        mult: 1.65,
+        color: '#a855f7',
+        glow: 'rgba(168, 85, 247, 0.8)',
+        cssClass: 'rarity-epic',
+        textClass: 'text-epic',
+        dropWeight: 28
+      },
+      {
+        id: 'legendary',
+        name: '전설',
+        order: 2,
+        mult: 2.7,
+        color: '#f59e0b',
+        glow: 'rgba(245, 158, 11, 0.85)',
+        cssClass: 'rarity-legendary',
+        textClass: 'text-legendary',
+        dropWeight: 12
+      },
+      {
+        id: 'mythic',
+        name: '신화',
+        order: 3,
+        mult: 4.5,
+        color: '#ef4444',
+        glow: 'rgba(239, 68, 68, 0.95)',
+        cssClass: 'rarity-mythic',
+        textClass: 'text-mythic',
+        dropWeight: 4
+      }
+    ];
+
+    const WEAPON_PREFIXES = {
+      sword: ['강철', '빛나는', '용살자', '천공의'],
+      bow: ['사냥꾼의', '질풍의', '매의 눈', '별빛'],
+      staff: ['견습생의', '비전', '대현자의', '태초의']
+    };
+
+    // 2. Canvas 및 전역 상태 초기화
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const MAX_INVENTORY_SIZE = 60; // 넉넉한 대용량 가방
+
+    let gameState = {
+      running: true,
+      time: 0,
+      camera: { x: 0, y: 0, shake: 0 },
+      mouse: { x: canvas.width / 2, y: canvas.height / 2, down: false },
+      keys: {},
+
+      // 웨이브 및 쉬는 시간(15초) 관리
+      wave: 1,
+      isBreak: false,
+      breakTimer: 15.0,
+      enemiesToSpawn: 0,
+      spawnCooldown: 0,
+      bossActive: false,
+
+      // 엔티티 배열
+      enemies: [],
+      projectiles: [],
+      enemyProjectiles: [],
+      slashes: [],
+      drops: [],
+      particles: [],
+      floatingTexts: []
+    };
+
+    let uidCounter = 1;
+    function createWeapon(typeId, rarityIndex, level = 0) {
+      const wType = WEAPON_TYPES[typeId];
+      const rar = RARITIES[Math.min(rarityIndex, RARITIES.length - 1)];
+      const prefix = WEAPON_PREFIXES[typeId][rar.order];
+      return {
+        uid: uidCounter++,
+        typeId: typeId,
+        rarityIndex: rar.order,
+        level: level,
+        name: `${prefix} ${wType.name}`
+      };
+    }
+
+    function getWeaponStats(weapon) {
+      const wType = WEAPON_TYPES[weapon.typeId];
+      const rar = RARITIES[weapon.rarityIndex];
+      const levelMult = 1 + weapon.level * 0.22;
+      const atk = Math.round(wType.baseAtk * rar.mult * levelMult);
+      const speed = +(wType.baseSpeed * (1 + weapon.level * 0.04 + rar.order * 0.06)).toFixed(2);
+      return { atk, speed, range: wType.range, projSpeed: wType.projSpeed };
+    }
+
+    // 플레이어 상태
+    const starterSword = createWeapon('sword', 0, 0);
+    let player = {
+      x: 0,
+      y: 0,
+      radius: 18,
+      angle: 0,
+      walkCycle: 0,
+      attackAnim: 0,
+      hitFlash: 0,
+
+      level: 1,
+      exp: 0,
+      nextExp: 50,
+      maxHp: 160,
+      hp: 160,
+      baseAtk: 5,
+      moveSpeed: 245,
+      attackCooldown: 0,
+
+      inventory: [starterSword],
+      equippedUid: starterSword.uid,
+      selectedUid: starterSword.uid
+    };
+
+    function getEquippedWeapon() {
+      return player.inventory.find(w => w.uid === player.equippedUid) || player.inventory[0];
+    }
+
+    // 3. 토스트 알림 도우미
+    function showToast(msg, color = '#f8fafc') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast-msg';
+      el.style.color = color;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 2200);
+    }
+
+    // 4. 입력 이벤트 (마우스 클릭/홀드 & 키보드 이동)
+    window.addEventListener('keydown', e => {
+      gameState.keys[e.key.toLowerCase()] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      gameState.keys[e.key.toLowerCase()] = false;
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      gameState.mouse.x = e.clientX - rect.left;
+      gameState.mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      if (e.button === 0) {
+        gameState.mouse.down = true;
+        tryPlayerAttack(); // 클릭 즉시 공격 시도
+      }
+    });
+
+    window.addEventListener('mouseup', e => {
+      if (e.button === 0) {
+        gameState.mouse.down = false;
+      }
+    });
+
+    // 터치 지원
+    canvas.addEventListener('touchstart', e => {
+      if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        gameState.mouse.x = e.touches[0].clientX - rect.left;
+        gameState.mouse.y = e.touches[0].clientY - rect.top;
+        gameState.mouse.down = true;
+        tryPlayerAttack();
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', e => {
+      if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        gameState.mouse.x = e.touches[0].clientX - rect.left;
+        gameState.mouse.y = e.touches[0].clientY - rect.top;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', () => {
+      gameState.mouse.down = false;
+    });
+
+    // 5. 웨이브 & 몬스터 스폰 시스템
+    function startWave(waveNum) {
+      gameState.wave = waveNum;
+      gameState.isBreak = false;
+      document.getElementById('break-controls').style.display = 'none';
+
+      const isBossWave = (waveNum % 5 === 0);
+      if (isBossWave) {
+        gameState.enemiesToSpawn = 3 + Math.floor(waveNum / 2);
+        spawnBoss(waveNum);
+        showToast(`⚠️ WAVE ${waveNum} - 거대 보스가 출현했습니다!`, '#f87171');
+      } else {
+        gameState.enemiesToSpawn = 5 + waveNum * 3;
+        showToast(`⚔️ WAVE ${waveNum} 시작!`, '#38bdf8');
+      }
+      gameState.spawnCooldown = 0.4;
+      updateWaveUI();
+    }
+
+    function startBreakPeriod() {
+      gameState.isBreak = true;
+      gameState.breakTimer = 15.0;
+      // 쉬는 시간 진입 시 체력 일부 회복
+      const heal = Math.round(player.maxHp * 0.25);
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      showToast(`✨ 웨이브 클리어! 15초간 휴식 (체력 +${heal} 회복)`, '#34d399');
+      document.getElementById('break-controls').style.display = 'flex';
+      updateWaveUI();
+    }
+
+    document.getElementById('btn-skip-break').addEventListener('click', () => {
+      if (gameState.isBreak) {
+        startWave(gameState.wave + 1);
+      }
+    });
+
+    function spawnMonster(wave) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.max(canvas.width, canvas.height) * 0.58 + 80;
+      const x = player.x + Math.cos(angle) * dist;
+      const y = player.y + Math.sin(angle) * dist;
+
+      const roll = Math.random();
+      let type = 'slime';
+      if (wave >= 2 && roll > 0.55) type = 'goblin';
+      if (wave >= 3 && roll > 0.80) type = 'skeleton';
+      if (wave >= 6 && roll > 0.90) type = 'knight';
+
+      const scale = 1 + (wave - 1) * 0.24;
+      const configs = {
+        slime: { name: '슬라임', hp: 42, atk: 8, speed: 95, radius: 16, color: '#22c55e', exp: 16, dropChance: 0.34 },
+        goblin: { name: '고블린 전사', hp: 65, atk: 13, speed: 135, radius: 17, color: '#eab308', exp: 25, dropChance: 0.40 },
+        skeleton: { name: '해골 궁수', hp: 55, atk: 15, speed: 105, radius: 17, color: '#e2e8f0', exp: 32, dropChance: 0.45, ranged: true },
+        knight: { name: '타락한 기사', hp: 130, atk: 22, speed: 110, radius: 22, color: '#6366f1', exp: 55, dropChance: 0.55 }
+      };
+
+      const cfg = configs[type];
+      gameState.enemies.push({
+        id: uidCounter++,
+        type,
+        isBoss: false,
+        name: cfg.name,
+        x, y,
+        vx: 0, vy: 0,
+        radius: cfg.radius,
+        maxHp: Math.round(cfg.hp * scale),
+        hp: Math.round(cfg.hp * scale),
+        atk: Math.round(cfg.atk * (1 + (wave - 1) * 0.16)),
+        speed: cfg.speed + Math.min(45, wave * 2),
+        color: cfg.color,
+        exp: Math.round(cfg.exp * (1 + (wave - 1) * 0.18)),
+        dropChance: cfg.dropChance,
+        ranged: !!cfg.ranged,
+        shootTimer: 1.5 + Math.random(),
+        hitFlash: 0,
+        animPhase: Math.random() * 6
+      });
+    }
+
+    function spawnBoss(wave) {
+      const bossTier = Math.floor(wave / 5);
+      const angle = -Math.PI / 2;
+      const dist = 360;
+      const x = player.x + Math.cos(angle) * dist;
+      const y = player.y + Math.sin(angle) * dist;
+
+      const maxHp = Math.round(950 * Math.pow(1.65, bossTier - 1));
+      const bossNames = ['심연의 군주', '붉은 재앙의 드래곤 나이트', '혼돈의 대마왕', '신화 파괴자'];
+      const bName = `👑 ${bossNames[(bossTier - 1) % bossNames.length]} (Lv.${wave} 보스)`;
+
+      gameState.enemies.push({
+        id: uidCounter++,
+        type: 'boss',
+        isBoss: true,
+        name: bName,
+        x, y,
+        vx: 0, vy: 0,
+        radius: 42,
+        maxHp: maxHp,
+        hp: maxHp,
+        atk: Math.round(28 * (1 + (bossTier - 1) * 0.35)),
+        speed: 115,
+        color: '#e11d48',
+        exp: 220 * bossTier,
+        dropChance: 1.0, // 보스는 100% 고등급 무기 드롭
+        bossTier: bossTier,
+        skillTimer: 2.5,
+        dashTimer: 0,
+        dashVx: 0,
+        dashVy: 0,
+        hitFlash: 0,
+        animPhase: 0
+      });
+
+      gameState.bossActive = true;
+      document.getElementById('boss-hud').style.display = 'flex';
+      document.getElementById('boss-name').textContent = bName;
+    }
+
+    // 6. 전투 및 무기 공격 로직 (검 / 활 / 마법의 지팡이)
+    function tryPlayerAttack() {
+      if (!gameState.running || player.attackCooldown > 0) return;
+
+      const weapon = getEquippedWeapon();
+      if (!weapon) return;
+      const stats = getWeaponStats(weapon);
+      const rar = RARITIES[weapon.rarityIndex];
+      const totalAtk = player.baseAtk + stats.atk;
+
+      player.attackCooldown = 1 / stats.speed;
+      player.attackAnim = 1.0;
+
+      const dirX = Math.cos(player.angle);
+      const dirY = Math.sin(player.angle);
+
+      if (weapon.typeId === 'sword') {
+        // [검] 부채꼴 근접 참격
+        const slashRange = stats.range + weapon.rarityIndex * 10;
+        const arcHalf = Math.PI * 0.44; // 약 160도 부채꼴
+
+        gameState.slashes.push({
+          x: player.x,
+          y: player.y,
+          angle: player.angle,
+          range: slashRange,
+          arcHalf: arcHalf,
+          color: rar.color,
+          glow: rar.glow,
+          life: 0.22,
+          maxLife: 0.22
+        });
+
+        gameState.camera.shake = Math.max(gameState.camera.shake, 3.5);
+
+        // 범위 내 적 타격
+        for (const enemy of gameState.enemies) {
+          const dx = enemy.x - player.x;
+          const dy = enemy.y - player.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= slashRange + enemy.radius) {
+            const angToEnemy = Math.atan2(dy, dx);
+            let diff = angToEnemy - player.angle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            if (Math.abs(diff) <= arcHalf + 0.25) {
+              damageEnemy(enemy, totalAtk, rar.color, 180, player.angle);
+            }
+          }
+        }
+      } else if (weapon.typeId === 'bow') {
+        // [활] 고속 관통 화살 (등급이 높으면 멀티샷 추가)
+        const arrowCount = weapon.rarityIndex >= 3 ? 3 : (weapon.rarityIndex >= 2 ? 2 : 1);
+        const spread = 0.11;
+
+        for (let i = 0; i < arrowCount; i++) {
+          const offsetAngle = (i - (arrowCount - 1) / 2) * spread;
+          const shotAngle = player.angle + offsetAngle;
+          gameState.projectiles.push({
+            kind: 'arrow',
+            x: player.x + Math.cos(shotAngle) * 22,
+            y: player.y + Math.sin(shotAngle) * 22,
+            vx: Math.cos(shotAngle) * stats.projSpeed,
+            vy: Math.sin(shotAngle) * stats.projSpeed,
+            angle: shotAngle,
+            damage: Math.round(totalAtk * (arrowCount > 1 ? 0.82 : 1)),
+            color: rar.color,
+            pierce: 1 + Math.floor(weapon.rarityIndex / 2),
+            hitIds: new Set(),
+            life: 0.95
+          });
+        }
+      } else if (weapon.typeId === 'staff') {
+        // [마법의 지팡이] 유도 + 범위 폭발 마법구
+        const orbCount = weapon.rarityIndex >= 3 ? 2 : 1;
+        for (let i = 0; i < orbCount; i++) {
+          const offsetAngle = (i - (orbCount - 1) / 2) * 0.18;
+          const shotAngle = player.angle + offsetAngle;
+          gameState.projectiles.push({
+            kind: 'magic',
+            x: player.x + Math.cos(shotAngle) * 26,
+            y: player.y + Math.sin(shotAngle) * 26,
+            vx: Math.cos(shotAngle) * stats.projSpeed,
+            vy: Math.sin(shotAngle) * stats.projSpeed,
+            angle: shotAngle,
+            damage: totalAtk,
+            aoeRadius: 68 + weapon.rarityIndex * 16,
+            color: rar.color,
+            glow: rar.glow,
+            life: 1.25
+          });
+        }
+      }
+    }
+
+    function damageEnemy(enemy, rawDamage, color = '#ffffff', knockback = 100, hitAngle = 0) {
+      const isCrit = Math.random() < 0.15;
+      const finalDmg = Math.round(rawDamage * (isCrit ? 1.5 : 1.0));
+      enemy.hp -= finalDmg;
+      enemy.hitFlash = 0.12;
+
+      if (!enemy.isBoss) {
+        enemy.vx += Math.cos(hitAngle) * knockback;
+        enemy.vy += Math.sin(hitAngle) * knockback;
+      }
+
+      spawnFloatingText(
+        enemy.x + (Math.random() - 0.5) * 16,
+        enemy.y - enemy.radius - 6,
+        isCrit ? `💥${finalDmg}` : `${finalDmg}`,
+        isCrit ? '#fde047' : color,
+        isCrit ? 16 : 13
+      );
+
+      spawnParticles(enemy.x, enemy.y, color, 5, 130);
+
+      if (enemy.hp <= 0) {
+        killEnemy(enemy);
+      }
+    }
+
+    function killEnemy(enemy) {
+      const idx = gameState.enemies.indexOf(enemy);
+      if (idx === -1) return;
+      gameState.enemies.splice(idx, 1);
+
+      spawnParticles(enemy.x, enemy.y, enemy.color, enemy.isBoss ? 36 : 14, enemy.isBoss ? 260 : 160);
+      if (enemy.isBoss) {
+        gameState.bossActive = false;
+        gameState.camera.shake = 14;
+        document.getElementById('boss-hud').style.display = 'none';
+        showToast('🎉 보스 처치 성공! 전설급 보상이 드롭되었습니다!', '#fbbf24');
+      }
+
+      // 경험치 획득
+      gainExp(enemy.exp);
+
+      // 일정 확률로 무기 드롭
+      if (Math.random() < enemy.dropChance) {
+        dropRandomWeapon(enemy.x, enemy.y, enemy.isBoss);
+      }
+    }
+
+    function gainExp(amount) {
+      player.exp += amount;
+      while (player.exp >= player.nextExp) {
+        player.exp -= player.nextExp;
+        player.level++;
+        player.nextExp = Math.round(player.nextExp * 1.32);
+        player.maxHp += 25;
+        player.hp = player.maxHp; // 레벨업 시 풀회복
+        player.baseAtk += 4;
+        spawnFloatingText(player.x, player.y - 34, `LEVEL UP! Lv.${player.level}`, '#34d399', 18);
+        spawnParticles(player.x, player.y, '#34d399', 22, 180);
+        showToast(`🆙 레벨 업! Lv.${player.level} 달성 (최대 체력 및 기본 공격력 상승!)`, '#34d399');
+      }
+    }
+
+    function dropRandomWeapon(x, y, isBoss = false) {
+      const types = ['sword', 'bow', 'staff'];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+
+      // 등급 확률 계산 (웨이브가 높을수록 및 보스일수록 고등급 확률 증가)
+      let rarityIndex = 0;
+      if (isBoss) {
+        rarityIndex = Math.random() < 0.32 ? 3 : 2; // 보스는 전설 또는 신화 확정!
+      } else {
+        const waveBonus = Math.min(20, gameState.wave * 1.3);
+        const weights = [
+          Math.max(25, 58 - waveBonus),
+          28 + waveBonus * 0.4,
+          11 + waveBonus * 0.45,
+          3 + waveBonus * 0.25
+        ];
+        const totalW = weights.reduce((a, b) => a + b, 0);
+        let r = Math.random() * totalW;
+        for (let i = 0; i < weights.length; i++) {
+          if (r < weights[i]) {
+            rarityIndex = i;
+            break;
+          }
+          r -= weights[i];
+        }
+      }
+
+      const weapon = createWeapon(randomType, rarityIndex, 0);
+      gameState.drops.push({
+        x: x + (Math.random() - 0.5) * 24,
+        y: y + (Math.random() - 0.5) * 24,
+        weapon,
+        bobPhase: Math.random() * Math.PI * 2,
+        life: 45 // 45초간 유지
+      });
+    }
+
+    // 7. 가방 / 강화 / 합성 시스템
+    function addWeaponToInventory(weapon) {
+      if (player.inventory.length >= MAX_INVENTORY_SIZE) {
+        showToast('⚠️ 가방이 가득 찼습니다! 중복 아이템을 강화/합성하세요.', '#f87171');
+        return false;
+      }
+      player.inventory.push(weapon);
+      const rar = RARITIES[weapon.rarityIndex];
+      showToast(`🎒 획득: [${rar.name}] ${weapon.name}`, rar.color);
+      renderInventoryUI();
+      return true;
+    }
+
+    // 같은 종류 + 같은 등급의 중복 무기 찾기 (자기 자신 제외)
+    function findDuplicatesFor(targetWeapon, excludeEquipped = false) {
+      return player.inventory.filter(w =>
+        w.uid !== targetWeapon.uid &&
+        (!excludeEquipped || w.uid !== player.equippedUid) &&
+        w.typeId === targetWeapon.typeId &&
+        w.rarityIndex === targetWeapon.rarityIndex
+      );
+    }
+
+    // 중복 강화: 같은 종류+등급의 중복 아이템 1개를 소모하여 대상 무기 +1 강화
+    function enhanceSelectedWeapon() {
+      const target = player.inventory.find(w => w.uid === player.selectedUid);
+      if (!target) return;
+
+      const dups = findDuplicatesFor(target, true);
+      if (dups.length === 0) {
+        showToast('강화 재료로 쓸 같은 종류·등급의 중복 무기가 없습니다.', '#fbbf24');
+        return;
+      }
+
+      // 레벨이 가장 낮은 중복 아이템을 재료로 소모
+      dups.sort((a, b) => a.level - b.level);
+      const material = dups[0];
+      player.inventory = player.inventory.filter(w => w.uid !== material.uid);
+
+      target.level += 1;
+      const rar = RARITIES[target.rarityIndex];
+      showToast(`🔨 강화 성공! [${rar.name}] ${target.name} +${target.level}`, '#fde047');
+      spawnParticles(player.x, player.y, '#fde047', 16, 150);
+      renderInventoryUI();
+    }
+
+    // 중복 합성: 같은 종류+등급 무기 2개(선택된 무기 + 동일 무기 1개)를 합쳐 상위 등급(희귀->영웅->전설->신화) 제작
+    function synthesizeSelectedWeapon() {
+      const target = player.inventory.find(w => w.uid === player.selectedUid);
+      if (!target) return;
+      if (target.rarityIndex >= RARITIES.length - 1) {
+        showToast('이미 최고 등급(신화) 무기입니다! 중복 강화를 이용하세요.', '#f87171');
+        return;
+      }
+
+      const dups = findDuplicatesFor(target, false);
+      if (dups.length === 0) {
+        showToast('합성하려면 같은 종류·등급 무기가 2개 필요합니다.', '#c084fc');
+        return;
+      }
+
+      // 장착 중이 아닌 중복 우선 소모
+      dups.sort((a, b) => (a.uid === player.equippedUid ? 1 : -1));
+      const partner = dups[0];
+      const wasEquipped = (target.uid === player.equippedUid || partner.uid === player.equippedUid);
+
+      player.inventory = player.inventory.filter(w => w.uid !== target.uid && w.uid !== partner.uid);
+
+      const nextRarity = target.rarityIndex + 1;
+      const newWeapon = createWeapon(target.typeId, nextRarity, 0);
+      player.inventory.push(newWeapon);
+      player.selectedUid = newWeapon.uid;
+      if (wasEquipped) {
+        player.equippedUid = newWeapon.uid;
+      }
+
+      const rar = RARITIES[newWeapon.rarityIndex];
+      showToast(`🔮 합성 대성공! [${rar.name}] ${newWeapon.name} 탄생!`, rar.color);
+      spawnParticles(player.x, player.y, rar.color, 26, 200);
+      renderInventoryUI();
+    }
+
+    // 중복 일괄 합성 (장착중인 무기는 보호하고, 가방 내 동일 종류+등급 쌍을 모두 상위 등급으로 합성)
+    function autoSynthesizeDuplicates() {
+      let synthCount = 0;
+      let changed = true;
+
+      while (changed) {
+        changed = false;
+        for (let r = 0; r < RARITIES.length - 1; r++) {
+          for (const typeId of Object.keys(WEAPON_TYPES)) {
+            const candidates = player.inventory.filter(
+              w => w.uid !== player.equippedUid && w.typeId === typeId && w.rarityIndex === r
+            );
+            if (candidates.length >= 2) {
+              const w1 = candidates[0];
+              const w2 = candidates[1];
+              player.inventory = player.inventory.filter(w => w.uid !== w1.uid && w.uid !== w2.uid);
+              const upgraded = createWeapon(typeId, r + 1, 0);
+              player.inventory.push(upgraded);
+              synthCount++;
+              changed = true;
+              break;
+            }
+          }
+          if (changed) break;
+        }
+      }
+
+      if (synthCount > 0) {
+        showToast(`⚡ 중복 일괄 합성 완료! 총 ${synthCount}회 승급 성공!`, '#34d399');
+        spawnParticles(player.x, player.y, '#c084fc', 24, 180);
+        renderInventoryUI();
+      } else {
+        showToast('일괄 합성할 수 있는 중복 무기 쌍이 없습니다.', '#94a3b8');
+      }
+    }
+
+    // 가방 UI 렌더링
+    function renderInventoryUI() {
+      const grid = document.getElementById('inv-grid');
+      grid.innerHTML = '';
+
+      document.getElementById('inv-count').textContent = player.inventory.length;
+      document.getElementById('inv-cap').textContent = MAX_INVENTORY_SIZE;
+
+      const eqWeapon = getEquippedWeapon();
+      if (eqWeapon) {
+        const eqRar = RARITIES[eqWeapon.rarityIndex];
+        const eqLabel = document.getElementById('eq-weapon-label');
+        eqLabel.className = eqRar.textClass;
+        eqLabel.textContent = `[${eqRar.name}] ${eqWeapon.name} +${eqWeapon.level}`;
+      }
+
+      // 정렬: 장착 무기 우선 -> 등급 높은 순 -> 강화 높은 순
+      const sorted = [...player.inventory].sort((a, b) => {
+        if (a.uid === player.equippedUid) return -1;
+        if (b.uid === player.equippedUid) return 1;
+        if (b.rarityIndex !== a.rarityIndex) return b.rarityIndex - a.rarityIndex;
+        if (b.level !== a.level) return b.level - a.level;
+        return a.typeId.localeCompare(b.typeId);
+      });
+
+      sorted.forEach(weapon => {
+        const wType = WEAPON_TYPES[weapon.typeId];
+        const rar = RARITIES[weapon.rarityIndex];
+        const slot = document.createElement('div');
+        slot.className = `inv-slot ${rar.cssClass}`;
+        if (weapon.uid === player.equippedUid) slot.classList.add('equipped');
+        if (weapon.uid === player.selectedUid) slot.classList.add('selected');
+
+        slot.innerHTML = `
+          <span class="slot-rarity-dot" style="background:${rar.color};"></span>
+          <span class="slot-icon">${wType.icon}</span>
+          ${weapon.level > 0 ? `<span class="slot-plus">+${weapon.level}</span>` : ''}
+        `;
+
+        slot.title = `[${rar.name}] ${weapon.name} +${weapon.level} (클릭: 선택 / 더블클릭: 즉시 장착)`;
+
+        slot.addEventListener('click', () => {
+          player.selectedUid = weapon.uid;
+          // 클릭 시 바로 장착도 함께 수행하여 빠른 무기 전환 지원
+          player.equippedUid = weapon.uid;
+          renderInventoryUI();
+        });
+
+        grid.appendChild(slot);
+      });
+
+      // 선택된 아이템 상세 정보 및 강화/합성 버튼 활성화 갱신
+      const sel = player.inventory.find(w => w.uid === player.selectedUid) || eqWeapon;
+      const infoEl = document.getElementById('sel-item-info');
+      const btnEquip = document.getElementById('btn-equip');
+      const btnEnhance = document.getElementById('btn-enhance');
+      const btnSynth = document.getElementById('btn-synth');
+
+      if (sel) {
+        const rar = RARITIES[sel.rarityIndex];
+        const stats = getWeaponStats(sel);
+        const dupsForEnhance = findDuplicatesFor(sel, true);
+        const dupsForSynth = findDuplicatesFor(sel, false);
+
+        infoEl.innerHTML = `<strong class="${rar.textClass}">[${rar.name}] ${sel.name} +${sel.level}</strong> (공격 +${stats.atk}, 공속 ${stats.speed}/s)`;
+        btnEquip.disabled = (sel.uid === player.equippedUid);
+        btnEnhance.disabled = (dupsForEnhance.length === 0);
+        btnEnhance.textContent = `중복 강화 (${dupsForEnhance.length})`;
+
+        btnSynth.disabled = (sel.rarityIndex >= RARITIES.length - 1 || dupsForSynth.length === 0);
+        btnSynth.textContent = sel.rarityIndex >= RARITIES.length - 1
+          ? '최고등급'
+          : `중복 합성 (${dupsForSynth.length + 1}/2)`;
+      }
+    }
+
+    document.getElementById('btn-equip').addEventListener('click', () => {
+      if (player.selectedUid) {
+        player.equippedUid = player.selectedUid;
+        renderInventoryUI();
+      }
+    });
+    document.getElementById('btn-enhance').addEventListener('click', enhanceSelectedWeapon);
+    document.getElementById('btn-synth').addEventListener('click', synthesizeSelectedWeapon);
+    document.getElementById('btn-auto-synth').addEventListener('click', autoSynthesizeDuplicates);
+
+    // 8. 파티클 및 플로팅 텍스트
+    function spawnParticles(x, y, color, count = 8, maxSpeed = 140) {
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 30 + Math.random() * maxSpeed;
+        gameState.particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          radius: 2 + Math.random() * 3.5,
+          color,
+          life: 0.35 + Math.random() * 0.25,
+          maxLife: 0.6
+        });
+      }
+    }
+
+    function spawnFloatingText(x, y, text, color = '#fff', size = 14) {
+      gameState.floatingTexts.push({
+        x, y,
+        text,
+        color,
+        size,
+        life: 0.85,
+        maxLife: 0.85
+      });
+    }
+
+    // 9. 메인 업데이트 루프
+    function update(dt) {
+      if (!gameState.running) return;
+      gameState.time += dt;
+
+      // 카메라 흔들림 감쇠
+      if (gameState.camera.shake > 0) {
+        gameState.camera.shake = Math.max(0, gameState.camera.shake - dt * 28);
+      }
+
+      // 플레이어 이동 (WASD / 방향키)
+      let moveX = 0;
+      let moveY = 0;
+      if (gameState.keys['w'] || gameState.keys['arrowup']) moveY -= 1;
+      if (gameState.keys['s'] || gameState.keys['arrowdown']) moveY += 1;
+      if (gameState.keys['a'] || gameState.keys['arrowleft']) moveX -= 1;
+      if (gameState.keys['d'] || gameState.keys['arrowright']) moveX += 1;
+
+      if (moveX !== 0 || moveY !== 0) {
+        const len = Math.hypot(moveX, moveY);
+        moveX /= len;
+        moveY /= len;
+        player.x += moveX * player.moveSpeed * dt;
+        player.y += moveY * player.moveSpeed * dt;
+        player.walkCycle += dt * 11;
+      } else {
+        player.walkCycle = 0;
+      }
+
+      // 마우스 방향 계산 (월드 좌표 기준)
+      const worldMouseX = gameState.mouse.x - canvas.width / 2 + player.x;
+      const worldMouseY = gameState.mouse.y - canvas.height / 2 + player.y;
+      player.angle = Math.atan2(worldMouseY - player.y, worldMouseX - player.x);
+
+      // 공격 쿨다운 및 길게 누르기(홀드) 연속 공격
+      if (player.attackCooldown > 0) {
+        player.attackCooldown -= dt;
+      }
+      if (player.attackAnim > 0) {
+        player.attackAnim = Math.max(0, player.attackAnim - dt * 5);
+      }
+      if (player.hitFlash > 0) {
+        player.hitFlash = Math.max(0, player.hitFlash - dt);
+      }
+      if (gameState.mouse.down && player.attackCooldown <= 0) {
+        tryPlayerAttack();
+      }
+
+      // 웨이브 및 15초 쉬는 시간 업데이트
+      if (gameState.isBreak) {
+        gameState.breakTimer -= dt;
+        if (gameState.breakTimer <= 0) {
+          startWave(gameState.wave + 1);
+        }
+      } else {
+        if (gameState.enemiesToSpawn > 0) {
+          gameState.spawnCooldown -= dt;
+          if (gameState.spawnCooldown <= 0) {
+            spawnMonster(gameState.wave);
+            gameState.enemiesToSpawn--;
+            gameState.spawnCooldown = Math.max(0.35, 1.1 - gameState.wave * 0.04);
+          }
+        } else if (gameState.enemies.length === 0) {
+          // 웨이브 내 모든 몬스터 처치 완료 -> 15초 쉬는 시간 돌입
+          startBreakPeriod();
+        }
+      }
+
+      // 드롭 아이템 자석 획득
+      for (let i = gameState.drops.length - 1; i >= 0; i--) {
+        const d = gameState.drops[i];
+        d.life -= dt;
+        d.bobPhase += dt * 4;
+        if (d.life <= 0) {
+          gameState.drops.splice(i, 1);
+          continue;
+        }
+        const dist = Math.hypot(player.x - d.x, player.y - d.y);
+        if (dist < 130 && player.inventory.length < MAX_INVENTORY_SIZE) {
+          const ang = Math.atan2(player.y - d.y, player.x - d.x);
+          d.x += Math.cos(ang) * 340 * dt;
+          d.y += Math.sin(ang) * 340 * dt;
+        }
+        if (dist < player.radius + 18) {
+          if (addWeaponToInventory(d.weapon)) {
+            gameState.drops.splice(i, 1);
+          }
+        }
+      }
+
+      // 플레이어 투사체 업데이트 (화살 / 마법구)
+      for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+        const p = gameState.projectiles[i];
+        p.life -= dt;
+        if (p.life <= 0) {
+          gameState.projectiles.splice(i, 1);
+          continue;
+        }
+
+        // 마법구는 가까운 적에게 살짝 유도
+        if (p.kind === 'magic' && gameState.enemies.length > 0) {
+          let nearest = null;
+          let minD = 260;
+          for (const e of gameState.enemies) {
+            const d = Math.hypot(e.x - p.x, e.y - p.y);
+            if (d < minD) {
+              minD = d;
+              nearest = e;
+            }
+          }
+          if (nearest) {
+            const targetAng = Math.atan2(nearest.y - p.y, nearest.x - p.x);
+            const curSpd = Math.hypot(p.vx, p.vy);
+            p.vx += Math.cos(targetAng) * curSpd * 3.5 * dt;
+            p.vy += Math.sin(targetAng) * curSpd * 3.5 * dt;
+            const newSpd = Math.hypot(p.vx, p.vy);
+            p.vx = (p.vx / newSpd) * curSpd;
+            p.vy = (p.vy / newSpd) * curSpd;
+          }
+        }
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        // 적 충돌 판정
+        let removeProj = false;
+        for (const enemy of gameState.enemies) {
+          if (p.kind === 'arrow' && p.hitIds.has(enemy.id)) continue;
+          const dist = Math.hypot(enemy.x - p.x, enemy.y - p.y);
+          if (dist < enemy.radius + 10) {
+            if (p.kind === 'arrow') {
+              p.hitIds.add(enemy.id);
+              damageEnemy(enemy, p.damage, p.color, 95, p.angle);
+              p.pierce--;
+              if (p.pierce <= 0) {
+                removeProj = true;
+                break;
+              }
+            } else if (p.kind === 'magic') {
+              // 범위 폭발 마법 데미지
+              spawnParticles(p.x, p.y, p.color, 18, 210);
+              gameState.slashes.push({
+                kind: 'explosion',
+                x: p.x,
+                y: p.y,
+                range: p.aoeRadius,
+                color: p.color,
+                life: 0.24,
+                maxLife: 0.24
+              });
+              for (const other of [...gameState.enemies]) {
+                if (Math.hypot(other.x - p.x, other.y - p.y) <= p.aoeRadius + other.radius) {
+                  damageEnemy(other, p.damage, p.color, 130, Math.atan2(other.y - p.y, other.x - p.x));
+                }
+              }
+              removeProj = true;
+              break;
+            }
+          }
+        }
+        if (removeProj) {
+          gameState.projectiles.splice(i, 1);
+        }
+      }
+
+      // 몬스터 AI 업데이트
+      for (const enemy of gameState.enemies) {
+        enemy.animPhase += dt * 6;
+        if (enemy.hitFlash > 0) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
+
+        // 넉백 속도 감쇠
+        enemy.x += enemy.vx * dt;
+        enemy.y += enemy.vy * dt;
+        enemy.vx *= Math.pow(0.05, dt);
+        enemy.vy *= Math.pow(0.05, dt);
+
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const ang = Math.atan2(dy, dx);
+
+        if (enemy.isBoss) {
+          // 보스 특수 패턴 (돌진 + 8방향 탄막)
+          if (enemy.dashTimer > 0) {
+            enemy.dashTimer -= dt;
+            enemy.x += enemy.dashVx * dt;
+            enemy.y += enemy.dashVy * dt;
+          } else {
+            enemy.x += Math.cos(ang) * enemy.speed * dt;
+            enemy.y += Math.sin(ang) * enemy.speed * dt;
+
+            enemy.skillTimer -= dt;
+            if (enemy.skillTimer <= 0) {
+              enemy.skillTimer = 2.8;
+              if (Math.random() < 0.5) {
+                // 돌진 공격
+                enemy.dashTimer = 0.45;
+                enemy.dashVx = Math.cos(ang) * 440;
+                enemy.dashVy = Math.sin(ang) * 440;
+                spawnFloatingText(enemy.x, enemy.y - 52, '⚠️ 보스 돌진!', '#fda4af', 15);
+              } else {
+                // 방사형 마법탄 발사
+                const bullets = 10 + enemy.bossTier * 2;
+                for (let b = 0; b < bullets; b++) {
+                  const bAng = (Math.PI * 2 / bullets) * b + gameState.time;
+                  gameState.enemyProjectiles.push({
+                    x: enemy.x,
+                    y: enemy.y,
+                    vx: Math.cos(bAng) * 240,
+                    vy: Math.sin(bAng) * 240,
+                    damage: Math.round(enemy.atk * 0.75),
+                    radius: 7,
+                    color: '#fb7185',
+                    life: 3.0
+                  });
+                }
+              }
+            }
+          }
+        } else if (enemy.ranged) {
+          // 원거리 해골 궁수
+          if (dist > 260) {
+            enemy.x += Math.cos(ang) * enemy.speed * dt;
+            enemy.y += Math.sin(ang) * enemy.speed * dt;
+          }
+          enemy.shootTimer -= dt;
+          if (enemy.shootTimer <= 0 && dist < 460) {
+            enemy.shootTimer = 2.1;
+            gameState.enemyProjectiles.push({
+              x: enemy.x,
+              y: enemy.y,
+              vx: Math.cos(ang) * 270,
+              vy: Math.sin(ang) * 270,
+              damage: enemy.atk,
+              radius: 5,
+              color: '#f8fafc',
+              life: 2.2
+            });
+          }
+        } else {
+          // 근접 추적 몬스터
+          enemy.x += Math.cos(ang) * enemy.speed * dt;
+          enemy.y += Math.sin(ang) * enemy.speed * dt;
+        }
+
+        // 플레이어와 접촉 데미지
+        if (dist < player.radius + enemy.radius) {
+          const pushAng = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+          player.x += Math.cos(pushAng) * 140 * dt;
+          player.y += Math.sin(pushAng) * 140 * dt;
+
+          if (player.hitFlash <= 0) {
+            damagePlayer(enemy.atk);
+          }
+        }
+      }
+
+      // 적 투사체 업데이트
+      for (let i = gameState.enemyProjectiles.length - 1; i >= 0; i--) {
+        const ep = gameState.enemyProjectiles[i];
+        ep.life -= dt;
+        ep.x += ep.vx * dt;
+        ep.y += ep.vy * dt;
+
+        if (ep.life <= 0) {
+          gameState.enemyProjectiles.splice(i, 1);
+          continue;
+        }
+        if (Math.hypot(player.x - ep.x, player.y - ep.y) < player.radius + ep.radius) {
+          damagePlayer(ep.damage);
+          gameState.enemyProjectiles.splice(i, 1);
+        }
+      }
+
+      // 참격/폭발 이펙트 수명
+      for (let i = gameState.slashes.length - 1; i >= 0; i--) {
+        gameState.slashes[i].life -= dt;
+        if (gameState.slashes[i].life <= 0) gameState.slashes.splice(i, 1);
+      }
+
+      // 파티클 수명
+      for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const pt = gameState.particles[i];
+        pt.life -= dt;
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        if (pt.life <= 0) gameState.particles.splice(i, 1);
+      }
+
+      // 데미지/알림 텍스트 수명
+      for (let i = gameState.floatingTexts.length - 1; i >= 0; i--) {
+        const ft = gameState.floatingTexts[i];
+        ft.life -= dt;
+        ft.y -= 34 * dt;
+        if (ft.life <= 0) gameState.floatingTexts.splice(i, 1);
+      }
+
+      updateHUD();
+    }
+
+    function damagePlayer(amount) {
+      if (!gameState.running || player.hitFlash > 0) return;
+      player.hp = Math.max(0, player.hp - amount);
+      player.hitFlash = 0.45;
+      gameState.camera.shake = 7;
+      spawnFloatingText(player.x, player.y - 26, `-${amount}`, '#f87171', 15);
+      spawnParticles(player.x, player.y, '#ef4444', 8, 120);
+
+      if (player.hp <= 0) {
+        gameState.running = false;
+        document.getElementById('gameover-summary').innerHTML =
+          `도달 웨이브: <strong>WAVE ${gameState.wave}</strong><br>최종 캐릭터 레벨: <strong>Lv.${player.level}</strong>`;
+        document.getElementById('gameover-modal').style.display = 'flex';
+      }
+    }
+
+    // 10. HUD 갱신
+    function updateHUD() {
+      const weapon = getEquippedWeapon();
+      const stats = weapon ? getWeaponStats(weapon) : { atk: 0, speed: 1 };
+      const wType = weapon ? WEAPON_TYPES[weapon.typeId] : WEAPON_TYPES.sword;
+
+      document.getElementById('ui-level').textContent = `Lv.${player.level}`;
+      document.getElementById('ui-class-name').textContent = wType.className;
+      document.getElementById('hp-bar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+      document.getElementById('hp-text').textContent = `${player.hp} / ${player.maxHp}`;
+      document.getElementById('exp-bar').style.width = `${(player.exp / player.nextExp) * 100}%`;
+      document.getElementById('exp-text').textContent = `EXP ${player.exp} / ${player.nextExp}`;
+      document.getElementById('ui-atk').textContent = `${player.baseAtk + stats.atk}`;
+      document.getElementById('ui-spd').textContent = `${stats.speed}/s`;
+
+      updateWaveUI();
+
+      // 보스 체력바 갱신
+      const boss = gameState.enemies.find(e => e.isBoss);
+      if (boss) {
+        document.getElementById('boss-hp-bar').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+        document.getElementById('boss-hp-text').textContent = `${Math.max(0, boss.hp)} / ${boss.maxHp}`;
+      }
+    }
+
+    function updateWaveUI() {
+      const isBossWave = (gameState.wave % 5 === 0);
+      document.getElementById('wave-title').textContent = isBossWave
+        ? `👑 WAVE ${gameState.wave} (BOSS)`
+        : `WAVE ${gameState.wave}`;
+
+      if (gameState.isBreak) {
+        document.getElementById('wave-sub').textContent = '정비 및 무기 강화/합성 시간';
+        document.getElementById('break-timer-text').textContent = `⏳ 쉬는 시간: ${Math.max(0, gameState.breakTimer).toFixed(1)}초`;
+      } else {
+        const remain = gameState.enemies.length + gameState.enemiesToSpawn;
+        document.getElementById('wave-sub').textContent = `남은 몬스터: ${remain}마리`;
+      }
+    }
+
+    // 11. 렌더링 엔진 (무기 종류/등급에 따른 캐릭터 외형 변화 포함)
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const shakeX = (Math.random() - 0.5) * gameState.camera.shake * 2;
+      const shakeY = (Math.random() - 0.5) * gameState.camera.shake * 2;
+
+      ctx.save();
+      ctx.translate(canvas.width / 2 - player.x + shakeX, canvas.height / 2 - player.y + shakeY);
+
+      drawWorldGrid();
+      drawDrops();
+      drawSlashes();
+      drawEnemies();
+      drawPlayerCharacter();
+      drawProjectiles();
+      drawParticlesAndTexts();
+
+      ctx.restore();
+    }
+
+    // 무한 타일 바닥 그리드 렌더링
+    function drawWorldGrid() {
+      const tileSize = 80;
+      const startX = Math.floor((player.x - canvas.width / 2) / tileSize) * tileSize - tileSize;
+      const endX = player.x + canvas.width / 2 + tileSize;
+      const startY = Math.floor((player.y - canvas.height / 2) / tileSize) * tileSize - tileSize;
+      const endY = player.y + canvas.height / 2 + tileSize;
+
+      ctx.fillStyle = '#111622';
+      ctx.fillRect(startX, startY, endX - startX, endY - startY);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = startX; x <= endX; x += tileSize) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+      }
+      for (let y = startY; y <= endY; y += tileSize) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+      }
+      ctx.stroke();
+
+      // 타일 교차점 장식 점
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+      for (let x = startX; x <= endX; x += tileSize * 2) {
+        for (let y = startY; y <= endY; y += tileSize * 2) {
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // 바닥에 떨어진 무기 렌더링
+    function drawDrops() {
+      for (const d of gameState.drops) {
+        const rar = RARITIES[d.weapon.rarityIndex];
+        const wType = WEAPON_TYPES[d.weapon.typeId];
+        const bobY = Math.sin(d.bobPhase) * 4;
+
+        ctx.save();
+        ctx.translate(d.x, d.y + bobY);
+
+        // 등급 빛기둥/오라
+        const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, 24);
+        grad.addColorStop(0, rar.glow);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 테두리 링
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 아이콘
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(wType.icon, 0, 1);
+
+        // 등급 이름 라벨
+        ctx.font = 'bold 10px "Noto Sans KR", sans-serif';
+        ctx.fillStyle = rar.color;
+        ctx.fillText(`[${rar.name}] ${wType.name}`, 0, -20);
+
+        ctx.restore();
+      }
+    }
+
+    // 장착 무기에 따라 캐릭터 의상·모자·무기 외형이 완전히 달라지는 렌더링
+    function drawPlayerCharacter() {
+      const weapon = getEquippedWeapon();
+      const typeId = weapon ? weapon.typeId : 'sword';
+      const rar = weapon ? RARITIES[weapon.rarityIndex] : RARITIES[0];
+
+      ctx.save();
+      ctx.translate(player.x, player.y);
+
+      // 바닥 그림자
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 14, 16, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 전설/신화 등급 오라 이펙트
+      if (rar.order >= 2) {
+        ctx.save();
+        ctx.rotate(gameState.time * 2);
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 25 + Math.sin(gameState.time * 5) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 걷기 발 애니메이션
+      const footOffset = Math.sin(player.walkCycle) * 5;
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(-6, 12 + footOffset, 4.5, 0, Math.PI * 2);
+      ctx.arc(6, 12 - footOffset, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 마우스 방향으로 회전하여 무기와 외형 그리기
+      ctx.save();
+      ctx.rotate(player.angle);
+
+      const isFlashing = player.hitFlash > 0 && Math.floor(player.hitFlash * 20) % 2 === 0;
+
+      if (typeId === 'sword') {
+        // ================= [검 착용: 중갑 전사 외형] =================
+        // 붉은/등급별 망토
+        ctx.fillStyle = isFlashing ? '#fff' : (rar.order >= 2 ? rar.color : '#b91c1c');
+        ctx.beginPath();
+        ctx.moveTo(-6, -12);
+        ctx.lineTo(-22 - Math.sin(player.walkCycle) * 3, 0);
+        ctx.lineTo(-6, 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // 판금 갑옷 몸통
+        ctx.fillStyle = isFlashing ? '#fff' : '#475569';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 왼손 방패
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(8, -14, 7, -Math.PI * 0.4, Math.PI * 0.6);
+        ctx.stroke();
+
+        // 투구 바이저
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(2, 0, 10, -Math.PI * 0.45, Math.PI * 0.45);
+        ctx.fill();
+
+        // 오른손 대검 (공격 시 휘두르는 각도 애니메이션)
+        const swingOffset = player.attackAnim > 0 ? Math.sin(player.attackAnim * Math.PI) * 1.4 - 0.7 : 0.35;
+        ctx.save();
+        ctx.rotate(swingOffset);
+        // 손잡이
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(10, -2, 8, 4);
+        // 코등이
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(17, -6, 3, 12);
+        // 검신 (등급 색상 광채)
+        ctx.shadowColor = rar.color;
+        ctx.shadowBlur = 10 + rar.order * 4;
+        ctx.fillStyle = rar.order === 3 ? '#fecaca' : '#f8fafc';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(20, -3.5);
+        ctx.lineTo(44 + rar.order * 3, 0);
+        ctx.lineTo(20, 3.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+      } else if (typeId === 'bow') {
+        // ================= [활 착용: 숲의 레인저 궁수 외형] =================
+        // 등 뒤 화살통
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(-17, -6, 8, 12);
+        ctx.fillStyle = rar.color;
+        ctx.fillRect(-19, -4, 3, 2);
+        ctx.fillRect(-19, 0, 3, 2);
+        ctx.fillRect(-19, 4, 3, 2);
+
+        // 레인저 망토 & 후드 몸통
+        ctx.fillStyle = isFlashing ? '#fff' : '#065f46';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 15.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 후드 챙
+        ctx.fillStyle = '#047857';
+        ctx.beginPath();
+        ctx.moveTo(-10, -11);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(-10, 11);
+        ctx.closePath();
+        ctx.fill();
+
+        // 전방 활 (Bow)
+        const drawPull = player.attackAnim > 0 ? player.attackAnim * 6 : 0;
+        ctx.save();
+        ctx.translate(14, 0);
+        ctx.shadowColor = rar.color;
+        ctx.shadowBlur = 8 + rar.order * 3;
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(-4, 0, 18, -Math.PI * 0.42, Math.PI * 0.42);
+        ctx.stroke();
+
+        // 활시위
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(2, -16);
+        ctx.lineTo(-4 - drawPull, 0);
+        ctx.lineTo(2, 16);
+        ctx.stroke();
+        ctx.restore();
+
+      } else if (typeId === 'staff') {
+        // ================= [마법의 지팡이 착용: 아케인 대마법사 외형] =================
+        // 비전 로브
+        ctx.fillStyle = isFlashing ? '#fff' : '#312e81';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 고깔 마법사 모자 챙 & 꼭지
+        ctx.fillStyle = '#1e1b4b';
+        ctx.strokeStyle = rar.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(-1, 0, 13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#4338ca';
+        ctx.beginPath();
+        ctx.moveTo(-3, -6);
+        ctx.lineTo(-18, 0);
+        ctx.lineTo(-3, 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // 오른손 마법의 지팡이 & 부유 오브
+        const thrust = player.attackAnim > 0 ? Math.sin(player.attackAnim * Math.PI) * 6 : 0;
+        ctx.save();
+        ctx.translate(12 + thrust, 8);
+        // 지팡이 대
+        ctx.strokeStyle = '#92400e';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(18, 0);
+        ctx.stroke();
+
+        // 끝단 발광 크리스탈 오브
+        ctx.shadowColor = rar.color;
+        ctx.shadowBlur = 14 + rar.order * 4;
+        ctx.fillStyle = rar.color;
+        ctx.beginPath();
+        ctx.arc(21, 0, 5.5 + Math.sin(gameState.time * 8) * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(21, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // 참격 및 마법 폭발 이펙트
+    function drawSlashes() {
+      for (const s of gameState.slashes) {
+        const alpha = Math.max(0, s.life / s.maxLife);
+        ctx.save();
+        if (s.kind === 'explosion') {
+          ctx.strokeStyle = s.color;
+          ctx.fillStyle = s.color;
+          ctx.globalAlpha = alpha * 0.35;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.range * (1.15 - alpha * 0.3), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        } else {
+          // 검 부채꼴 베기 이펙트
+          ctx.translate(s.x, s.y);
+          ctx.rotate(s.angle);
+          ctx.globalAlpha = alpha;
+          ctx.shadowColor = s.color;
+          ctx.shadowBlur = 15;
+
+          const grad = ctx.createRadialGradient(0, 0, s.range * 0.35, 0, 0, s.range);
+          grad.addColorStop(0, 'rgba(255,255,255,0)');
+          grad.addColorStop(0.75, s.glow);
+          grad.addColorStop(1, '#ffffff');
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.arc(0, 0, s.range, -s.arcHalf, s.arcHalf);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // 투사체 렌더링
+    function drawProjectiles() {
+      for (const p of gameState.projectiles) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.kind === 'arrow') {
+          ctx.rotate(p.angle);
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 8;
+          ctx.strokeStyle = '#f8fafc';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(-14, 0);
+          ctx.lineTo(12, 0);
+          ctx.stroke();
+
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.moveTo(16, 0);
+          ctx.lineTo(8, -4);
+          ctx.lineTo(8, 4);
+          ctx.closePath();
+          ctx.fill();
+        } else if (p.kind === 'magic') {
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 14;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(0, 0, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // 적 투사체
+      for (const ep of gameState.enemyProjectiles) {
+        ctx.save();
+        ctx.fillStyle = ep.color;
+        ctx.shadowColor = ep.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(ep.x, ep.y, ep.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 몬스터 및 보스 렌더링
+    function drawEnemies() {
+      for (const e of gameState.enemies) {
+        ctx.save();
+        ctx.translate(e.x, e.y);
+
+        // 그림자
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, e.radius * 0.85, e.radius * 0.9, e.radius * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const wobble = Math.sin(e.animPhase) * 2;
+        ctx.fillStyle = e.hitFlash > 0 ? '#ffffff' : e.color;
+        ctx.strokeStyle = e.isBoss ? '#fde047' : 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = e.isBoss ? 3.5 : 2;
+
+        ctx.beginPath();
+        ctx.arc(0, wobble * 0.5, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 보스 왕관 및 뿔 장식
+        if (e.isBoss) {
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.moveTo(-18, -e.radius + 4);
+          ctx.lineTo(-10, -e.radius - 16);
+          ctx.lineTo(0, -e.radius - 4);
+          ctx.lineTo(10, -e.radius - 16);
+          ctx.lineTo(18, -e.radius + 4);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // 몬스터 눈
+        const eyeAng = Math.atan2(player.y - e.y, player.x - e.x);
+        const ex = Math.cos(eyeAng) * (e.radius * 0.35);
+        const ey = Math.sin(eyeAng) * (e.radius * 0.35);
+        ctx.fillStyle = e.isBoss ? '#fef08a' : '#0f172a';
+        ctx.beginPath();
+        ctx.arc(ex - 4, ey - 2, e.isBoss ? 4.5 : 2.8, 0, Math.PI * 2);
+        ctx.arc(ex + 4, ey - 2, e.isBoss ? 4.5 : 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 일반 몬스터 미니 체력바
+        if (!e.isBoss && e.hp < e.maxHp) {
+          const bw = e.radius * 2;
+          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          ctx.fillRect(-bw / 2, -e.radius - 11, bw, 5);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(-bw / 2, -e.radius - 11, bw * Math.max(0, e.hp / e.maxHp), 5);
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function drawParticlesAndTexts() {
+      for (const pt of gameState.particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const ft of gameState.floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+        ctx.font = `900 ${ft.size}px "Noto Sans KR", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+    }
+
+    // 12. 게임 재시작 및 index.html 저장 기능
+    function resetGame() {
+      const freshSword = createWeapon('sword', 0, 0);
+      player = {
+        x: 0,
+        y: 0,
+        radius: 18,
+        angle: 0,
+        walkCycle: 0,
+        attackAnim: 0,
+        hitFlash: 0,
+        level: 1,
+        exp: 0,
+        nextExp: 50,
+        maxHp: 160,
+        hp: 160,
+        baseAtk: 5,
+        moveSpeed: 245,
+        attackCooldown: 0,
+        inventory: [freshSword],
+        equippedUid: freshSword.uid,
+        selectedUid: freshSword.uid
+      };
+
+      gameState.running = true;
+      gameState.enemies = [];
+      gameState.projectiles = [];
+      gameState.enemyProjectiles = [];
+      gameState.slashes = [];
+      gameState.drops = [];
+      gameState.particles = [];
+      gameState.floatingTexts = [];
+      gameState.bossActive = false;
+
+      document.getElementById('boss-hud').style.display = 'none';
+      document.getElementById('gameover-modal').style.display = 'none';
+
+      renderInventoryUI();
+      startWave(1);
+    }
+
+    document.getElementById('btn-restart').addEventListener('click', resetGame);
+
+    // 현재 페이지 전체를 index.html 파일로 다운로드
+    document.getElementById('btn-download-html').addEventListener('click', () => {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('💾 index.html 파일이 저장되었습니다!', '#38bdf8');
+    });
+
+    // 13. 메인 게임 루프 시작
+    let lastTimestamp = performance.now();
+    function gameLoop(now) {
+      const dt = Math.min(0.05, (now - lastTimestamp) / 1000);
+      lastTimestamp = now;
+
+      update(dt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // 초기 실행
+    renderInventoryUI();
+    startWave(1);
+    requestAnimationFrame(gameLoop);
+  </script>
+
+</body></html>

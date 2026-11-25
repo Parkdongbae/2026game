@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>무한의 계단 - Infinite Stairs</title>
+    <!-- 레트로 픽셀 폰트 로드 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 기본 초기화 및 반응형 레이아웃 설정 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: manipulation;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #111827;
+            font-family: 'Noto Sans KR', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 게임 컨테이너 (모바일/PC 대응 중앙 정렬) */
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            max-height: 900px;
+            background: #38bdf8;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 501px) {
+            #game-wrapper {
+                height: 95vh;
+                border-radius: 24px;
+                border: 4px solid #1e293b;
+            }
+        }
+
+        /* 캔버스 영역 */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 상단 HUD UI */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px 20px;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hud-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .best-score-badge {
+            background: rgba(15, 23, 42, 0.7);
+            color: #fbbf24;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 900;
+            border: 2px solid rgba(251, 191, 36, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(4px);
+        }
+
+        #sound-btn {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.7);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform 0.1s, background 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        #sound-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* 제한 시간 게이지 (체력바) */
+        .gauge-container {
+            width: 100%;
+            height: 22px;
+            background: rgba(15, 23, 42, 0.85);
+            border-radius: 12px;
+            padding: 3px;
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #time-gauge {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+            border-radius: 8px;
+            transition: width 0.05s linear;
+        }
+
+        .gauge-danger {
+            animation: pulseDanger 0.3s infinite alternate;
+        }
+
+        @keyframes pulseDanger {
+            from { filter: brightness(1); }
+            to { filter: brightness(1.5) drop-shadow(0 0 6px #ef4444); }
+        }
+
+        /* 현재 점수 및 고도 표시 */
+        .score-display {
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        #current-score {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 42px;
+            color: #ffffff;
+            text-shadow: 
+                0 4px 0 #0f172a,
+                -2px -2px 0 #0f172a,  
+                 2px -2px 0 #0f172a,
+                -2px  2px 0 #0f172a,
+                 2px  2px 0 #0f172a;
+            letter-spacing: -1px;
+        }
+
+        #zone-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.45);
+            color: #e2e8f0;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* 하단 컨트롤 버튼 영역 */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 18px;
+            display: flex;
+            gap: 14px;
+            z-index: 15;
+        }
+
+        .ctrl-btn {
+            flex: 1;
+            height: 86px;
+            border: none;
+            border-radius: 20px;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-weight: 900;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+            transition: transform 0.06s ease, box-shadow 0.06s ease;
+        }
+
+        /* 방향 전환 버튼 (왼쪽) */
+        #btn-turn {
+            background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
+            box-shadow: 0 7px 0 #9a3412, 0 12px 20px rgba(0, 0, 0, 0.4);
+            border: 2px solid #fdba74;
+        }
+
+        #btn-turn:active, #btn-turn.pressed {
+            transform: translateY(6px);
+            box-shadow: 0 1px 0 #9a3412, 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 오르기 버튼 (오른쪽) */
+        #btn-climb {
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 7px 0 #1e40af, 0 12px 20px rgba(0, 0, 0, 0.4);
+            border: 2px solid #93c5fd;
+        }
+
+        #btn-climb:active, #btn-climb.pressed {
+            transform: translateY(6px);
+            box-shadow: 0 1px 0 #1e40af, 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-icon {
+            font-size: 26px;
+            line-height: 1;
+        }
+
+        .btn-label {
+            font-size: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-key-hint {
+            font-size: 10px;
+            opacity: 0.85;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+
+        /* 오버레이 모달 (시작 화면 & 게임 오버 화면) */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            z-index: 30;
+            text-align: center;
+            color: white;
+            transition: opacity 0.25s ease;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .game-title {
+            font-size: 38px;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 4px 0 #b45309, 0 8px 20px rgba(0,0,0,0.6);
+            margin-bottom: 6px;
+            letter-spacing: -1px;
+        }
+
+        .game-subtitle {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+            color: #93c5fd;
+            margin-bottom: 24px;
+            letter-spacing: 1px;
+        }
+
+        .guide-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 2px solid #475569;
+            border-radius: 18px;
+            padding: 18px;
+            width: 100%;
+            max-width: 340px;
+            margin-bottom: 26px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .guide-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .guide-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .badge-orange {
+            background: #ea580c;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .badge-blue {
+            background: #2563eb;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: 2px solid #6ee7b7;
+            border-radius: 18px;
+            padding: 16px 40px;
+            font-size: 20px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #065f46, 0 12px 24px rgba(0, 0, 0, 0.4);
+            transition: transform 0.1s;
+        }
+
+        .action-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #065f46;
+        }
+
+        /* 게임 오버 결과 카드 */
+        .result-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 3px solid #64748b;
+            border-radius: 22px;
+            padding: 24px;
+            width: 100%;
+            max-width: 320px;
+            margin-bottom: 24px;
+        }
+
+        .gameover-reason {
+            color: #f87171;
+            font-weight: 900;
+            font-size: 15px;
+            margin-bottom: 14px;
+        }
+
+        .stat-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-box:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 20px;
+            color: #ffffff;
+        }
+
+        .new-record-tag {
+            background: #fbbf24;
+            color: #78350f;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 999px;
+            margin-left: 8px;
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-4px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <!-- 게임 캔버스 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 상단 HUD -->
+    <div id="hud">
+        <div class="hud-top-row">
+            <div class="best-score-badge">
+                <span>🏆 BEST</span>
+                <span id="best-score-text">0</span>
+            </div>
+            <button id="sound-btn" title="효과음 켜기/끄기" aria-label="효과음 토글">🔊</button>
+        </div>
+
+        <!-- 제한 시간 게이지 -->
+        <div class="gauge-container" id="gauge-box">
+            <div id="time-gauge"></div>
+        </div>
+
+        <!-- 현재 층수 -->
+        <div class="score-display">
+            <div id="current-score">0</div>
+            <div id="zone-badge">☀️ 푸른 하늘</div>
+        </div>
+    </div>
+
+    <!-- 하단 컨트롤 버튼 (터치 & 클릭) -->
+    <div id="controls">
+        <button id="btn-turn" class="ctrl-btn" aria-label="방향 전환">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-label">방향 전환</span>
+            <span class="btn-key-hint">F</span>
+        </button>
+        <button id="btn-climb" class="ctrl-btn" aria-label="오르기">
+            <span class="btn-icon">⬆️</span>
+            <span class="btn-label">오르기</span>
+            <span class="btn-key-hint">J / K</span>
+        </button>
+    </div>
+
+    <!-- 시작 화면 오버레이 -->
+    <div id="start-screen" class="overlay-screen">
+        <div class="game-title">무한의 계단</div>
+        <div class="game-subtitle">INFINITE STAIRS</div>
+
+        <div class="guide-card">
+            <div class="guide-row">
+                <span class="badge-blue">오르기 (J / K)</span>
+                <span>바라보는 방향으로 한 칸 점프!</span>
+            </div>
+            <div class="guide-row">
+                <span class="badge-orange">방향 전환 (F)</span>
+                <span>좌우 방향을 바꾸며 한 칸 점프!</span>
+            </div>
+            <div class="guide-row">
+                <span>⏱️</span>
+                <span>체력이 다 닳기 전에 빠르게 올라가세요!</span>
+            </div>
+        </div>
+
+        <button id="start-btn" class="action-btn">게임 시작</button>
+    </div>
+
+    <!-- 게임 오버 오버레이 -->
+    <div id="gameover-screen" class="overlay-screen hidden">
+        <div class="game-title" style="color: #f87171; text-shadow: 0 4px 0 #7f1d1d;">GAME OVER</div>
+        <div class="gameover-reason" id="gameover-reason">발을 헛디뎌 추락했습니다!</div>
+
+        <div class="result-card">
+            <div class="stat-box">
+                <span class="stat-label">도달한 계단</span>
+                <span class="stat-value" id="final-score">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">최고 기록 <span id="new-record-badge" class="new-record-tag hidden">NEW!</span></span>
+                <span class="stat-value" style="color: #fbbf24;" id="final-best">0</span>
+            </div>
+        </div>
+
+        <button id="restart-btn" class="action-btn">다시 도전</button>
+    </div>
+</div>
+
+<script>
+/**
+ * ============================================================================
+ * 1. Web Audio API 기반 8비트 레트로 사운드 합성기
+ * ============================================================================
+ */
+class RetroSound {
+    constructor() {
+        this.ctx = null;
+        this.muted = false;
+    }
+
+    init() {
+        if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+                this.ctx = new AudioContext();
+            }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+    }
+
+    // 기본 톤 재생 헬퍼
+    playTone(freqStart, freqEnd, duration, type = 'square', volume = 0.12, delay = 0) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        try {
+            const now = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freqStart, now);
+            if (freqEnd !== freqStart) {
+                osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + duration);
+            }
+
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        } catch (e) {
+            // 오디오 재생 오류 무시
+        }
+    }
+
+    // 오르기 효과음 (경쾌한 상승음)
+    playClimb() {
+        this.playTone(360, 620, 0.075, 'square', 0.1);
+    }
+
+    // 방향 전환 효과음 (살짝 다른 피치의 경쾌한 2중음)
+    playTurn() {
+        this.playTone(440, 740, 0.08, 'triangle', 0.14);
+    }
+
+    // 100계단 돌파 팡파르 효과음
+    playMilestone() {
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // 도, 미, 솔, 높은 도
+        notes.forEach((freq, idx) => {
+            this.playTone(freq, freq, 0.11, 'square', 0.12, idx * 0.07);
+        });
+    }
+
+    // 게임 오버 효과음 (하강음)
+    playGameOver() {
+        this.playTone(320, 140, 0.18, 'sawtooth', 0.15, 0);
+        this.playTone(220, 65, 0.35, 'sawtooth', 0.15, 0.16);
+    }
+}
+
+/**
+ * ============================================================================
+ * 2. 게임 핵심 엔진 및 상태 관리
+ * ============================================================================
+ */
+const sound = new RetroSound();
+
+// DOM 요소 참조
+const wrapper = document.getElementById('game-wrapper');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const scoreEl = document.getElementById('current-score');
+const bestScoreEl = document.getElementById('best-score-text');
+const zoneBadgeEl = document.getElementById('zone-badge');
+const timeGaugeEl = document.getElementById('time-gauge');
+const gaugeBoxEl = document.getElementById('gauge-box');
+const soundBtn = document.getElementById('sound-btn');
+
+const startScreen = document.getElementById('start-screen');
+const gameoverScreen = document.getElementById('gameover-screen');
+const gameoverReasonEl = document.getElementById('gameover-reason');
+const finalScoreEl = document.getElementById('final-score');
+const finalBestEl = document.getElementById('final-best');
+const newRecordBadge = document.getElementById('new-record-badge');
+
+const btnTurn = document.getElementById('btn-turn');
+const btnClimb = document.getElementById('btn-climb');
+const startBtn = document.getElementById('start-btn');
+const restartBtn = document.getElementById('restart-btn');
+
+// 로컬 스토리지 최고 기록
+const STORAGE_KEY = 'infinite_stairs_best_v1';
+let bestScore = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+bestScoreEl.textContent = bestScore;
+
+// 게임 상수 설정
+const STAIR_DX = 64;        // 계단 가로 간격
+const STAIR_DY = 38;        // 계단 세로 높이 간격
+const STAIR_WIDTH = 74;     // 계단 발판 너비
+const STAIR_HEIGHT = 20;    // 계단 발판 두께
+
+// 게임 상태 변수
+let gameState = 'READY';    // 'READY', 'PLAYING', 'FALLING', 'GAMEOVER'
+let score = 0;
+let stairs = [];            // { index, x, y, dir } (x, y는 그리드 좌표)
+let player = {
+    gridX: 0,
+    gridY: 0,
+    dir: 1,                 // 1: 오른쪽, -1: 왼쪽
+    animProgress: 1,        // 0 -> 1 점프 애니메이션 진행도
+    startX: 0,
+    startY: 0,
+    fallVy: 0,
+    fallRotation: 0
+};
+
+// 카메라 부드러운 추적 좌표
+let camera = {
+    x: 0,
+    y: 0
+};
+
+// 시간 게이지 (0 ~ 100)
+let stamina = 100;
+let hasStartedClimbing = false; // 첫 발을 내딛기 전까지는 시간 감소 대기
+
+// 시각 효과 배열 (파티클, 플로팅 텍스트, 별, 구름)
+let particles = [];
+let floatingTexts = [];
+let bgStars = [];
+let bgClouds = [];
+
+// 화면 흔들림(Shake) 효과
+let shakeTimer = 0;
+let shakeIntensity = 0;
+
+// 캔버스 해상도 반응형 조정
+let canvasWidth = 0;
+let canvasHeight = 0;
+
+function resizeCanvas() {
+    const rect = wrapper.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvasWidth = rect.width;
+    canvasHeight = rect.height;
+    canvas.width = canvasWidth * dpr;
+    canvas.height = canvasHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// 배경 장식 요소(구름, 별) 초기화
+function initDecorations() {
+    bgClouds = [];
+    for (let i = 0; i < 8; i++) {
+        bgClouds.push({
+            x: Math.random() * 500,
+            y: Math.random() * 800,
+            speed: 8 + Math.random() * 14,
+            scale: 0.6 + Math.random() * 0.8
+        });
+    }
+
+    bgStars = [];
+    for (let i = 0; i < 65; i++) {
+        bgStars.push({
+            x: Math.random() * 500,
+            y: Math.random() * 900,
+            size: Math.random() * 2.5 + 1,
+            twinkleOffset: Math.random() * Math.PI * 2
+        });
+    }
+}
+
+/**
+ * ============================================================================
+ * 3. 계단 생성 및 게임 초기화 로직
+ * ============================================================================
+ */
+function generateNextStair() {
+    if (stairs.length === 0) {
+        // 0번 시작 바닥 계단
+        stairs.push({ index: 0, x: 0, y: 0, dir: 1 });
+        return;
+    }
+
+    const prev = stairs[stairs.length - 1];
+    let nextDir;
+
+    if (prev.index === 0) {
+        // 첫 번째 계단은 항상 오른쪽(1)으로 생성해 직관적인 시작 유도
+        nextDir = 1;
+    } else {
+        // 연속 방향 유지 확률과 전환 확률의 자연스러운 조화 (약 62% 유지, 38% 전환)
+        // 너무 한쪽으로만 12칸 이상 치우치지 않도록 보정
+        const keepSame = Math.random() < 0.62;
+        nextDir = keepSame ? prev.dir : -prev.dir;
+    }
+
+    stairs.push({
+        index: prev.index + 1,
+        x: prev.x + nextDir,
+        y: prev.y + 1,
+        dir: nextDir
+    });
+}
+
+function resetGame() {
+    score = 0;
+    stamina = 100;
+    hasStartedClimbing = false;
+    stairs = [];
+    particles = [];
+    floatingTexts = [];
+    shakeTimer = 0;
+
+    // 초기 40개 계단 미리 생성
+    for (let i = 0; i < 40; i++) {
+        generateNextStair();
+    }
+
+    player = {
+        gridX: 0,
+        gridY: 0,
+        dir: 1,
+        animProgress: 1,
+        startX: 0,
+        startY: 0,
+        fallVy: 0,
+        fallRotation: 0
+    };
+
+    camera.x = 0;
+    camera.y = 0;
+
+    updateHUD();
+}
+
+function startGame() {
+    sound.init();
+    resetGame();
+    gameState = 'PLAYING';
+    startScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+}
+
+/**
+ * ============================================================================
+ * 4. 핵심 플레이어 조작 (오르기 / 방향 전환)
+ * ============================================================================
+ */
+function handleMove(isTurnAction) {
+    if (gameState !== 'PLAYING') return;
+
+    // 첫 입력 시 타이머 시작
+    if (!hasStartedClimbing) {
+        hasStartedClimbing = true;
+    }
+
+    // 방향 전환 버튼이면 바라보는 방향 반전
+    if (isTurnAction) {
+        player.dir *= -1;
+    }
+
+    // 목표 그리드 좌표 계산
+    const targetX = player.gridX + player.dir;
+    const targetY = player.gridY + 1;
+
+    // 점프 애니메이션 시작점 저장
+    player.startX = player.gridX;
+    player.startY = player.gridY;
+    player.gridX = targetX;
+    player.gridY = targetY;
+    player.animProgress = 0;
+
+    // 다음 계단 검증
+    const nextStair = stairs.find(s => s.index === targetY);
+
+    if (nextStair && nextStair.x === targetX) {
+        // === 성공적으로 계단 오름 ===
+        score++;
+
+        // 효과음 재생
+        if (score % 100 === 0) {
+            sound.playMilestone();
+            triggerShake(0.25, 6);
+            spawnFloatingText(`🎉 ${score}층 돌파!`, targetX, targetY, '#fbbf24', true);
+            spawnConfetti(targetX, targetY);
+        } else {
+            if (isTurnAction) {
+                sound.playTurn();
+            } else {
+                sound.playClimb();
+            }
+        }
+
+        // 체력(시간 게이지) 회복: 층수가 높아질수록 회복량도 미세하게 조절되나 충분한 보상 제공
+        const recoverAmount = Math.max(6.5, 11 - score * 0.004);
+        stamina = Math.min(100, stamina + recoverAmount);
+
+        // 먼지 파티클 생성
+        spawnDustParticles(targetX, targetY);
+
+        // 앞쪽 계단 계속 생성 및 지나간 하단 계단 정리
+        while (stairs[stairs.length - 1].index < score + 35) {
+            generateNextStair();
+        }
+        if (stairs.length > 60) {
+            stairs.shift();
+        }
+
+        updateHUD();
+    } else {
+        // === 허공을 밟음 -> 추락 게임 오버 ===
+        triggerGameOver('발을 헛디뎌 추락했습니다!', true);
+    }
+}
+
+function triggerGameOver(reasonText, isFall) {
+    if (gameState === 'FALLING' || gameState === 'GAMEOVER') return;
+
+    sound.playGameOver();
+    triggerShake(0.35, 10);
+    gameoverReasonEl.textContent = reasonText;
+
+    // 최고 기록 갱신 확인
+    let isNewRecord = false;
+    if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem(STORAGE_KEY, bestScore.toString());
+        bestScoreEl.textContent = bestScore;
+        isNewRecord = true;
+    }
+
+    if (isFall) {
+        gameState = 'FALLING';
+        player.fallVy = -180; // 살짝 떴다가 아래로 추락
+        setTimeout(() => {
+            showGameOverModal(isNewRecord);
+        }, 650);
+    } else {
+        gameState = 'GAMEOVER';
+        showGameOverModal(isNewRecord);
+    }
+}
+
+function showGameOverModal(isNewRecord) {
+    gameState = 'GAMEOVER';
+    finalScoreEl.textContent = score;
+    finalBestEl.textContent = bestScore;
+    if (isNewRecord) {
+        newRecordBadge.classList.remove('hidden');
+    } else {
+        newRecordBadge.classList.add('hidden');
+    }
+    gameoverScreen.classList.remove('hidden');
+}
+
+/**
+ * ============================================================================
+ * 5. 파티클 & 시각 효과 헬퍼
+ * ============================================================================
+ */
+function triggerShake(duration, intensity) {
+    shakeTimer = duration;
+    shakeIntensity = intensity;
+}
+
+function spawnDustParticles(gx, gy) {
+    for (let i = 0; i < 6; i++) {
+        particles.push({
+            gx: gx + (Math.random() - 0.5) * 0.4,
+            gy: gy,
+            vx: (Math.random() - 0.5) * 120,
+            vy: -Math.random() * 70 - 20,
+            size: 3 + Math.random() * 4,
+            color: 'rgba(255, 255, 255, 0.85)',
+            life: 1,
+            decay: 2.8 + Math.random()
+        });
+    }
+}
+
+function spawnConfetti(gx, gy) {
+    const colors = ['#fbbf24', '#f87171', '#34d399', '#60a5fa', '#c084fc'];
+    for (let i = 0; i < 28; i++) {
+        particles.push({
+            gx: gx,
+            gy: gy + 0.5,
+            vx: (Math.random() - 0.5) * 260,
+            vy: -Math.random() * 260 - 80,
+            size: 5 + Math.random() * 5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            life: 1,
+            decay: 1.1 + Math.random() * 0.5
+        });
+    }
+}
+
+function spawnFloatingText(text, gx, gy, color = '#ffffff', isBig = false) {
+    floatingTexts.push({
+        text,
+        gx,
+        gy: gy + 1.2,
+        offsetY: 0,
+        color,
+        isBig,
+        life: 1
+    });
+}
+
+/**
+ * ============================================================================
+ * 6. 고도(층수)에 따른 배경 색상 보간 (낮 -> 노을 -> 밤 -> 우주)
+ * ============================================================================
+ */
+function lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
+function lerpColor(rgb1, rgb2, t) {
+    const r = Math.round(lerp(rgb1[0], rgb2[0], t));
+    const g = Math.round(lerp(rgb1[1], rgb2[1], t));
+    const b = Math.round(lerp(rgb1[2], rgb2[2], t));
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function getSkyTheme(currentScore) {
+    // 단계별 테마 정의 (0층: 낮, 100층: 노을, 200층: 밤, 350층+: 우주)
+    const stages = [
+        { score: 0,   top: [56, 189, 248],  bottom: [186, 230, 253], label: '☀️ 푸른 하늘', starAlpha: 0, cloudAlpha: 0.85 },
+        { score: 100, top: [124, 58, 237],  bottom: [251, 146, 60],  label: '🌇 황혼의 노을', starAlpha: 0.25, cloudAlpha: 0.5 },
+        { score: 220, top: [15, 23, 42],    bottom: [49, 46, 129],   label: '🌙 깊은 밤하늘', starAlpha: 0.85, cloudAlpha: 0.15 },
+        { score: 350, top: [2, 6, 23],      bottom: [17, 24, 39],    label: '🚀 끝없는 우주', starAlpha: 1.0, cloudAlpha: 0.0 }
+    ];
+
+    let s1 = stages[0];
+    let s2 = stages[stages.length - 1];
+    let t = 0;
+
+    for (let i = 0; i < stages.length - 1; i++) {
+        if (currentScore >= stages[i].score && currentScore <= stages[i + 1].score) {
+            s1 = stages[i];
+            s2 = stages[i + 1];
+            t = (currentScore - s1.score) / (s2.score - s1.score);
+            break;
+        } else if (currentScore > stages[stages.length - 1].score) {
+            s1 = s2;
+            t = 0;
+        }
+    }
+
+    return {
+        topColor: lerpColor(s1.top, s2.top, t),
+        bottomColor: lerpColor(s1.bottom, s2.bottom, t),
+        label: t < 0.5 ? s1.label : s2.label,
+        starAlpha: lerp(s1.starAlpha, s2.starAlpha, t),
+        cloudAlpha: lerp(s1.cloudAlpha, s2.cloudAlpha, t)
+    };
+}
+
+function updateHUD() {
+    scoreEl.textContent = score;
+    const theme = getSkyTheme(score);
+    zoneBadgeEl.textContent = theme.label;
+}
+
+/**
+ * ============================================================================
+ * 7. 메인 업데이트 및 캔버스 렌더링 루프
+ * ============================================================================
+ */
+let lastTime = 0;
+
+function update(dt) {
+    // 구름 이동 업데이트
+    bgClouds.forEach(c => {
+        c.x += c.speed * dt;
+        if (c.x > canvasWidth + 100) c.x = -100;
+    });
+
+    // 화면 흔들림 감쇠
+    if (shakeTimer > 0) {
+        shakeTimer = Math.max(0, shakeTimer - dt);
+    }
+
+    // 파티클 업데이트
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.gx += (p.vx * dt) / STAIR_DX;
+        p.gy -= (p.vy * dt) / STAIR_DY;
+        p.vy += 450 * dt; // 중력
+        p.life -= p.decay * dt;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // 플로팅 텍스트 업데이트
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.offsetY -= 45 * dt;
+        ft.life -= 1.1 * dt;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    // 플레이어 점프 보간 애니메이션
+    if (player.animProgress < 1) {
+        player.animProgress = Math.min(1, player.animProgress + dt * 14);
+    }
+
+    // 플레이 중 체력(시간 게이지) 감소 로직
+    if (gameState === 'PLAYING' && hasStartedClimbing) {
+        // 기본 초당 15% 감소 + 층수가 올라갈수록 점진적으로 속도 증가 (최대 초당 46%까지 가속)
+        const drainRate = Math.min(46, 15 + score * 0.085);
+        stamina -= drainRate * dt;
+
+        if (stamina <= 0) {
+            stamina = 0;
+            timeGaugeEl.style.width = '0%';
+            triggerGameOver('체력이 모두 소진되었습니다!', false);
+        }
+    }
+
+    // 게이지 UI 갱신
+    timeGaugeEl.style.width = `${Math.max(0, stamina)}%`;
+    if (stamina < 28 && gameState === 'PLAYING') {
+        gaugeBoxEl.classList.add('gauge-danger');
+    } else {
+        gaugeBoxEl.classList.remove('gauge-danger');
+    }
+
+    // 추락 물리 처리
+    if (gameState === 'FALLING') {
+        player.fallVy += 1400 * dt;
+        player.gridY -= (player.fallVy * dt) / STAIR_DY;
+        player.fallRotation += player.dir * 8 * dt;
+    }
+
+    // 카메라 부드럽게 플레이어 추적 (추락 시에는 카메라 고정)
+    if (gameState !== 'FALLING' && gameState !== 'GAMEOVER') {
+        const targetCamX = player.gridX * STAIR_DX;
+        const targetCamY = player.gridY * STAIR_DY;
+        camera.x += (targetCamX - camera.x) * Math.min(1, dt * 14);
+        camera.y += (targetCamY - camera.y) * Math.min(1, dt * 14);
+    }
+}
+
+function draw() {
+    const theme = getSkyTheme(score);
+
+    // 1. 배경 하늘 그라데이션 렌더링
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+    skyGrad.addColorStop(0, theme.topColor);
+    skyGrad.addColorStop(1, theme.bottomColor);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // 2. 밤/우주 배경 별 렌더링
+    if (theme.starAlpha > 0.01) {
+        const now = performance.now() / 1000;
+        bgStars.forEach(star => {
+            const twinkle = 0.5 + 0.5 * Math.sin(now * 3 + star.twinkleOffset);
+            ctx.fillStyle = `rgba(255, 255, 255, ${theme.starAlpha * twinkle})`;
+            ctx.fillRect(star.x % canvasWidth, star.y % canvasHeight, star.size, star.size);
+        });
+    }
+
+    // 3. 낮/노을 구름 렌더링
+    if (theme.cloudAlpha > 0.01) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${theme.cloudAlpha})`;
+        bgClouds.forEach(c => {
+            drawPixelCloud(c.x, c.y, c.scale);
+        });
+    }
+
+    // 카메라 변환 시작 (플레이어를 화면 중앙 약간 아래쪽에 배치)
+    ctx.save();
+    let shakeX = 0, shakeY = 0;
+    if (shakeTimer > 0) {
+        shakeX = (Math.random() - 0.5) * shakeIntensity * 2;
+        shakeY = (Math.random() - 0.5) * shakeIntensity * 2;
+    }
+
+    const originX = canvasWidth / 2 - camera.x + shakeX;
+    const originY = canvasHeight * 0.63 + camera.y + shakeY;
+    ctx.translate(originX, originY);
+
+    // 4. 계단 렌더링
+    stairs.forEach(stair => {
+        const sx = stair.x * STAIR_DX;
+        const sy = -stair.y * STAIR_DY;
+
+        // 화면 밖 계단 컬링
+        if (sy + originY < -100 || sy + originY > canvasHeight + 100) return;
+
+        drawStairBlock(sx, sy, stair.index);
+    });
+
+    // 5. 파티클 렌더링
+    particles.forEach(p => {
+        const px = p.gx * STAIR_DX;
+        const py = -p.gy * STAIR_DY;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillRect(px - p.size / 2, py - p.size / 2, p.size, p.size);
+    });
+    ctx.globalAlpha = 1;
+
+    // 6. 플레이어 캐릭터 렌더링
+    drawPlayer();
+
+    // 7. 플로팅 텍스트 렌더링 (100계단 돌파 등)
+    floatingTexts.forEach(ft => {
+        const fx = ft.gx * STAIR_DX;
+        const fy = -ft.gy * STAIR_DY + ft.offsetY;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.font = ft.isBig ? '900 20px "Noto Sans KR", sans-serif' : '900 15px "Noto Sans KR", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#0f172a';
+        ctx.fillText(ft.text, fx + 2, fy + 2);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, fx, fy);
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
+// 도트 감성 구름 그리기
+function drawPixelCloud(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.beginPath();
+    ctx.roundRect(-30, -10, 60, 20, 10);
+    ctx.roundRect(-18, -22, 36, 20, 10);
+    ctx.fill();
+    ctx.restore();
+}
+
+// 입체감 있는 계단 블록 그리기
+function drawStairBlock(x, y, index) {
+    const halfW = STAIR_WIDTH / 2;
+    const isMilestone = index > 0 && index % 100 === 0;
+    const isTenStep = index > 0 && index % 10 === 0;
+
+    // 100계단 단위 황금 계단, 일반 계단은 깔끔한 대리석/아케이드 톤
+    let topColor = '#ffffff';
+    let frontColor = '#cbd5e1';
+    let shadowColor = '#64748b';
+
+    if (isMilestone) {
+        topColor = '#fde047';
+        frontColor = '#eab308';
+        shadowColor = '#a16207';
+    } else if (isTenStep) {
+        topColor = '#e0f2fe';
+        frontColor = '#7dd3fc';
+        shadowColor = '#0284c7';
+    }
+
+    // 계단 하단 그림자
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.beginPath();
+    ctx.roundRect(x - halfW + 3, y + 6, STAIR_WIDTH, STAIR_HEIGHT, 6);
+    ctx.fill();
+
+    // 계단 앞면 두께
+    ctx.fillStyle = frontColor;
+    ctx.beginPath();
+    ctx.roundRect(x - halfW, y, STAIR_WIDTH, STAIR_HEIGHT, 5);
+    ctx.fill();
+
+    // 외곽선
+    ctx.strokeStyle = shadowColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 계단 윗면 발판
+    ctx.fillStyle = topColor;
+    ctx.beginPath();
+    ctx.roundRect(x - halfW + 2, y + 1, STAIR_WIDTH - 4, 8, 3);
+    ctx.fill();
+
+    // 10층 단위 층수 표기
+    if (isTenStep) {
+        ctx.fillStyle = isMilestone ? '#713f12' : '#0369a1';
+        ctx.font = '900 10px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${index}`, x, y + 16);
+    }
+}
+
+// 귀여운 비즈니스맨 도트/벡터 캐릭터 그리기
+function drawPlayer() {
+    // 보간된 현재 위치 계산
+    const t = player.animProgress;
+    const curGridX = lerp(player.startX, player.gridX, t);
+    const curGridY = lerp(player.startY, player.gridY, t);
+
+    // 점프 포물선 높이 추가 (sin 곡선)
+    const jumpArc = t < 1 ? Math.sin(t * Math.PI) * 24 : 0;
+
+    const px = curGridX * STAIR_DX;
+    const py = -curGridY * STAIR_DY - jumpArc;
+
+    ctx.save();
+    ctx.translate(px, py);
+
+    // 추락 중이면 회전 적용
+    if (gameState === 'FALLING') {
+        ctx.rotate(player.fallRotation);
+    }
+
+    // 바라보는 방향에 따라 좌우 반전 (1: 오른쪽, -1: 왼쪽)
+    ctx.scale(player.dir, 1);
+
+    // 점프 스쿼시/스트레치 효과
+    const stretchY = t < 1 ? 1 + Math.sin(t * Math.PI) * 0.14 : 1;
+    const stretchX = 2 - stretchY;
+    ctx.scale(stretchX, stretchY);
+
+    // 캐릭터 발바닥 기준점 (y = 0)
+    // 1. 구두 (발)
+    const legSwing = t < 1 ? Math.sin(t * Math.PI) * 6 : 0;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-10 - legSwing, -6, 8, 6); // 뒷발
+    ctx.fillRect(2 + legSwing, -6, 9, 6);   // 앞발
+
+    // 2. 정장 바지
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-9, -18, 18, 12);
+
+    // 3. 정장 상의 (네이비 수트)
+    ctx.fillStyle = '#1d4ed8';
+    ctx.beginPath();
+    ctx.roundRect(-12, -36, 24, 20, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#1e3a8a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 4. 와이셔츠 & 빨간 넥타이 (바라보는 앞쪽 방향에 배치)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(2, -35, 7, 13);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(4, -34, 4, 11);
+
+    // 5. 서류가방 (뒷손에 들린 디테일)
+    ctx.fillStyle = '#92400e';
+    ctx.beginPath();
+    ctx.roundRect(-18, -22, 12, 10, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 6. 얼굴 (머리)
+    ctx.fillStyle = '#fed7aa';
+    ctx.beginPath();
+    ctx.roundRect(-11, -56, 22, 20, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#9a3412';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 7. 머리카락 (깔끔한 가르마 헤어)
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(-12, -60, 24, 8, 4);
+    ctx.fill();
+    ctx.fillRect(-12, -55, 5, 9); // 옆머리
+
+    // 8. 눈 & 결연한 표정 (앞쪽 바라봄)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(4, -49, 3.5, 4.5); // 눈
+
+    // 체력이 30% 미만이면 땀방울 표시
+    if (stamina < 30 && gameState === 'PLAYING') {
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(-6, -48, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+/**
+ * ============================================================================
+ * 8. 입력 이벤트 바인딩 (키보드, 마우스, 터치)
+ * ============================================================================
+ */
+function bindButtonAction(btnElement, isTurn) {
+    const trigger = (e) => {
+        e.preventDefault();
+        btnElement.classList.add('pressed');
+        handleMove(isTurn);
+    };
+    const release = (e) => {
+        e.preventDefault();
+        btnElement.classList.remove('pressed');
+    };
+
+    btnElement.addEventListener('touchstart', trigger, { passive: false });
+    btnElement.addEventListener('touchend', release, { passive: false });
+    btnElement.addEventListener('touchcancel', release, { passive: false });
+    btnElement.addEventListener('mousedown', trigger);
+    btnElement.addEventListener('mouseup', release);
+    btnElement.addEventListener('mouseleave', release);
+}
+
+bindButtonAction(btnTurn, true);
+bindButtonAction(btnClimb, false);
+
+// 캔버스 자체를 직접 터치해도 조작 가능 (화면 왼쪽 반 = 방향 전환, 오른쪽 반 = 오르기)
+canvas.addEventListener('touchstart', (e) => {
+    if (gameState !== 'PLAYING') return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const relX = touch.clientX - rect.left;
+    if (relX < rect.width / 2) {
+        btnTurn.classList.add('pressed');
+        handleMove(true);
+        setTimeout(() => btnTurn.classList.remove('pressed'), 90);
+    } else {
+        btnClimb.classList.add('pressed');
+        handleMove(false);
+        setTimeout(() => btnClimb.classList.remove('pressed'), 90);
+    }
+}, { passive: false });
+
+// 키보드 조작 지원
+window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+
+    // 시작 또는 재시작 단축키 (Enter / Space)
+    if (gameState === 'READY' && (e.code === 'Space' || e.code === 'Enter')) {
+        e.preventDefault();
+        startGame();
+        return;
+    }
+    if (gameState === 'GAMEOVER' && (e.code === 'Space' || e.code === 'Enter')) {
+        e.preventDefault();
+        startGame();
+        return;
+    }
+
+    if (gameState !== 'PLAYING') return;
+
+    // 오르기: J, K 키
+    if (e.code === 'KeyJ' || e.code === 'KeyK') {
+        e.preventDefault();
+        btnClimb.classList.add('pressed');
+        handleMove(false);
+    }
+    // 방향 전환: F 키
+    else if (e.code === 'KeyF') {
+        e.preventDefault();
+        btnTurn.classList.add('pressed');
+        handleMove(true);
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'KeyJ' || e.code === 'KeyK') {
+        btnClimb.classList.remove('pressed');
+    } else if (e.code === 'KeyF') {
+        btnTurn.classList.remove('pressed');
+    }
+});
+
+// 시작 및 재시작 버튼 이벤트
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+
+// 음소거 토글 버튼
+soundBtn.addEventListener('click', () => {
+    const isMuted = sound.toggleMute();
+    soundBtn.textContent = isMuted ? '🔇' : '🔊';
+});
+
+// 초기화 및 루프 시작
+window.onload = function () {
+    resizeCanvas();
+    initDecorations();
+    resetGame();
+    requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>
