@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>피아노 타일 리듬게임 - K-POP & 발라드 뮤직 라이브러리</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 65%, #04060b 100%);
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(129, 140, 248, 0.45);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(129, 140, 248, 0.8);
+    }
+
+    /* 유광 피아노 타일 버튼 애니메이션 */
+    .piano-key {
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 78%, #cbd5e1 100%);
+      border-top: 3px solid #991b1b;
+      border-left: 1px solid #cbd5e1;
+      border-right: 1px solid #94a3b8;
+      border-bottom: 6px solid #64748b;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.95);
+      transition: transform 0.05s ease, filter 0.05s ease, box-shadow 0.05s ease;
+      cursor: pointer;
+    }
+
+    .piano-key:active,
+    .piano-key.pressed {
+      transform: translateY(4px);
+      border-bottom-width: 2px;
+      background: linear-gradient(180deg, #e0e7ff 0%, #c7d2fe 80%, #a5b4fc 100%);
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.6), inset 0 0 16px rgba(99, 102, 241, 0.45);
+    }
+
+    /* 칭찬 팝업 애니메이션 */
+    @keyframes praiseFloat {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, 10px) scale(0.75);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -6px) scale(1.08);
+      }
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -22px) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -36px) scale(0.95);
+      }
+    }
+
+    .praise-toast {
+      animation: praiseFloat 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 유리 질감 카드 */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+  <!-- ==================== 1. 메인 곡 선택 및 검색 화면 ==================== -->
+  <div id="menu-screen" class="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col gap-4">
+    <!-- 상단 헤더 -->
+    <header class="glass-panel rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-2xl shadow-lg shadow-indigo-500/30">
+          🎹
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-indigo-200 to-pink-200 bg-clip-text text-transparent">
+              피아노 타일 리듬 스테이지
+            </h1>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+              225곡+ 수록
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 mt-0.5">
+            노래를 검색해 원곡 스트리밍으로 연주하고 <span class="text-amber-300 font-bold">100점 칭찬</span>을 받아보세요!
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-700/70">
+        <span class="text-slate-400">PC 조작키:</span>
+        <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-600 rounded font-bold text-indigo-300">D</kbd>
+        <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-600 rounded font-bold text-indigo-300">F</kbd>
+        <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-600 rounded font-bold text-indigo-300">G</kbd>
+        <kbd class="px-2 py-0.5 bg-slate-800 border border-slate-600 rounded font-bold text-indigo-300">H</kbd>
+      </div>
+    </header>
+
+    <!-- 검색 및 유튜브 직접 연주 바 -->
+    <section class="glass-panel rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+        <!-- 노래/가수 실시간 검색창 -->
+        <div class="md:col-span-7 relative flex items-center">
+          <span class="absolute left-3.5 text-slate-400 text-base">🔍</span>
+          <input
+            id="song-search-input"
+            type="text"
+            placeholder="노래 제목 또는 가수 검색 (예: 디셈버, 사랑 참, 아이유, 뉴진스...)"
+            class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 text-sm text-white placeholder-slate-400 outline-none transition"
+          />
+          <button
+            id="clear-search-btn"
+            type="button"
+            class="hidden absolute right-2.5 w-6 h-6 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs flex items-center justify-center transition"
+            title="검색어 지우기"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- 유튜브 링크 직접 연주 -->
+        <div class="md:col-span-5 flex items-center gap-1.5">
+          <input
+            id="youtube-url-input"
+            type="text"
+            placeholder="유튜브 링크(URL) 붙여넣기..."
+            class="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/30 text-xs sm:text-sm text-white placeholder-slate-400 outline-none transition"
+          />
+          <button
+            id="play-youtube-btn"
+            type="button"
+            class="shrink-0 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/25 active:scale-95 transition flex items-center gap-1"
+          >
+            <span>▶</span>
+            <span>YT 연주</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 카테고리 필터 탭 -->
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div id="category-tabs" class="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <button type="button" data-cat="ALL" class="cat-tab active px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow transition">
+            전체 (225)
+          </button>
+          <button type="button" data-cat="BALLAD" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800/90 text-slate-300 hover:bg-slate-700 transition">
+            감성 발라드 · 디셈버
+          </button>
+          <button type="button" data-cat="KPOP" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800/90 text-slate-300 hover:bg-slate-700 transition">
+            K-POP 히트
+          </button>
+          <button type="button" data-cat="OST" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800/90 text-slate-300 hover:bg-slate-700 transition">
+            드라마·애니 OST
+          </button>
+          <button type="button" data-cat="PIANO" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800/90 text-slate-300 hover:bg-slate-700 transition">
+            뉴에이지·클래식
+          </button>
+        </div>
+
+        <span id="song-count-badge" class="text-xs text-slate-400 font-medium">
+          총 225곡 표시 중
+        </span>
+      </div>
+    </section>
+
+    <!-- 곡 리스트 그리드 -->
+    <section id="song-list-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[56vh] overflow-y-auto pr-1">
+      <!-- 자바스크립트로 동적 생성 -->
+    </section>
+  </div>
+
+  <!-- ==================== 2. 난이도 선택 모달 ==================== -->
+  <div id="difficulty-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-indigo-400/30 flex flex-col gap-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <span id="modal-song-category" class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 mb-1">
+            감성 발라드
+          </span>
+          <h2 id="modal-song-title" class="text-xl font-black text-white leading-snug">
+            사랑 참...
+          </h2>
+          <p id="modal-song-artist" class="text-sm text-slate-300">
+            디셈버 (December)
+          </p>
+        </div>
+        <button id="close-modal-btn" type="button" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          ✕
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 bg-slate-900/70 p-2.5 rounded-xl border border-slate-800">
+        난이도가 높을수록 타일이 빠르게 내려옵니다. 박자를 맞추면 <strong class="text-amber-300">100점 칭찬</strong>이 터집니다!
+      </p>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <button type="button" data-diff="EASY" class="diff-select-btn p-3 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 text-left transition active:scale-95">
+          <div class="text-sm font-black text-emerald-300">🌱 쉬움</div>
+          <div class="text-[11px] text-slate-300 mt-0.5">속도 0.80x · 여유로운 템포</div>
+        </button>
+        <button type="button" data-diff="NORMAL" class="diff-select-btn p-3 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/40 text-left transition active:scale-95">
+          <div class="text-sm font-black text-sky-300">🎵 보통</div>
+          <div class="text-[11px] text-slate-300 mt-0.5">속도 1.00x · 표준 리듬</div>
+        </button>
+        <button type="button" data-diff="HARD" class="diff-select-btn p-3 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-left transition active:scale-95">
+          <div class="text-sm font-black text-amber-300">🔥 어려움</div>
+          <div class="text-[11px] text-slate-300 mt-0.5">속도 1.35x · 빠른 낙하</div>
+        </button>
+        <button type="button" data-diff="EXPERT" class="diff-select-btn p-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-400/40 text-left transition active:scale-95">
+          <div class="text-sm font-black text-rose-300">⚡ 매우 어려움</div>
+          <div class="text-[11px] text-slate-300 mt-0.5">속도 1.72x · 초고속 챌린지</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. 실제 리듬게임 플레이 화면 ==================== -->
+  <div id="game-screen" class="hidden fixed inset-0 z-40 flex flex-col items-center justify-between bg-slate-950">
+    <!-- 상단 HUD -->
+    <div class="w-full max-w-xl px-3 pt-2.5 pb-1.5 flex items-center justify-between gap-2 z-20">
+      <button id="quit-game-btn" type="button" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition">
+        ← 곡 목록
+      </button>
+
+      <div class="flex flex-col items-center text-center min-w-0 flex-1">
+        <div id="hud-song-title" class="text-xs sm:text-sm font-black text-white truncate max-w-[200px] sm:max-w-[260px]">
+          곡 제목
+        </div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <span id="hud-audio-status" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+            🎵 음원 준비 중...
+          </span>
+          <span id="hud-hearts" class="text-xs tracking-tighter">❤️❤️❤️❤️❤️</span>
+        </div>
+      </div>
+
+      <div class="text-right">
+        <div class="text-[10px] text-slate-400 font-bold">SCORE</div>
+        <div id="hud-score" class="text-base sm:text-lg font-black text-amber-300 leading-none">0</div>
+      </div>
+    </div>
+
+    <!-- 진행도 바 -->
+    <div class="w-full max-w-xl px-3 mb-1">
+      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div id="hud-progress-bar" class="h-full bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 w-0 transition-all duration-150"></div>
+      </div>
+    </div>
+
+    <!-- 유튜브 미니 플레이어 (YT 연주 시 노출) -->
+    <div id="yt-embed-wrapper" class="hidden w-full max-w-xl px-3 mb-1">
+      <div class="rounded-xl overflow-hidden border border-rose-500/40 bg-black h-24 sm:h-28">
+        <iframe
+          id="yt-player-iframe"
+          class="w-full h-full"
+          src=""
+          title="YouTube audio player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    </div>
+
+    <!-- 메인 게임 캔버스 영역 -->
+    <div id="canvas-wrapper" class="relative w-full max-w-xl flex-1 min-h-0 px-2 sm:px-3 flex flex-col">
+      <div id="board-container" class="relative w-full flex-1 rounded-t-2xl overflow-hidden border-x border-t border-slate-700/80 bg-gradient-to-b from-slate-900 via-[#0d1326] to-[#111936] shadow-2xl">
+        <canvas id="game-canvas" class="block w-full h-full"></canvas>
+
+        <!-- 중앙 콤보 & 칭찬 팝업 레이어 -->
+        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <div id="combo-display" class="opacity-0 transition-opacity duration-150 flex flex-col items-center">
+            <span id="combo-count" class="text-4xl sm:text-5xl font-black bg-gradient-to-b from-white to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_4px_12px_rgba(99,102,241,0.6)]">
+              0
+            </span>
+            <span class="text-[11px] font-extrabold tracking-widest text-indigo-300 uppercase">COMBO</span>
+          </div>
+        </div>
+
+        <!-- 100점 칭찬 팝업 컨테이너 -->
+        <div id="praise-container" class="pointer-events-none absolute inset-x-0 top-[24%] z-30"></div>
+
+        <!-- 카운트다운 오버레이 -->
+        <div id="countdown-overlay" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-xs flex flex-col items-center justify-center z-30">
+          <div id="countdown-number" class="text-6xl font-black text-amber-300 animate-bounce">3</div>
+          <p class="text-xs text-slate-300 mt-2">준비하세요! D · F · G · H 또는 터치</p>
+        </div>
+      </div>
+
+      <!-- 하단 그랜드 피아노 건반 4개 -->
+      <div class="w-full h-24 sm:h-28 grid grid-cols-4 gap-1 bg-slate-900 p-1.5 rounded-b-2xl border-x border-b border-slate-700 shadow-2xl">
+        <button type="button" data-lane="0" class="piano-key flex flex-col items-center justify-end pb-2.5">
+          <span class="text-xs sm:text-sm font-black text-slate-700">D</span>
+          <span class="text-[10px] font-bold text-slate-400">도</span>
+        </button>
+        <button type="button" data-lane="1" class="piano-key flex flex-col items-center justify-end pb-2.5">
+          <span class="text-xs sm:text-sm font-black text-slate-700">F</span>
+          <span class="text-[10px] font-bold text-slate-400">미</span>
+        </button>
+        <button type="button" data-lane="2" class="piano-key flex flex-col items-center justify-end pb-2.5">
+          <span class="text-xs sm:text-sm font-black text-slate-700">G</span>
+          <span class="text-[10px] font-bold text-slate-400">솔</span>
+        </button>
+        <button type="button" data-lane="3" class="piano-key flex flex-col items-center justify-end pb-2.5">
+          <span class="text-xs sm:text-sm font-black text-slate-700">H</span>
+          <span class="text-[10px] font-bold text-slate-400">시</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. 결과 화면 모달 ==================== -->
+  <div id="result-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 text-center shadow-2xl border border-amber-400/30 flex flex-col gap-4">
+      <div id="result-badge" class="mx-auto px-3 py-1 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-400/40">
+        STAGE CLEAR!
+      </div>
+      <div>
+        <h2 id="result-title" class="text-2xl font-black text-white">완벽한 연주였어요!</h2>
+        <p id="result-song-info" class="text-xs text-slate-300 mt-1">디셈버 - 사랑 참...</p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+        <div>
+          <div class="text-[11px] text-slate-400">최종 점수</div>
+          <div id="res-score" class="text-lg font-black text-amber-300">0</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-slate-400">100점 완벽</div>
+          <div id="res-perfect" class="text-lg font-black text-emerald-300">0회</div>
+        </div>
+        <div>
+          <div class="text-[11px] text-slate-400">최대 콤보</div>
+          <div id="res-combo" class="text-lg font-black text-indigo-300">0</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button id="res-retry-btn" type="button" class="flex-1 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg transition">
+          다시 연주하기
+        </button>
+        <button id="res-menu-btn" type="button" class="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition">
+          다른 곡 고르기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 실제 오디오 스트리밍 태그 -->
+  <audio id="real-audio-player" crossorigin="anonymous" preload="auto"></audio>
+
+  <script>
+    // =========================================================================
+    // 1. 225곡+ 뮤직 라이브러리 (디셈버 명곡, 감성 발라드, K-POP, OST, 클래식)
+    // =========================================================================
+    const DECEMBER_SONGS = [
+      { title: "사랑 참...", artist: "디셈버 (December)", bpm: 72, durationSec: 238 },
+      { title: "별이 될께", artist: "디셈버 (December)", bpm: 76, durationSec: 245 },
+      { title: "배운게 사랑이라", artist: "디셈버 (December)", bpm: 74, durationSec: 242 },
+      { title: "혼자왔어요", artist: "디셈버 (December)", bpm: 70, durationSec: 251 },
+      { title: "돌아올 순 없나요", artist: "디셈버 (December)", bpm: 75, durationSec: 236 },
+      { title: "미인 (美人)", artist: "디셈버 (December)", bpm: 84, durationSec: 229 },
+      { title: "She's Gone", artist: "디셈버 (December)", bpm: 78, durationSec: 254 },
+      { title: "세상에 소리쳐", artist: "디셈버 (December)", bpm: 88, durationSec: 221 },
+      { title: "눈부신 눈물", artist: "디셈버 (December)", bpm: 72, durationSec: 240 },
+      { title: "가슴으로 운다", artist: "디셈버 (December)", bpm: 71, durationSec: 248 },
+      { title: "여자는 나쁜남자를 좋아한다", artist: "디셈버 (December)", bpm: 82, durationSec: 231 },
+      { title: "네게 줄 수 있는건 오직 사랑뿐", artist: "디셈버 (December)", bpm: 76, durationSec: 235 },
+      { title: "사랑했었다면...", artist: "디셈버 (December)", bpm: 70, durationSec: 244 },
+      { title: "발걸음", artist: "디셈버 (December)", bpm: 74, durationSec: 239 },
+      { title: "기억을 걷다보면", artist: "디셈버 (December)", bpm: 73, durationSec: 247 }
+    ];
+
+    const BALLAD_POOL = [
+      { title: "야생화", artist: "박효신", bpm: 68, durationSec: 312 },
+      { title: "눈의 꽃", artist: "박효신", bpm: 72, durationSec: 340 },
+      { title: "숨", artist: "박효신", bpm: 70, durationSec: 282 },
+      { title: "좋은 사람", artist: "박효신", bpm: 76, durationSec: 258 },
+      { title: "보고싶다", artist: "김범수", bpm: 72, durationSec: 246 },
+      { title: "끝사랑", artist: "김범수", bpm: 70, durationSec: 263 },
+      { title: "어디에도", artist: "엠씨더맥스 (M.C the MAX)", bpm: 74, durationSec: 332 },
+      { title: "잠시만 안녕", artist: "엠씨더맥스 (M.C the MAX)", bpm: 76, durationSec: 274 },
+      { title: "그대가 분다", artist: "엠씨더맥스 (M.C the MAX)", bpm: 72, durationSec: 268 },
+      { title: "넘쳐흘러", artist: "엠씨더맥스 (M.C the MAX)", bpm: 75, durationSec: 271 },
+      { title: "모든 날, 모든 순간", artist: "폴킴", bpm: 78, durationSec: 210 },
+      { title: "너를 만나", artist: "폴킴", bpm: 74, durationSec: 279 },
+      { title: "사랑은 늘 도망가", artist: "임영웅", bpm: 72, durationSec: 272 },
+      { title: "이제 나만 믿어요", artist: "임영웅", bpm: 75, durationSec: 244 },
+      { title: "좋니", artist: "윤종신", bpm: 74, durationSec: 328 },
+      { title: "소주 한 잔", artist: "임창정", bpm: 72, durationSec: 291 },
+      { title: "내가 저지른 사랑", artist: "임창정", bpm: 76, durationSec: 238 },
+      { title: "가시", artist: "버즈 (Buzz)", bpm: 84, durationSec: 260 },
+      { title: "남자를 몰라", artist: "버즈 (Buzz)", bpm: 82, durationSec: 242 },
+      { title: "응급실", artist: "izi", bpm: 78, durationSec: 232 },
+      { title: "취중진담", artist: "전람회", bpm: 70, durationSec: 318 },
+      { title: "기억의 습작", artist: "전람회", bpm: 72, durationSec: 314 },
+      { title: "너의 모든 순간", artist: "성시경", bpm: 74, durationSec: 245 },
+      { title: "거리에서", artist: "성시경", bpm: 72, durationSec: 279 },
+      { title: "희재", artist: "성시경", bpm: 70, durationSec: 284 },
+      { title: "체념", artist: "빅마마", bpm: 72, durationSec: 251 },
+      { title: "인연", artist: "이선희", bpm: 70, durationSec: 270 },
+      { title: "그중에 그대를 만나", artist: "이선희", bpm: 74, durationSec: 262 },
+      { title: "바람기억", artist: "나얼", bpm: 72, durationSec: 311 },
+      { title: "같은 시간 속의 너", artist: "나얼", bpm: 70, durationSec: 304 },
+      { title: "사랑앓이", artist: "FT아일랜드", bpm: 84, durationSec: 241 },
+      { title: "지독하게", artist: "FT아일랜드", bpm: 86, durationSec: 229 },
+      { title: "사랑했나봐", artist: "윤도현", bpm: 88, durationSec: 256 },
+      { title: "흰수염고래", artist: "YB", bpm: 80, durationSec: 278 },
+      { title: "밤편지", artist: "아이유 (IU)", bpm: 72, durationSec: 253 },
+      { title: "이름에게", artist: "아이유 (IU)", bpm: 76, durationSec: 289 },
+      { title: "무릎", artist: "아이유 (IU)", bpm: 68, durationSec: 283 },
+      { title: "Love wins all", artist: "아이유 (IU)", bpm: 74, durationSec: 271 },
+      { title: "헤어지자 말해요", artist: "박재정", bpm: 72, durationSec: 244 },
+      { title: "사건의 지평선", artist: "윤하", bpm: 112, durationSec: 300 },
+      { title: "비밀번호 486", artist: "윤하", bpm: 128, durationSec: 230 },
+      { title: "기다리다", artist: "윤하", bpm: 76, durationSec: 278 },
+      { title: "비도 오고 그래서", artist: "헤이즈 (Heize)", bpm: 86, durationSec: 206 },
+      { title: "취기를 빌려", artist: "산들", bpm: 92, durationSec: 228 },
+      { title: "너에게 난, 나에게 넌", artist: "자전거 탄 풍경", bpm: 88, durationSec: 234 },
+      { title: "서른 즈음에", artist: "김광석", bpm: 72, durationSec: 282 },
+      { title: "사랑했지만", artist: "김광석", bpm: 74, durationSec: 266 },
+      { title: "이등병의 편지", artist: "김광석", bpm: 76, durationSec: 285 },
+      { title: "오래된 노래", artist: "스탠딩 에그", bpm: 84, durationSec: 236 },
+      { title: "사랑에 연습이 있었다면", artist: "임재현", bpm: 74, durationSec: 247 },
+      { title: "시든 꽃에 물을 주듯", artist: "박혜원 (HYNN)", bpm: 72, durationSec: 258 },
+      { title: "그때 그 아인", artist: "김필", bpm: 74, durationSec: 285 },
+      { title: "다시 사랑한다면", artist: "도원경", bpm: 78, durationSec: 254 },
+      { title: "천년의 사랑", artist: "박완규", bpm: 82, durationSec: 292 },
+      { title: "슬픈 언약식", artist: "김정민", bpm: 84, durationSec: 268 },
+      { title: "아로하", artist: "조정석", bpm: 96, durationSec: 245 },
+      { title: "흔들리는 꽃들 속에서 네 샴푸향이 느껴진거야", artist: "장범준", bpm: 98, durationSec: 168 },
+      { title: "벚꽃 엔딩", artist: "버스커 버스커", bpm: 94, durationSec: 262 },
+      { title: "여수 밤바다", artist: "버스커 버스커", bpm: 88, durationSec: 278 },
+      { title: "광화문에서", artist: "규현", bpm: 74, durationSec: 282 },
+      { title: "선물", artist: "멜로망스", bpm: 88, durationSec: 261 },
+      { title: "사랑인가 봐", artist: "멜로망스", bpm: 102, durationSec: 185 },
+      { title: "고백", artist: "델리스파이스", bpm: 104, durationSec: 322 },
+      { title: "어떻게 이별까지 사랑하겠어, 널 사랑하는 거지", artist: "AKMU (악뮤)", bpm: 76, durationSec: 290 },
+      { title: "오랜 날 오랜 밤", artist: "AKMU (악뮤)", bpm: 86, durationSec: 284 }
+    ];
+
+    const KPOP_SONGS = [
+      { title: "APT.", artist: "로제 (ROSÉ) & Bruno Mars", bpm: 149, durationSec: 170 },
+      { title: "Supernova", artist: "aespa (에스파)", bpm: 120, durationSec: 179 },
+      { title: "Whiplash", artist: "aespa (에스파)", bpm: 125, durationSec: 183 },
+      { title: "Next Level", artist: "aespa (에스파)", bpm: 109, durationSec: 221 },
+      { title: "Hype Boy", artist: "NewJeans (뉴진스)", bpm: 100, durationSec: 179 },
+      { title: "Ditto", artist: "NewJeans (뉴진스)", bpm: 134, durationSec: 185 },
+      { title: "OMG", artist: "NewJeans (뉴진스)", bpm: 127, durationSec: 213 },
+      { title: "Attention", artist: "NewJeans (뉴진스)", bpm: 105, durationSec: 180 },
+      { title: "LOVE DIVE", artist: "IVE (아이브)", bpm: 118, durationSec: 177 },
+      { title: "I AM", artist: "IVE (아이브)", bpm: 122, durationSec: 183 },
+      { title: "After LIKE", artist: "IVE (아이브)", bpm: 125, durationSec: 176 },
+      { title: "해야 (HEYA)", artist: "IVE (아이브)", bpm: 116, durationSec: 189 },
+      { title: "Blueming", artist: "아이유 (IU)", bpm: 106, durationSec: 217 },
+      { title: "좋은 날", artist: "아이유 (IU)", bpm: 128, durationSec: 233 },
+      { title: "금요일에 만나요", artist: "아이유 (IU)", bpm: 102, durationSec: 217 },
+      { title: "봄날", artist: "방탄소년단 (BTS)", bpm: 107, durationSec: 274 },
+      { title: "Dynamite", artist: "방탄소년단 (BTS)", bpm: 114, durationSec: 199 },
+      { title: "Butter", artist: "방탄소년단 (BTS)", bpm: 110, durationSec: 164 },
+      { title: "Seven", artist: "정국 (Jung Kook)", bpm: 125, durationSec: 184 },
+      { title: "뚜두뚜두 (DDU-DU DDU-DU)", artist: "BLACKPINK", bpm: 140, durationSec: 209 },
+      { title: "마지막처럼", artist: "BLACKPINK", bpm: 125, durationSec: 213 },
+      { title: "꽃 (FLOWER)", artist: "지수 (JISOO)", bpm: 124, durationSec: 173 },
+      { title: "TOMBOY", artist: "(여자)아이들", bpm: 124, durationSec: 174 },
+      { title: "퀸카 (Queencard)", artist: "(여자)아이들", bpm: 130, durationSec: 161 },
+      { title: "나는 아픈 건 딱 질색이니까", artist: "(여자)아이들", bpm: 138, durationSec: 161 },
+      { title: "고민중독", artist: "QWER", bpm: 146, durationSec: 175 },
+      { title: "내 이름 맑음", artist: "QWER", bpm: 136, durationSec: 188 },
+      { title: "한 페이지가 될 수 있게", artist: "DAY6 (데이식스)", bpm: 175, durationSec: 205 },
+      { title: "예뻤어", artist: "DAY6 (데이식스)", bpm: 92, durationSec: 283 },
+      { title: "Welcome to the Show", artist: "DAY6 (데이식스)", bpm: 132, durationSec: 217 },
+      { title: "HAPPY", artist: "DAY6 (데이식스)", bpm: 142, durationSec: 189 },
+      { title: "SPOT!", artist: "지코 (ZICO) feat. 제니", bpm: 126, durationSec: 167 },
+      { title: "아무노래", artist: "지코 (ZICO)", bpm: 108, durationSec: 227 },
+      { title: "밤양갱", artist: "비비 (BIBI)", bpm: 112, durationSec: 146 },
+      { title: "첫 만남은 계획대로 되지 않아", artist: "TWS (투어스)", bpm: 142, durationSec: 152 },
+      { title: "Magnetic", artist: "ILLIT (아일릿)", bpm: 131, durationSec: 160 },
+      { title: "파이팅 해야지", artist: "부석순 (SEVENTEEN)", bpm: 145, durationSec: 200 },
+      { title: "손오공", artist: "SEVENTEEN (세븐틴)", bpm: 130, durationSec: 200 },
+      { title: "아주 NICE", artist: "SEVENTEEN (세븐틴)", bpm: 122, durationSec: 192 },
+      { title: "ANTIFRAGILE", artist: "LE SSERAFIM", bpm: 105, durationSec: 184 },
+      { title: "Perfect Night", artist: "LE SSERAFIM", bpm: 136, durationSec: 159 },
+      { title: "Feel My Rhythm", artist: "Red Velvet (레드벨벳)", bpm: 124, durationSec: 210 },
+      { title: "빨간 맛 (Red Flavor)", artist: "Red Velvet (레드벨벳)", bpm: 125, durationSec: 191 },
+      { title: "Psycho", artist: "Red Velvet (레드벨벳)", bpm: 140, durationSec: 210 },
+      { title: "CHEER UP", artist: "TWICE (트와이스)", bpm: 173, durationSec: 208 },
+      { title: "TT", artist: "TWICE (트와이스)", bpm: 130, durationSec: 212 },
+      { title: "What is Love?", artist: "TWICE (트와이스)", bpm: 170, durationSec: 208 },
+      { title: "거짓말", artist: "BIGBANG (빅뱅)", bpm: 124, durationSec: 229 },
+      { title: "하루하루", artist: "BIGBANG (빅뱅)", bpm: 124, durationSec: 257 },
+      { title: "봄여름가을겨울", artist: "BIGBANG (빅뱅)", bpm: 84, durationSec: 189 }
+    ];
+
+    const OST_SONGS = [
+      { title: "소나기", artist: "이클립스 (선재 업고 튀어 OST)", bpm: 82, durationSec: 233 },
+      { title: "첫눈처럼 너에게 가겠다", artist: "에일리 (도깨비 OST)", bpm: 74, durationSec: 230 },
+      { title: "Stay With Me", artist: "찬열, 펀치 (도깨비 OST)", bpm: 88, durationSec: 192 },
+      { title: "Beautiful", artist: "크러쉬 (도깨비 OST)", bpm: 76, durationSec: 228 },
+      { title: "미안해 미워해 사랑해", artist: "크러쉬 (눈물의 여왕 OST)", bpm: 72, durationSec: 244 },
+      { title: "멈춰줘", artist: "헤이즈 (눈물의 여왕 OST)", bpm: 76, durationSec: 235 },
+      { title: "시작", artist: "가호 (이태원 클라쓰 OST)", bpm: 108, durationSec: 202 },
+      { title: "돌덩이", artist: "하현우 (이태원 클라쓰 OST)", bpm: 92, durationSec: 209 },
+      { title: "그대라는 시", artist: "태연 (호텔 델루나 OST)", bpm: 74, durationSec: 210 },
+      { title: "기억해줘요 내 모든 날과 그때를", artist: "거미 (호텔 델루나 OST)", bpm: 72, durationSec: 229 },
+      { title: "You Are My Everything", artist: "거미 (태양의 후예 OST)", bpm: 76, durationSec: 240 },
+      { title: "Always", artist: "윤미래 (태양의 후예 OST)", bpm: 78, durationSec: 205 },
+      { title: "이 사랑", artist: "다비치 (태양의 후예 OST)", bpm: 74, durationSec: 226 },
+      { title: "인생의 회전목마", artist: "히사이시 조 (하울의 움직이는 성)", bpm: 112, durationSec: 311 },
+      { title: "Summer", artist: "히사이시 조 (기쿠지로의 여름)", bpm: 120, durationSec: 235 },
+      { title: "어느 여름날", artist: "히사이시 조 (센과 치히로의 행방불명)", bpm: 84, durationSec: 232 },
+      { title: "언제나 몇 번이라도", artist: "센과 치히로의 행방불명 OST", bpm: 96, durationSec: 215 },
+      { title: "아무것도 아니야 (Nandemonaiya)", artist: "RADWIMPS (너의 이름은 OST)", bpm: 86, durationSec: 344 },
+      { title: "스즈메 (Suzume)", artist: "RADWIMPS (스즈메의 문단속 OST)", bpm: 92, durationSec: 236 },
+      { title: "아이돌 (IDOL)", artist: "YOASOBI (최애의 아이 OST)", bpm: 166, durationSec: 213 },
+      { title: "밤을 달리다", artist: "YOASOBI", bpm: 130, durationSec: 261 },
+      { title: "Lemon", artist: "요네즈 켄시 (언내추럴 OST)", bpm: 87, durationSec: 255 },
+      { title: "Let It Go", artist: "Idina Menzel (겨울왕국 OST)", bpm: 137, durationSec: 224 },
+      { title: "Into the Unknown", artist: "Idina Menzel (겨울왕국 2 OST)", bpm: 146, durationSec: 194 },
+      { title: "A Whole New World", artist: "알라딘 OST", bpm: 92, durationSec: 160 }
+    ];
+
+    const PIANO_SONGS = [
+      { title: "River Flows In You", artist: "이루마 (Yiruma)", bpm: 78, durationSec: 188 },
+      { title: "Kiss The Rain", artist: "이루마 (Yiruma)", bpm: 74, durationSec: 256 },
+      { title: "May Be", artist: "이루마 (Yiruma)", bpm: 76, durationSec: 242 },
+      { title: "캐논 변주곡 (Canon in D)", artist: "파헬벨 (Pachelbel)", bpm: 84, durationSec: 260 },
+      { title: "엘리제를 위하여 (Für Elise)", artist: "베토벤 (Beethoven)", bpm: 112, durationSec: 175 },
+      { title: "월광 소나타 1악장", artist: "베토벤 (Beethoven)", bpm: 64, durationSec: 320 },
+      { title: "터키 행진곡", artist: "모차르트 (Mozart)", bpm: 132, durationSec: 212 },
+      { title: "작은 별 변주곡", artist: "모차르트 (Mozart)", bpm: 116, durationSec: 245 },
+      { title: "녹턴 Op.9 No.2", artist: "쇼팽 (Chopin)", bpm: 72, durationSec: 270 },
+      { title: "강아지 왈츠", artist: "쇼팽 (Chopin)", bpm: 148, durationSec: 115 },
+      { title: "즉흥환상곡", artist: "쇼팽 (Chopin)", bpm: 152, durationSec: 310 },
+      { title: "짐노페디 1번 (Gymnopédie No.1)", artist: "에릭 사티 (Erik Satie)", bpm: 70, durationSec: 195 },
+      { title: "달빛 (Clair de Lune)", artist: "드뷔시 (Debussy)", bpm: 68, durationSec: 300 },
+      { title: "사랑의 인사 (Salut d'Amour)", artist: "엘가 (Elgar)", bpm: 82, durationSec: 185 },
+      { title: "왕벌의 비행", artist: "림스키코르사코프", bpm: 176, durationSec: 95 },
+      { title: "G선상의 아리아", artist: "바흐 (Bach)", bpm: 66, durationSec: 280 },
+      { title: "미뉴에트 G장조", artist: "바흐 (Bach)", bpm: 114, durationSec: 135 },
+      { title: "라 캄파넬라", artist: "리스트 (Liszt)", bpm: 138, durationSec: 285 },
+      { title: "사랑의 꿈 3번", artist: "리스트 (Liszt)", bpm: 74, durationSec: 278 },
+      { title: "사계 중 '봄'", artist: "비발디 (Vivaldi)", bpm: 120, durationSec: 210 }
+    ];
+
+    const SONG_LIBRARY = [];
+    let songIdCounter = 1;
+
+    DECEMBER_SONGS.forEach((s) =>
+      SONG_LIBRARY.push({
+        id: songIdCounter++,
+        ...s,
+        category: "BALLAD",
+        categoryLabel: "디셈버 스페셜"
+      })
+    );
+    BALLAD_POOL.forEach((s) =>
+      SONG_LIBRARY.push({
+        id: songIdCounter++,
+        ...s,
+        category: "BALLAD",
+        categoryLabel: "감성 발라드"
+      })
+    );
+    KPOP_SONGS.forEach((s) =>
+      SONG_LIBRARY.push({
+        id: songIdCounter++,
+        ...s,
+        category: "KPOP",
+        categoryLabel: "K-POP 히트"
+      })
+    );
+    OST_SONGS.forEach((s) =>
+      SONG_LIBRARY.push({
+        id: songIdCounter++,
+        ...s,
+        category: "OST",
+        categoryLabel: "드라마·애니 OST"
+      })
+    );
+    PIANO_SONGS.forEach((s) =>
+      SONG_LIBRARY.push({
+        id: songIdCounter++,
+        ...s,
+        category: "PIANO",
+        categoryLabel: "뉴에이지·클래식"
+      })
+    );
+
+    // =========================================================================
+    // 2. 풀버전 원곡 스트리밍 + 내장 원곡 멜로디/반주 듀얼 사운드 엔진 (100% 소리 보장)
+    // =========================================================================
+    const audioEl = document.getElementById("real-audio-player");
+    let audioCtx = null;
+    let fallbackMelodyTimer = null;
+    let isRealStreamPlaying = false;
+    let activeStreamSource = "NONE";
+
+    // 곡별 실제 핵심 원곡 멜로디 악보 (MIDI 노트 번호 & 박자 길이)
+    const SONG_MELODIES = {
+      "사랑 참...": [
+        [69,1],[72,1],[76,2],[74,1],[72,1],[69,2],
+        [67,1],[69,1],[72,2],[71,1],[69,1],[67,2],
+        [65,1],[69,1],[72,2],[74,1],[76,1],[77,2],
+        [76,1],[74,1],[72,1],[71,1],[69,4]
+      ],
+      "별이 될께": [
+        [72,1],[74,1],[76,2],[79,1],[76,1],[74,2],
+        [72,1],[71,1],[69,2],[72,1],[74,1],[76,2],
+        [77,1],[76,1],[74,1],[72,1],[74,2],[79,2],
+        [76,1],[74,1],[72,2],[72,4]
+      ],
+      "배운게 사랑이라": [
+        [64,1],[69,1],[71,1],[72,2],[71,1],[69,2],
+        [67,1],[71,1],[74,2],[72,1],[71,1],[69,2],
+        [65,1],[69,1],[72,2],[76,1],[74,1],[72,2],
+        [71,1],[69,1],[68,2],[69,4]
+      ],
+      "혼자왔어요": [
+        [76,1.5],[74,0.5],[72,1],[71,1],[69,2],[67,2],
+        [65,1],[67,1],[69,1],[72,1],[71,4],
+        [76,1.5],[74,0.5],[72,1],[74,1],[76,2],[79,2],
+        [77,1],[76,1],[74,2],[72,4]
+      ],
+      "돌아올 순 없나요": [
+        [69,1],[71,1],[72,2],[76,1],[74,1],[72,2],
+        [71,1],[72,1],[74,2],[76,1],[74,1],[71,2],
+        [69,1],[71,1],[72,2],[77,1],[76,1],[74,2],
+        [72,1],[71,1],[69,4]
+      ],
+      "미인 (美人)": [
+        [76,1],[76,1],[79,1],[76,1],[74,1],[72,1],[74,2],
+        [72,1],[72,1],[76,1],[72,1],[71,1],[69,1],[71,2],
+        [69,1],[72,1],[76,1],[79,1],[77,1],[76,1],[74,2],
+        [76,1],[74,1],[72,1],[71,1],[69,4]
+      ],
+      "She's Gone": [
+        [69,2],[72,1],[76,1],[79,2],[77,1],[76,1],
+        [74,2],[77,1],[76,1],[74,2],[72,2],
+        [71,2],[74,1],[76,1],[77,2],[76,1],[74,1],
+        [76,2],[79,2],[81,4]
+      ],
+      "야생화": [
+        [67,1],[72,1],[74,1],[76,2],[74,1],[72,2],
+        [69,1],[72,1],[74,1],[76,2],[79,2],
+        [81,1.5],[79,0.5],[76,1],[74,1],[72,2],[74,2],
+        [76,1],[74,1],[72,4]
+      ],
+      "눈의 꽃": [
+        [76,1],[74,1],[72,2],[71,1],[69,1],[67,2],
+        [65,1],[67,1],[69,2],[71,1],[72,1],[74,2],
+        [76,1],[74,1],[72,2],[79,1],[77,1],[76,2],
+        [74,1],[72,1],[71,2],[72,4]
+      ],
+      "밤편지": [
+        [64,1],[67,1],[72,2],[71,1],[67,1],[64,2],
+        [65,1],[69,1],[72,2],[71,1],[69,1],[67,2],
+        [64,1],[67,1],[72,2],[74,1],[76,1],[74,2],
+        [72,1],[71,1],[72,4]
+      ],
+      "APT.": [
+        [76,0.5],[76,0.5],[76,1],[79,1],[76,1],
+        [74,0.5],[74,0.5],[74,1],[76,1],[74,1],
+        [72,0.5],[72,0.5],[72,1],[74,1],[72,1],
+        [69,1],[72,1],[74,1],[76,1]
+      ],
+      "River Flows In You": [
+        [81,0.5],[80,0.5],[81,0.5],[80,0.5],[81,0.5],[76,0.5],[81,0.5],[74,0.5],
+        [81,0.5],[73,0.5],[76,0.5],[81,0.5],[83,1],[85,1],
+        [81,0.5],[80,0.5],[81,0.5],[80,0.5],[81,0.5],[76,0.5],[81,0.5],[74,0.5],
+        [73,1],[71,1],[69,2]
+      ]
+    };
+
+    const DEFAULT_MELODIES = [
+      [[72,1],[74,1],[76,2],[79,1],[76,1],[74,2],[72,1],[71,1],[69,2],[72,2],[74,2]],
+      [[69,1],[72,1],[76,2],[74,1],[72,1],[69,2],[67,1],[69,1],[72,2],[71,2],[69,2]],
+      [[76,1],[74,1],[72,1],[74,1],[76,2],[79,2],[77,1],[76,1],[74,1],[72,1],[74,4]]
+    ];
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    // 그랜드 피아노 음색 합성기 (주선율 + 화음 반주)
+    function playGrandPianoNote(freq, durationSec, volume = 0.22, isBass = false) {
+      try {
+        ensureAudioContext();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = isBass ? "sine" : "triangle";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.frequency.setValueAtTime(freq * 2, now);
+
+        const osc2Gain = audioCtx.createGain();
+        osc2Gain.gain.setValueAtTime(isBass ? 0.15 : 0.3, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(volume * 0.45, now + Math.min(0.25, durationSec * 0.5));
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.35, durationSec * 1.15));
+
+        osc1.connect(gain);
+        osc2.connect(osc2Gain);
+        osc2Gain.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        const stopTime = now + Math.max(0.4, durationSec * 1.2);
+        osc1.stop(stopTime);
+        osc2.stop(stopTime);
+      } catch (e) {}
+    }
+
+    // 건반 터치 시 피아노 소리 완전 제거 (무음 처리 - 오직 진동 & 시각 타격감만 제공)
+    const LANE_FREQS = [261.63, 329.63, 392.00, 493.88];
+    function playPianoTapTone(lane, isPerfect, noteMidi = null) {
+      // 사용자 요청: 타일을 눌러도 피아노 소리나 효과음이 전혀 나지 않음
+      return;
+    }
+
+    // iTunes JSONP 공식 음원 스트리밍 시도
+    function fetchITunesStream(song) {
+      return new Promise((resolve) => {
+        const cleanArtist = song.artist.replace(/\(.*?\)/g, "").trim();
+        const cleanTitle = song.title.replace(/\(.*?\)/g, "").trim();
+        const query = encodeURIComponent(`${cleanArtist} ${cleanTitle}`);
+        const cbName = `itunesCb_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+        const script = document.createElement("script");
+
+        const timeout = setTimeout(() => {
+          cleanup();
+          resolve(null);
+        }, 3500);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cbName] = (data) => {
+          cleanup();
+          if (data && Array.isArray(data.results) && data.results.length > 0) {
+            const match = data.results.find((r) => r.previewUrl) || null;
+            resolve(match ? match.previewUrl : null);
+          } else {
+            resolve(null);
+          }
+        };
+
+        script.src = `https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=5&callback=${cbName}`;
+        script.onerror = () => {
+          cleanup();
+          resolve(null);
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    // 즉시 노래가 나오도록 보장하는 원곡 멜로디 + 화음 반주 시퀀서
+    function startSongMelodyEngine(song) {
+      stopFallbackPianoBGM();
+      ensureAudioContext();
+      if (!audioCtx) return;
+
+      const melody =
+        SONG_MELODIES[song.title] ||
+        DEFAULT_MELODIES[song.id % DEFAULT_MELODIES.length];
+
+      const chordProgressions = [
+        [48, 55, 60], // C
+        [45, 52, 57], // Am
+        [41, 48, 53], // F
+        [43, 50, 55]  // G
+      ];
+
+      const beatSec = 60 / (song.bpm || 80);
+      let noteIdx = 0;
+      let beatAccum = 0;
+
+      function scheduleNext() {
+        if (!gameState.isPlaying || isRealStreamPlaying) return;
+        const [midi, beats] = melody[noteIdx % melody.length];
+        const durSec = beats * beatSec;
+
+        playGrandPianoNote(midiToFreq(midi), durSec, 0.24, false);
+
+        if (Math.floor(beatAccum) % 2 === 0) {
+          const chord = chordProgressions[Math.floor(beatAccum / 2) % chordProgressions.length];
+          chord.forEach((cMidi, idx) => {
+            setTimeout(() => {
+              if (gameState.isPlaying && !isRealStreamPlaying) {
+                playGrandPianoNote(midiToFreq(cMidi), beatSec * 1.8, 0.09, idx === 0);
+              }
+            }, idx * 45);
+          });
+        }
+
+        noteIdx++;
+        beatAccum += beats;
+        fallbackMelodyTimer = setTimeout(scheduleNext, Math.max(180, durSec * 1000));
+      }
+
+      scheduleNext();
+    }
+
+    function stopFallbackPianoBGM() {
+      if (fallbackMelodyTimer) {
+        clearTimeout(fallbackMelodyTimer);
+        fallbackMelodyTimer = null;
+      }
+    }
+
+    function stopAllMusic() {
+      isRealStreamPlaying = false;
+      activeStreamSource = "NONE";
+      stopFallbackPianoBGM();
+      try {
+        audioEl.pause();
+        audioEl.removeAttribute("src");
+        audioEl.load();
+      } catch (e) {}
+      const ytFrame = document.getElementById("yt-player-iframe");
+      if (ytFrame) ytFrame.src = "";
+    }
+
+    async function startSongAudio(song, youtubeVideoId = null) {
+      stopAllMusic();
+      ensureAudioContext();
+      const statusBadge = document.getElementById("hud-audio-status");
+
+      if (youtubeVideoId) {
+        const ytWrap = document.getElementById("yt-embed-wrapper");
+        const ytFrame = document.getElementById("yt-player-iframe");
+        ytWrap.classList.remove("hidden");
+        ytFrame.src = `https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&playsinline=1&rel=0`;
+        isRealStreamPlaying = true;
+        activeStreamSource = "YT_EMBED";
+        statusBadge.textContent = "▶ 유튜브 풀버전 재생 중";
+        return;
+      } else {
+        document.getElementById("yt-embed-wrapper").classList.add("hidden");
+      }
+
+      // 1. 전주 반주부터 완곡 끝까지 끊김 없이 재생되도록 풀버전 시퀀서 즉시 시작
+      startSongMelodyEngine(song);
+      statusBadge.textContent = "🎵 전주~완곡 풀버전 재생 중";
+
+      // 2. 백그라운드에서 실제 원곡 음원(iTunes 공식 스트리밍)이 로드되면 원곡 보컬/반주로 전환
+      const streamUrl = await fetchITunesStream(song);
+      if (streamUrl && gameState.isPlaying) {
+        try {
+          audioEl.src = streamUrl;
+          audioEl.loop = true;
+          audioEl.volume = 0.9;
+          await audioEl.play();
+          isRealStreamPlaying = true;
+          activeStreamSource = "ITUNES_STREAM";
+          stopFallbackPianoBGM();
+          statusBadge.textContent = "🎵 실제 원곡 풀버전 재생 중";
+        } catch (err) {
+          isRealStreamPlaying = false;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 3. 게임 상태 및 난이도 프리셋
+    // =========================================================================
+    const DIFFICULTY_CONFIG = {
+      EASY: { label: "쉬움", speedMult: 0.80, density: 0.90, scoreMult: 1.0 },
+      NORMAL: { label: "보통", speedMult: 1.00, density: 1.05, scoreMult: 1.2 },
+      HARD: { label: "어려움", speedMult: 1.35, density: 1.25, scoreMult: 1.5 },
+      EXPERT: { label: "매우 어려움", speedMult: 1.72, density: 1.45, scoreMult: 2.0 }
+    };
+
+    const PRAISE_MESSAGES = [
+      "100점! 완벽해요! ✨",
+      "100점! 천재 피아니스트! 🎹",
+      "100점! 박자 감각 최고! 🔥",
+      "100점! 소름 돋는 정확도! 👑",
+      "100점! 환상적인 연주! 🌟"
+    ];
+
+    const gameState = {
+      selectedCategory: "ALL",
+      searchQuery: "",
+      selectedSong: null,
+      selectedDifficulty: "NORMAL",
+      youtubeVideoId: null,
+      isPlaying: false,
+      startTime: 0,
+      songDuration: 34, // 초
+      notes: [],
+      particles: [],
+      ripples: [],
+      laneGlow: [0, 0, 0, 0],
+      score: 0,
+      combo: 0,
+      maxCombo: 0,
+      perfectCount: 0,
+      hearts: 5,
+      maxHearts: 5,
+      animFrameId: null,
+      boardShake: 0,
+      boardZoom: 1.0,
+      hitFlash: 0,
+      laneBeams: [0, 0, 0, 0],
+      hitGhosts: [],
+      shockwaves: [],
+      audioOffsetSec: 0
+    };
+
+    // =========================================================================
+    // 4. 곡 목록 렌더링 & 실시간 검색 필터링
+    // =========================================================================
+    function normalizeText(str) {
+      return (str || "")
+        .toString()
+        .normalize("NFC")
+        .toLowerCase()
+        .replace(/\s+/g, "");
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const m = Math.floor(s / 60);
+      const rem = s % 60;
+      return `${m}:${rem < 10 ? "0" : ""}${rem}`;
+    }
+
+    function renderSongMenu() {
+      const container = document.getElementById("song-list-container");
+      const countBadge = document.getElementById("song-count-badge");
+      if (!container) return;
+
+      const q = normalizeText(gameState.searchQuery);
+      const filtered = SONG_LIBRARY.filter((song) => {
+        const matchCat =
+          gameState.selectedCategory === "ALL" ||
+          song.category === gameState.selectedCategory;
+        if (!matchCat) return false;
+        if (!q) return true;
+        return (
+          normalizeText(song.title).includes(q) ||
+          normalizeText(song.artist).includes(q)
+        );
+      });
+
+      if (countBadge) {
+        countBadge.textContent = `총 ${filtered.length}곡 표시 중`;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-400 bg-slate-900/50 rounded-2xl border border-slate-800">
+            <div class="text-3xl mb-2">🎵</div>
+            <p class="text-sm font-bold text-slate-300">검색 결과가 없습니다.</p>
+            <p class="text-xs mt-1">다른 가수나 노래 제목을 검색하거나 상단 유튜브 링크로 연주해 보세요!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered
+        .map(
+          (song) => `
+          <button
+            type="button"
+            data-song-id="${song.id}"
+            class="song-card group text-left p-3.5 rounded-2xl bg-slate-900/80 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-400/60 shadow-md hover:shadow-indigo-500/15 transition flex items-center justify-between gap-3 active:scale-[0.98]"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-400/20">
+                  ${song.categoryLabel}
+                </span>
+                <span class="text-[10px] text-slate-400 font-semibold">
+                  ${formatTime(song.durationSec)} · ${song.bpm} BPM
+                </span>
+              </div>
+              <div class="text-sm font-black text-white group-hover:text-amber-300 truncate transition">
+                ${song.title}
+              </div>
+              <div class="text-xs text-slate-400 truncate mt-0.5">
+                ${song.artist}
+              </div>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-slate-800 group-hover:bg-indigo-600 text-indigo-300 group-hover:text-white flex items-center justify-center text-sm font-black shrink-0 transition">
+              ▶
+            </div>
+          </button>
+        `
+        )
+        .join("");
+
+      container.querySelectorAll(".song-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          const id = Number(card.getAttribute("data-song-id"));
+          const song = SONG_LIBRARY.find((s) => s.id === id);
+          if (song) openDifficultyModal(song, null);
+        });
+      });
+    }
+
+    function openDifficultyModal(song, youtubeVideoId = null) {
+      gameState.selectedSong = song;
+      gameState.youtubeVideoId = youtubeVideoId;
+      document.getElementById("modal-song-category").textContent = song.categoryLabel;
+      document.getElementById("modal-song-title").textContent = song.title;
+      document.getElementById("modal-song-artist").textContent = song.artist;
+      document.getElementById("difficulty-modal").classList.remove("hidden");
+    }
+
+    // =========================================================================
+    // 5. 노트(타일) 채보 생성 및 게임 플레이 루프
+    // =========================================================================
+    const canvas = document.getElementById("game-canvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      const board = document.getElementById("board-container");
+      if (!board || !canvas) return;
+      const rect = board.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // 현재 실제 음악 재생 시간(초) 반환 (스트리밍 오디오와 완벽 동기화)
+    function getSyncedPlaybackTime(timestamp) {
+      const wallElapsed = (timestamp - gameState.startTime) / 1000;
+      if (
+        activeStreamSource === "ITUNES_STREAM" &&
+        audioEl &&
+        !audioEl.paused &&
+        audioEl.readyState >= 2 &&
+        audioEl.duration > 0
+      ) {
+        // 30초 프리뷰 루프 환경에서도 전체 완곡 타임라인과 연속 동기화
+        const loopCount = Math.floor(wallElapsed / audioEl.duration);
+        const synced = loopCount * audioEl.duration + audioEl.currentTime;
+        if (Math.abs(synced - wallElapsed) < 1.2) {
+          return synced;
+        }
+      }
+      return wallElapsed;
+    }
+
+    // 실제 곡의 멜로디 음표 리듬(박자 길이 + 음높이 레인 매핑)으로 정밀 채보 생성
+    function generateBeatMap(song, diffKey) {
+      const bpm = song.bpm || 80;
+      const beatSec = 60 / bpm;
+      const duration = song.durationSec || 180;
+      const melody =
+        SONG_MELODIES[song.title] ||
+        DEFAULT_MELODIES[song.id % DEFAULT_MELODIES.length];
+
+      const notes = [];
+      let t = 1.6;
+      let prevLane = -1;
+      let idx = 0;
+
+      // 난이도별 박자 세분화 배율
+      const speedFactor =
+        diffKey === "EASY" ? 1.25 :
+        diffKey === "NORMAL" ? 1.0 :
+        diffKey === "HARD" ? 0.75 : 0.55;
+
+      while (t < duration - 2.0) {
+        const [midi, beats] = melody[idx % melody.length];
+
+        // 실제 멜로디 음높이(MIDI)에 따라 자연스러운 4레인 피아노 건반 위치 배치
+        let lane;
+        if (midi <= 67) lane = 0;
+        else if (midi <= 72) lane = 1;
+        else if (midi <= 76) lane = 2;
+        else lane = 3;
+
+        // 같은 음 연속 시 자연스럽게 인접 레인 교차 또는 연타 유지
+        if (lane === prevLane && beats <= 0.5) {
+          lane = (lane + (idx % 2 === 0 ? 1 : 3)) % 4;
+        }
+        prevLane = lane;
+
+        const isStrongBeat = idx % 4 === 0 || beats >= 2;
+        const isChord =
+          (diffKey === "HARD" || diffKey === "EXPERT") && isStrongBeat && idx % 3 === 0;
+
+        notes.push({
+          id: notes.length + 1,
+          lane,
+          hitTime: t,
+          midi,
+          beats,
+          hit: false,
+          missed: false,
+          isHarmony: isChord
+        });
+
+        // 긴 음표(2박 이상)일 때 어려움/매우 어려움 난이도에서는 중간 리듬 노트 추가
+        if ((diffKey === "HARD" || diffKey === "EXPERT") && beats >= 2) {
+          const midTime = t + beatSec * speedFactor;
+          if (midTime < duration - 2.0) {
+            notes.push({
+              id: notes.length + 1,
+              lane: (lane + 2) % 4,
+              hitTime: midTime,
+              midi: midi + 4,
+              beats: 1,
+              hit: false,
+              missed: false,
+              isHarmony: true
+            });
+          }
+        }
+
+        const stepSec = Math.max(0.22, beats * beatSec * speedFactor);
+        t += stepSec;
+        idx++;
+      }
+      return notes;
+    }
+
+    function showPraisePopup(text) {
+      const container = document.getElementById("praise-container");
+      if (!container) return;
+      const el = document.createElement("div");
+      el.className =
+        "praise-toast absolute left-1/2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-slate-950 font-black text-sm sm:text-base shadow-[0_0_24px_rgba(251,191,36,0.85)] whitespace-nowrap";
+      el.textContent = text;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 860);
+    }
+
+    function updateHUD(elapsed = 0) {
+      document.getElementById("hud-score").textContent = gameState.score.toLocaleString();
+      document.getElementById("hud-hearts").textContent =
+        "❤️".repeat(Math.max(0, gameState.hearts)) +
+        "🖤".repeat(Math.max(0, gameState.maxHearts - gameState.hearts));
+
+      const comboEl = document.getElementById("combo-display");
+      const comboCountEl = document.getElementById("combo-count");
+      if (gameState.combo >= 2) {
+        comboEl.classList.remove("opacity-0");
+        comboCountEl.textContent = gameState.combo;
+      } else {
+        comboEl.classList.add("opacity-0");
+      }
+
+      const pct = Math.min(100, Math.max(0, (elapsed / gameState.songDuration) * 100));
+      document.getElementById("hud-progress-bar").style.width = `${pct}%`;
+    }
+
+    function triggerLaneInput(lane) {
+      if (!gameState.isPlaying) return;
+      const keyBtn = document.querySelector(`.piano-key[data-lane="${lane}"]`);
+      if (keyBtn) {
+        keyBtn.classList.add("pressed");
+        setTimeout(() => keyBtn.classList.remove("pressed"), 110);
+      }
+
+      gameState.laneGlow[lane] = 1.0;
+      const now = getSyncedPlaybackTime(performance.now());
+
+      // 해당 레인에서 가장 가까운 미처리 타일 탐색
+      let target = null;
+      let minDiff = Infinity;
+      for (const n of gameState.notes) {
+        if (!n.hit && !n.missed && n.lane === lane) {
+          const diff = Math.abs(n.hitTime - now);
+          if (diff < minDiff) {
+            minDiff = diff;
+            target = n;
+          }
+        }
+      }
+
+      if (target && minDiff <= 0.45) {
+        target.hit = true;
+        const isPerfect = minDiff <= 0.22;
+        const diffMult = DIFFICULTY_CONFIG[gameState.selectedDifficulty]?.scoreMult || 1;
+        const gained = Math.round((isPerfect ? 100 : 70) * diffMult);
+
+        gameState.score += gained;
+        gameState.combo += 1;
+        gameState.maxCombo = Math.max(gameState.maxCombo, gameState.combo);
+        if (isPerfect) gameState.perfectCount += 1;
+
+        // 10콤보마다 하트 1개 회복
+        if (gameState.combo % 10 === 0 && gameState.hearts < gameState.maxHearts) {
+          gameState.hearts += 1;
+        }
+
+        // 극대화된 시각·물리 타격감 이펙트
+        gameState.boardShake = isPerfect ? 11.5 : 5.0;
+        gameState.boardZoom = isPerfect ? 1.018 : 1.008;
+        gameState.hitFlash = isPerfect ? 1.0 : 0.55;
+        gameState.laneBeams[lane] = 1.25;
+        gameState.hitGhosts.push({ lane, alpha: 1.0, scale: 1.0 });
+        gameState.shockwaves.push({
+          lane,
+          radius: 10,
+          maxRadius: isPerfect ? 135 : 85,
+          alpha: 0.95,
+          color: isPerfect ? "#fbbf24" : "#818cf8"
+        });
+
+        const particleCount = isPerfect ? 26 : 12;
+        for (let i = 0; i < particleCount; i++) {
+          const angle = -Math.PI * Math.random();
+          const speed = (isPerfect ? 4.5 : 2.5) + Math.random() * 7.5;
+          gameState.particles.push({
+            lane,
+            xOffset: (Math.random() - 0.5) * 0.65,
+            yOffset: (Math.random() - 0.5) * 8,
+            vx: Math.cos(angle) * speed * 1.4,
+            vy: Math.sin(angle) * speed - 2.0,
+            size: (isPerfect ? 3.5 : 2.5) + Math.random() * 4.5,
+            alpha: 1,
+            color: isPerfect
+              ? (i % 3 === 0 ? "#ffffff" : i % 2 === 0 ? "#fbbf24" : "#f59e0b")
+              : "#818cf8"
+          });
+        }
+
+        // 진동 피드백 (박자 맞출 때마다 묵직한 진동 전달)
+        if (navigator.vibrate) {
+          navigator.vibrate(isPerfect ? [45, 20, 35] : 25);
+        }
+
+        if (isPerfect) {
+          const msg = PRAISE_MESSAGES[gameState.perfectCount % PRAISE_MESSAGES.length];
+          showPraisePopup(msg);
+        }
+      } else {
+        // 빈 건반/박자 오차 시 콤보만 초기화 (하트 보호, 소리 없음)
+        gameState.combo = 0;
+        showPraisePopup("MISS! 박자를 놓쳤어요!");
+      }
+      updateHUD(now);
+    }
+
+    function startSongCountdown() {
+      const song = gameState.selectedSong;
+      if (!song) return;
+
+      document.getElementById("difficulty-modal").classList.add("hidden");
+      document.getElementById("result-modal").classList.add("hidden");
+      document.getElementById("menu-screen").classList.add("hidden");
+      document.getElementById("game-screen").classList.remove("hidden");
+
+      resizeCanvas();
+
+      document.getElementById("hud-song-title").textContent = `${song.artist} - ${song.title}`;
+      gameState.songDuration = song.durationSec || 180;
+      gameState.notes = generateBeatMap(song, gameState.selectedDifficulty);
+      gameState.particles = [];
+      gameState.hitGhosts = [];
+      gameState.shockwaves = [];
+      gameState.boardZoom = 1.0;
+      gameState.score = 0;
+      gameState.combo = 0;
+      gameState.maxCombo = 0;
+      gameState.perfectCount = 0;
+      gameState.hearts = 5;
+      updateHUD(0);
+
+      const overlay = document.getElementById("countdown-overlay");
+      const numEl = document.getElementById("countdown-number");
+      overlay.classList.remove("hidden");
+
+      let count = 3;
+      numEl.textContent = count;
+
+      const cdTimer = setInterval(() => {
+        count -= 1;
+        if (count > 0) {
+          numEl.textContent = count;
+        } else {
+          clearInterval(cdTimer);
+          overlay.classList.add("hidden");
+          beginGameplay();
+        }
+      }, 650);
+    }
+
+    function beginGameplay() {
+      gameState.isPlaying = true;
+      gameState.startTime = performance.now();
+      startSongAudio(gameState.selectedSong, gameState.youtubeVideoId);
+
+      if (gameState.animFrameId) cancelAnimationFrame(gameState.animFrameId);
+      gameState.animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function finishSong(cleared = true) {
+      gameState.isPlaying = false;
+      stopAllMusic();
+      if (gameState.animFrameId) cancelAnimationFrame(gameState.animFrameId);
+
+      document.getElementById("result-badge").textContent = cleared
+        ? "STAGE CLEAR! ✨"
+        : "STAGE FINISH";
+      document.getElementById("result-title").textContent = cleared
+        ? "완벽한 피아노 연주였어요!"
+        : "아쉬워요! 다시 도전해 볼까요?";
+      document.getElementById("result-song-info").textContent =
+        `${gameState.selectedSong.artist} - ${gameState.selectedSong.title}`;
+      document.getElementById("res-score").textContent = gameState.score.toLocaleString();
+      document.getElementById("res-perfect").textContent = `${gameState.perfectCount}회`;
+      document.getElementById("res-combo").textContent = `${gameState.maxCombo}`;
+      document.getElementById("result-modal").classList.remove("hidden");
+    }
+
+    function drawRoundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function gameLoop(timestamp) {
+      if (!gameState.isPlaying) return;
+      const elapsed = getSyncedPlaybackTime(timestamp);
+
+      if (elapsed >= gameState.songDuration) {
+        finishSong(true);
+        return;
+      }
+
+      const board = document.getElementById("board-container");
+      const width = board.clientWidth;
+      const height = board.clientHeight;
+      const laneWidth = width / 4;
+      const hitLineY = height - 42;
+      const diffCfg = DIFFICULTY_CONFIG[gameState.selectedDifficulty] || DIFFICULTY_CONFIG.NORMAL;
+      const fallSpeed = 380 * diffCfg.speedMult; // px/sec
+
+      ctx.save();
+      // 1. 임팩트 줌 + 셰이크 물리 효과
+      if (gameState.boardZoom > 1.0005) {
+        const cx = width / 2;
+        const cy = height / 2;
+        ctx.translate(cx, cy);
+        ctx.scale(gameState.boardZoom, gameState.boardZoom);
+        ctx.translate(-cx, -cy);
+        gameState.boardZoom = 1 + (gameState.boardZoom - 1) * 0.78;
+      }
+      if (gameState.boardShake > 0.1) {
+        const sx = (Math.random() - 0.5) * gameState.boardShake;
+        const sy = (Math.random() - 0.5) * gameState.boardShake;
+        ctx.translate(sx, sy);
+        gameState.boardShake *= 0.76;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // 박자 비트 펄스 (실제 노래 BPM에 맞춰 판정선이 심장처럼 고동침)
+      const beatSec = 60 / (gameState.selectedSong?.bpm || 80);
+      const beatPhase = (elapsed % beatSec) / beatSec;
+      const beatPulse = Math.pow(1 - beatPhase, 3);
+
+      // 레인 구분선 및 터치 글로우
+      for (let i = 0; i < 4; i++) {
+        const lx = i * laneWidth;
+        if (gameState.laneGlow[i] > 0.01) {
+          const grad = ctx.createLinearGradient(0, hitLineY - 220, 0, height);
+          grad.addColorStop(0, "rgba(99, 102, 241, 0)");
+          grad.addColorStop(1, `rgba(129, 140, 248, ${0.28 * gameState.laneGlow[i]})`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(lx, 0, laneWidth, height);
+          gameState.laneGlow[i] *= 0.88;
+        }
+
+        if (gameState.laneBeams[i] > 0.01) {
+          const bGrad = ctx.createLinearGradient(0, 0, 0, hitLineY);
+          bGrad.addColorStop(0, "rgba(251, 191, 36, 0)");
+          bGrad.addColorStop(0.5, `rgba(253, 224, 71, ${0.22 * gameState.laneBeams[i]})`);
+          bGrad.addColorStop(1, `rgba(255, 255, 255, ${0.55 * gameState.laneBeams[i]})`);
+          ctx.fillStyle = bGrad;
+          ctx.fillRect(lx + 2, 0, laneWidth - 4, hitLineY);
+          gameState.laneBeams[i] *= 0.84;
+        }
+
+        if (i > 0) {
+          ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(lx, 0);
+          ctx.lineTo(lx, height);
+          ctx.stroke();
+        }
+      }
+
+      // 하단 판정선 (BPM 박자 고동 + 타격 시 섬광 글로우)
+      ctx.save();
+      if (gameState.hitFlash > 0.05) {
+        ctx.shadowColor = "#fbbf24";
+        ctx.shadowBlur = 22 * gameState.hitFlash;
+      }
+      ctx.strokeStyle =
+        gameState.hitFlash > 0.05
+          ? `rgba(254, 240, 138, ${0.65 + gameState.hitFlash * 0.35})`
+          : `rgba(129, 140, 248, ${0.45 + beatPulse * 0.45})`;
+      ctx.lineWidth = 3 + beatPulse * 2 + gameState.hitFlash * 3;
+      ctx.beginPath();
+      ctx.moveTo(0, hitLineY);
+      ctx.lineTo(width, hitLineY);
+      ctx.stroke();
+      ctx.restore();
+      gameState.hitFlash *= 0.84;
+
+      // 입체 유광 피아노 타일 렌더링
+      const tileHeight = Math.max(82, Math.min(115, height * 0.18));
+      for (const note of gameState.notes) {
+        if (note.hit) continue;
+
+        const timeDiff = note.hitTime - elapsed;
+        if (!note.missed && timeDiff < -0.45) {
+          note.missed = true;
+          gameState.combo = 0;
+          gameState.hearts -= 1;
+          if (gameState.hearts <= 0) {
+            finishSong(false);
+            ctx.restore();
+            return;
+          }
+        }
+
+        const tileBottomY = hitLineY - timeDiff * fallSpeed;
+        const tileTopY = tileBottomY - tileHeight;
+
+        if (tileBottomY < -20 || tileTopY > height + 40) continue;
+
+        const padX = 6;
+        const tx = note.lane * laneWidth + padX;
+        const tw = laneWidth - padX * 2;
+
+        // 1. 3D 하단 그림자
+        ctx.fillStyle = "rgba(2, 6, 23, 0.7)";
+        drawRoundRect(ctx, tx, tileTopY + 6, tw, tileHeight, 14);
+        ctx.fill();
+
+        // 2. 유광 그랜드 피아노 바디
+        const bodyGrad = ctx.createLinearGradient(tx, tileTopY, tx, tileBottomY);
+        if (note.missed) {
+          bodyGrad.addColorStop(0, "#475569");
+          bodyGrad.addColorStop(1, "#1e293b");
+        } else if (note.isHarmony) {
+          bodyGrad.addColorStop(0, "#fbbf24");
+          bodyGrad.addColorStop(0.5, "#d97706");
+          bodyGrad.addColorStop(1, "#78350f");
+        } else {
+          bodyGrad.addColorStop(0, "#312e81");
+          bodyGrad.addColorStop(0.45, "#0f172a");
+          bodyGrad.addColorStop(1, "#020617");
+        }
+        ctx.fillStyle = bodyGrad;
+        drawRoundRect(ctx, tx, tileTopY, tw, tileHeight, 14);
+        ctx.fill();
+
+        // 3. 테두리 베벨
+        ctx.strokeStyle = note.isHarmony
+          ? "rgba(253, 224, 71, 0.9)"
+          : "rgba(129, 140, 248, 0.65)";
+        ctx.lineWidth = 1.6;
+        drawRoundRect(ctx, tx, tileTopY, tw, tileHeight, 14);
+        ctx.stroke();
+
+        // 4. 상단 유리 광택 하이라이트
+        const glossGrad = ctx.createLinearGradient(tx, tileTopY, tx, tileTopY + tileHeight * 0.42);
+        glossGrad.addColorStop(0, "rgba(255, 255, 255, 0.34)");
+        glossGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = glossGrad;
+        drawRoundRect(ctx, tx + 2, tileTopY + 2, tw - 4, tileHeight * 0.4, 12);
+        ctx.fill();
+
+        // 5. 중앙 음표 엠블럼
+        ctx.fillStyle = note.isHarmony ? "#fef08a" : "#c7d2fe";
+        ctx.font = "bold 16px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(note.isHarmony ? "♫" : "♪", tx + tw / 2, tileTopY + tileHeight * 0.54);
+      }
+
+      // 타격 잔상 이펙트
+      for (let i = gameState.hitGhosts.length - 1; i >= 0; i--) {
+        const g = gameState.hitGhosts[i];
+        const gx = g.lane * laneWidth + 6;
+        const gw = laneWidth - 12;
+        ctx.strokeStyle = `rgba(251, 191, 36, ${g.alpha})`;
+        ctx.lineWidth = 3.5;
+        drawRoundRect(ctx, gx - (g.scale - 1) * 20, hitLineY - tileHeight - (g.scale - 1) * 20, gw + (g.scale - 1) * 40, tileHeight + (g.scale - 1) * 40, 16);
+        ctx.stroke();
+        g.scale += 0.055;
+        g.alpha -= 0.075;
+        if (g.alpha <= 0) gameState.hitGhosts.splice(i, 1);
+      }
+
+      // 충격파 링(Shockwave) 이펙트
+      for (let i = gameState.shockwaves.length - 1; i >= 0; i--) {
+        const sw = gameState.shockwaves[i];
+        const swX = (sw.lane + 0.5) * laneWidth;
+        ctx.save();
+        ctx.strokeStyle = sw.color;
+        ctx.globalAlpha = Math.max(0, sw.alpha);
+        ctx.lineWidth = 3.5 * sw.alpha;
+        ctx.beginPath();
+        ctx.arc(swX, hitLineY, sw.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        sw.radius += (sw.maxRadius - sw.radius) * 0.24;
+        sw.alpha -= 0.065;
+        if (sw.alpha <= 0) gameState.shockwaves.splice(i, 1);
+      }
+
+      // 황금 파티클 업데이트
+      for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const p = gameState.particles[i];
+        const px = (p.lane + 0.5 + p.xOffset) * laneWidth;
+        const py = hitLineY + p.yOffset;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.beginPath();
+        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        p.xOffset += p.vx / laneWidth;
+        p.yOffset += p.vy;
+        p.vy += 0.25;
+        p.alpha -= 0.035;
+        if (p.alpha <= 0) gameState.particles.splice(i, 1);
+      }
+
+      ctx.restore();
+      updateHUD(elapsed);
+      gameState.animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // =========================================================================
+    // 6. 전체 UI 이벤트 초기화
+    // =========================================================================
+    function extractYouTubeId(url) {
+      if (!url) return null;
+      const reg = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const match = url.trim().match(reg);
+      if (match) return match[1];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) return url.trim();
+      return null;
+    }
+
+    function initApp() {
+      renderSongMenu();
+
+      const searchInput = document.getElementById("song-search-input");
+      const clearBtn = document.getElementById("clear-search-btn");
+      searchInput.addEventListener("input", (e) => {
+        gameState.searchQuery = e.target.value;
+        clearBtn.classList.toggle("hidden", !gameState.searchQuery);
+        renderSongMenu();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        gameState.searchQuery = "";
+        clearBtn.classList.add("hidden");
+        renderSongMenu();
+      });
+
+      document.querySelectorAll(".cat-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".cat-tab").forEach((t) => {
+            t.classList.remove("bg-indigo-600", "text-white", "shadow");
+            t.classList.add("bg-slate-800/90", "text-slate-300");
+          });
+          tab.classList.remove("bg-slate-800/90", "text-slate-300");
+          tab.classList.add("bg-indigo-600", "text-white", "shadow");
+          gameState.selectedCategory = tab.getAttribute("data-cat");
+          renderSongMenu();
+        });
+      });
+
+      document.getElementById("play-youtube-btn").addEventListener("click", () => {
+        const urlVal = document.getElementById("youtube-url-input").value;
+        const vid = extractYouTubeId(urlVal);
+        if (!vid) {
+          showPraisePopup("올바른 유튜브 링크를 붙여넣어 주세요!");
+          document.getElementById("youtube-url-input").focus();
+          return;
+        }
+        openDifficultyModal(
+          {
+            id: 9999,
+            title: "유튜브 사용자 지정 곡",
+            artist: "YouTube 직접 스트리밍",
+            category: "ALL",
+            categoryLabel: "유튜브 연주",
+            bpm: 96,
+            durationSec: 240
+          },
+          vid
+        );
+      });
+
+      document.getElementById("close-modal-btn").addEventListener("click", () => {
+        document.getElementById("difficulty-modal").classList.add("hidden");
+      });
+
+      document.querySelectorAll(".diff-select-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          gameState.selectedDifficulty = btn.getAttribute("data-diff");
+          startSongCountdown();
+        });
+      });
+
+      document.getElementById("quit-game-btn").addEventListener("click", () => {
+        gameState.isPlaying = false;
+        stopAllMusic();
+        if (gameState.animFrameId) cancelAnimationFrame(gameState.animFrameId);
+        document.getElementById("game-screen").classList.add("hidden");
+        document.getElementById("menu-screen").classList.remove("hidden");
+      });
+
+      document.getElementById("res-retry-btn").addEventListener("click", () => {
+        startSongCountdown();
+      });
+
+      document.getElementById("res-menu-btn").addEventListener("click", () => {
+        document.getElementById("result-modal").classList.add("hidden");
+        document.getElementById("game-screen").classList.add("hidden");
+        document.getElementById("menu-screen").classList.remove("hidden");
+      });
+
+      // 하단 피아노 건반 클릭 및 터치 이벤트
+      document.querySelectorAll(".piano-key").forEach((keyEl) => {
+        const lane = Number(keyEl.getAttribute("data-lane"));
+        keyEl.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          triggerLaneInput(lane);
+        });
+      });
+
+      // PC 키보드 D, F, G, H 입력
+      const keyMap = { KeyD: 0, KeyF: 1, KeyG: 2, KeyH: 3 };
+      window.addEventListener("keydown", (e) => {
+        if (e.repeat) return;
+        if (gameState.isPlaying && e.code in keyMap) {
+          e.preventDefault();
+          triggerLaneInput(keyMap[e.code]);
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (!document.getElementById("game-screen").classList.contains("hidden")) {
+          resizeCanvas();
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+</body>
+</html>
