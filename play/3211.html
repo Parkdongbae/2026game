@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>버튼 클리커 타이쿤</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans KR & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Tone.js (클릭 및 구매 효과음 생성용) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+            background-color: #0b1120;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 메인 버튼 3D 입체 효과 및 애니메이션 */
+        .arcade-btn {
+            background: radial-gradient(circle at 35% 30%, #38bdf8 0%, #0284c7 65%, #0369a1 100%);
+            box-shadow: 0 12px 0 #075985, 0 20px 35px rgba(2, 132, 199, 0.45), inset 0 4px 10px rgba(255, 255, 255, 0.4);
+            transition: transform 0.05s ease, box-shadow 0.05s ease, filter 0.15s ease;
+        }
+
+        .arcade-btn:active:not(:disabled),
+        .arcade-btn.pressed {
+            transform: translateY(8px);
+            box-shadow: 0 4px 0 #075985, 0 8px 15px rgba(2, 132, 199, 0.4), inset 0 2px 5px rgba(255, 255, 255, 0.3);
+        }
+
+        .arcade-btn:disabled {
+            filter: grayscale(0.55) brightness(0.8);
+            transform: translateY(6px);
+            box-shadow: 0 6px 0 #075985, 0 8px 15px rgba(0, 0, 0, 0.4);
+            cursor: not-allowed;
+        }
+
+        /* 떠오르는 수익 텍스트 애니메이션 */
+        @keyframes floatUpFade {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(0.9);
+            }
+            30% {
+                transform: translate(-50%, -25px) scale(1.15);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -85px) scale(1.0);
+            }
+        }
+
+        .floating-coin {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            color: #fde047;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 12px rgba(250, 204, 21, 0.5);
+            animation: floatUpFade 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            z-index: 30;
+            white-space: nowrap;
+        }
+
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-3 sm:p-6">
+
+    <!-- 상단 헤더 -->
+    <header class="max-w-6xl w-full mx-auto flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-6 bg-slate-900/80 backdrop-blur-md border border-slate-800 px-4 py-3 rounded-2xl shadow-lg">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center shadow-md">
+                <!-- 버튼 아이콘 SVG -->
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-sky-400 to-indigo-300 bg-clip-text text-transparent">
+                    버튼 클리커 타이쿤
+                </h1>
+                <p class="text-xs text-slate-400">클릭하고, 강화하고, 자동화 제국을 건설하세요!</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="sound-toggle-btn" type="button" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition flex items-center gap-1.5">
+                <span id="sound-icon">🔊</span>
+                <span id="sound-label">효과음 켜짐</span>
+            </button>
+            <button id="open-reset-modal-btn" type="button" class="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 text-xs font-semibold text-rose-300 transition">
+                초기화
+            </button>
+        </div>
+    </header>
+
+    <!-- 메인 게임 보드 (2단 그리드) -->
+    <main class="max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
+
+        <!-- 왼쪽: 디스플레이 & 클릭 패널 (5칸) -->
+        <section id="click-panel" class="lg:col-span-5 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-3xl p-5 sm:p-7 flex flex-col justify-between items-center relative overflow-hidden shadow-2xl">
+            <!-- 배경 은은한 광원 -->
+            <div class="absolute -top-24 -left-24 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- 실시간 상태 디스플레이 -->
+            <div class="w-full bg-slate-950/90 border border-slate-800/90 rounded-2xl p-5 text-center shadow-inner relative z-10">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">현재 보유 자금</div>
+                <div id="money-display" class="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight tabular-nums break-all">
+                    0원
+                </div>
+
+                <!-- 세부 스탯 3종 -->
+                <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-800/80">
+                    <div class="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800/60">
+                        <div class="text-[11px] text-slate-400">클릭당 수익</div>
+                        <div id="click-power-display" class="text-sm sm:text-base font-extrabold text-sky-400 mt-0.5 tabular-nums">1원</div>
+                    </div>
+                    <div class="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800/60">
+                        <div class="text-[11px] text-slate-400">초당 자동 수익</div>
+                        <div id="cps-display" class="text-sm sm:text-base font-extrabold text-emerald-400 mt-0.5 tabular-nums">0.0원/초</div>
+                    </div>
+                    <div class="bg-slate-900/70 rounded-xl p-2.5 border border-slate-800/60">
+                        <div class="text-[11px] text-slate-400">버튼 쿨타임</div>
+                        <div id="cooldown-display" class="text-sm sm:text-base font-extrabold text-purple-400 mt-0.5 tabular-nums">0.50초</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중앙 클릭 버튼 및 쿨타임 게이지 -->
+            <div class="my-8 flex flex-col items-center justify-center relative z-10 w-full">
+                <button id="main-btn" type="button" class="arcade-btn w-44 h-44 sm:w-52 sm:h-52 rounded-full flex flex-col items-center justify-center text-white focus:outline-none">
+                    <span class="text-xl sm:text-2xl font-black tracking-wide drop-shadow">버튼 누르기</span>
+                    <span id="btn-reward-badge" class="mt-2 px-3.5 py-1 rounded-full bg-slate-950/35 text-amber-200 text-sm sm:text-base font-extrabold border border-white/15">
+                        +1원
+                    </span>
+                </button>
+
+                <!-- 쿨타임 진행 바 -->
+                <div class="w-full max-w-[240px] mt-8">
+                    <div class="flex justify-between text-xs font-semibold mb-1.5">
+                        <span id="cooldown-status" class="text-sky-300">누를 수 있습니다!</span>
+                        <span id="cooldown-percent" class="text-slate-400 tabular-nums">100%</span>
+                    </div>
+                    <div class="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                        <div id="cooldown-bar" class="h-full w-full rounded-full bg-gradient-to-r from-purple-500 via-sky-400 to-emerald-400 transition-none"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 하단 자동 저장 안내 -->
+            <div class="w-full flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/70 pt-3 relative z-10">
+                <span>단축키: <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">Space</kbd> / <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">Enter</kbd></span>
+                <span id="save-status" class="text-emerald-400/80 font-medium">● 자동 저장 활성화됨</span>
+            </div>
+        </section>
+
+        <!-- 오른쪽: 업그레이드 & 인력 고용 상점 (7칸) -->
+        <section class="lg:col-span-7 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-3xl p-5 sm:p-6 flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-extrabold text-white">업그레이드 & 인력 상점</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">수익 배율을 높이고 직원을 고용해 자본을 불리세요.</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 block">총 고용 인력</span>
+                    <span id="total-workers-display" class="text-sm font-extrabold text-indigo-400">0명</span>
+                </div>
+            </div>
+
+            <div class="space-y-5 overflow-y-auto max-h-[580px] pr-1">
+                <!-- 카테고리 1: 핵심 버튼 강화 -->
+                <div>
+                    <div class="flex items-center gap-2 mb-2.5">
+                        <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">핵심 버튼 강화</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3">
+                        <!-- 클릭당 수익 (2의 제곱수) -->
+                        <div class="bg-slate-800/75 hover:bg-slate-800 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-extrabold text-base text-white">클릭 수익 2배 증폭</span>
+                                    <span id="click-lv-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-950 text-sky-300 border border-sky-800/70">
+                                        Lv.0 (현재 1원)
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-400">
+                                    버튼 1회 클릭 수익이 <span class="text-sky-300 font-semibold">2의 제곱수(1 → 2 → 4 → 8...)</span>로 증가합니다.
+                                </p>
+                            </div>
+                            <button id="buy-click-btn" type="button" class="px-5 py-3 rounded-xl font-extrabold text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-md sm:min-w-[130px] shrink-0">
+                                50원
+                            </button>
+                        </div>
+
+                        <!-- 쿨타임 단축 -->
+                        <div class="bg-slate-800/75 hover:bg-slate-800 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-extrabold text-base text-white">버튼 쿨타임 단축</span>
+                                    <span id="cd-lv-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-950 text-purple-300 border border-purple-800/70">
+                                        Lv.0 (현재 0.50초)
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-400">
+                                    버튼을 다시 누르기까지 걸리는 대기 시간을 <span class="text-purple-300 font-semibold">15%씩</span> 단축합니다.
+                                </p>
+                            </div>
+                            <button id="buy-cd-btn" type="button" class="px-5 py-3 rounded-xl font-extrabold text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-md sm:min-w-[130px] shrink-0">
+                                120원
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 카테고리 2: 자동화 인력 고용 -->
+                <div>
+                    <div class="flex items-center gap-2 mb-2.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">자동화 인력 고용 (초당 자동 수익)</h3>
+                    </div>
+                    <div id="workers-container" class="grid grid-cols-1 gap-3">
+                        <!-- 자바스크립트로 인력 카드 렌더링 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 데이터 초기화 확인 모달 (alert/confirm 대신 커스텀 UI 사용) -->
+    <div id="reset-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                !
+            </div>
+            <h3 class="text-lg font-extrabold text-white mb-1">데이터를 초기화할까요?</h3>
+            <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+                현재 보유한 자금, 업그레이드 레벨, 고용한 인력이 모두 처음 상태로 되돌아갑니다.
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="cancel-reset-btn" type="button" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold transition">
+                    취소
+                </button>
+                <button id="confirm-reset-btn" type="button" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-bold transition">
+                    초기화 실행
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 게임 설정 및 초기 상태 정의
+        // ==========================================
+        const STORAGE_KEY = "button_clicker_tycoon_save_v1";
+
+        const defaultState = {
+            money: 0,
+            clickLevel: 0,      // 클릭당 수익 = 2 ^ clickLevel (1, 2, 4, 8, 16...)
+            cooldownLevel: 0,   // 초기 0.50초에서 단계마다 15% 단축
+            workers: [0, 0, 0, 0, 0],
+            soundEnabled: true
+        };
+
+        // 자동화 인력 구성 (요구사항 반영)
+        const workerConfigs = [
+            {
+                id: "novice",
+                icon: "🧑‍🎓",
+                name: "초보 알바생",
+                desc: "서툴지만 열심히 버튼을 대신 눌러줍니다.",
+                baseCost: 15,
+                costMultiplier: 1.25,
+                cps: 0.2
+            },
+            {
+                id: "skilled",
+                icon: "🧑‍💼",
+                name: "숙련 알바생",
+                desc: "일정한 박자로 빠르게 버튼을 연타합니다.",
+                baseCost: 180,
+                costMultiplier: 1.28,
+                cps: 1.5
+            },
+            {
+                id: "manager",
+                icon: "👔",
+                name: "전문 매니저",
+                desc: "동선을 최적화해 효율적으로 수익을 올립니다.",
+                baseCost: 1600,
+                costMultiplier: 1.30,
+                cps: 12
+            },
+            {
+                id: "server",
+                icon: "🖥️",
+                name: "자동화 매크로 서버",
+                desc: "24시간 무중단으로 고속 클릭을 수행합니다.",
+                baseCost: 14000,
+                costMultiplier: 1.32,
+                cps: 95
+            },
+            {
+                id: "aifactory",
+                icon: "🤖",
+                name: "AI 버튼 공장",
+                desc: "초지능 연산으로 막대한 자본을 자동 생산합니다.",
+                baseCost: 120000,
+                costMultiplier: 1.35,
+                cps: 750
+            }
+        ];
+
+        let state = loadGame();
+        let isCoolingDown = false;
+        let cooldownEndTime = 0;
+        let currentCooldownDuration = 500;
+
+        // ==========================================
+        // 2. 사운드 합성기 (Tone.js)
+        // ==========================================
+        let synth = null;
+        function playSound(type) {
+            if (!state.soundEnabled || typeof Tone === "undefined") return;
+            try {
+                if (Tone.context.state !== "running") {
+                    Tone.start();
+                }
+                if (!synth) {
+                    synth = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "triangle" },
+                        envelope: { attack: 0.005, decay: 0.08, sustain: 0.01, release: 0.1 }
+                    }).toDestination();
+                    synth.volume.value = -12;
+                }
+                if (type === "click") {
+                    synth.triggerAttackRelease("C5", "32n");
+                } else if (type === "upgrade") {
+                    synth.triggerAttackRelease(["E5", "G5", "B5"], "16n");
+                }
+            } catch (e) {
+                // 오디오 컨텍스트 제한 시 무시
+            }
+        }
+
+        // ==========================================
+        // 3. 핵심 수식 및 포맷팅 함수
+        // ==========================================
+        function getClickPower() {
+            return Math.pow(2, state.clickLevel);
+        }
+
+        function getClickUpgradeCost() {
+            // 초기 50원, 2의 제곱수 강화에 맞춰 가파르게 증가
+            return Math.floor(50 * Math.pow(3.2, state.clickLevel));
+        }
+
+        function getCooldownSeconds() {
+            // 초기 0.50초, 업그레이드마다 15%씩 짧아짐 (최소 0.03초)
+            const cd = 0.5 * Math.pow(0.85, state.cooldownLevel);
+            return Math.max(0.03, cd);
+        }
+
+        function getCooldownUpgradeCost() {
+            return Math.floor(120 * Math.pow(2.4, state.cooldownLevel));
+        }
+
+        function getWorkerCost(index) {
+            const cfg = workerConfigs[index];
+            return Math.floor(cfg.baseCost * Math.pow(cfg.costMultiplier, state.workers[index]));
+        }
+
+        function getTotalCPS() {
+            return workerConfigs.reduce((sum, cfg, idx) => sum + state.workers[idx] * cfg.cps, 0);
+        }
+
+        function formatMoney(num) {
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + "조 원";
+            if (num >= 1e8) return (num / 1e8).toFixed(2) + "억 원";
+            if (num >= 10000) {
+                return Math.floor(num).toLocaleString("ko-KR") + "원";
+            }
+            // 소수점 자본(초당 0.2원 등)을 자연스럽게 표시
+            if (Math.abs(num - Math.round(num)) > 0.001) {
+                return num.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "원";
+            }
+            return Math.round(num).toLocaleString("ko-KR") + "원";
+        }
+
+        // ==========================================
+        // 4. DOM 요소 및 UI 렌더링
+        // ==========================================
+        const moneyDisplay = document.getElementById("money-display");
+        const clickPowerDisplay = document.getElementById("click-power-display");
+        const cpsDisplay = document.getElementById("cps-display");
+        const cooldownDisplay = document.getElementById("cooldown-display");
+        const mainBtn = document.getElementById("main-btn");
+        const btnRewardBadge = document.getElementById("btn-reward-badge");
+        const cooldownBar = document.getElementById("cooldown-bar");
+        const cooldownStatus = document.getElementById("cooldown-status");
+        const cooldownPercent = document.getElementById("cooldown-percent");
+        const clickPanel = document.getElementById("click-panel");
+
+        const clickLvBadge = document.getElementById("click-lv-badge");
+        const buyClickBtn = document.getElementById("buy-click-btn");
+        const cdLvBadge = document.getElementById("cd-lv-badge");
+        const buyCdBtn = document.getElementById("buy-cd-btn");
+        const workersContainer = document.getElementById("workers-container");
+        const totalWorkersDisplay = document.getElementById("total-workers-display");
+
+        const soundToggleBtn = document.getElementById("sound-toggle-btn");
+        const soundIcon = document.getElementById("sound-icon");
+        const soundLabel = document.getElementById("sound-label");
+
+        const resetModal = document.getElementById("reset-modal");
+        const openResetModalBtn = document.getElementById("open-reset-modal-btn");
+        const cancelResetBtn = document.getElementById("cancel-reset-btn");
+        const confirmResetBtn = document.getElementById("confirm-reset-btn");
+
+        function initWorkersUI() {
+            workersContainer.innerHTML = "";
+            workerConfigs.forEach((cfg, idx) => {
+                const card = document.createElement("div");
+                card.className = "bg-slate-800/75 hover:bg-slate-800 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition";
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-lg">${cfg.icon}</span>
+                            <span class="font-extrabold text-base text-white">${cfg.name}</span>
+                            <span id="worker-badge-${idx}" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-800/70">
+                                0명 (초당 0.0원)
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400">
+                            ${cfg.desc} <span class="text-emerald-400 font-semibold">(1명당 초당 +${cfg.cps}원)</span>
+                        </p>
+                    </div>
+                    <button id="buy-worker-${idx}" type="button" class="px-5 py-3 rounded-xl font-extrabold text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-md sm:min-w-[130px] shrink-0">
+                        ${formatMoney(cfg.baseCost)}
+                    </button>
+                `;
+                workersContainer.appendChild(card);
+
+                document.getElementById(`buy-worker-${idx}`).addEventListener("click", () => {
+                    buyWorker(idx);
+                });
+            });
+        }
+
+        function updateUI() {
+            const clickPower = getClickPower();
+            const totalCPS = getTotalCPS();
+            const cdSec = getCooldownSeconds();
+
+            // 상단 디스플레이 갱신
+            moneyDisplay.textContent = formatMoney(state.money);
+            clickPowerDisplay.textContent = formatMoney(clickPower);
+            cpsDisplay.textContent = totalCPS.toFixed(1) + "원/초";
+            cooldownDisplay.textContent = cdSec.toFixed(2) + "초";
+            btnRewardBadge.textContent = "+" + formatMoney(clickPower);
+
+            // 클릭 업그레이드 버튼 갱신
+            const clickCost = getClickUpgradeCost();
+            clickLvBadge.textContent = `Lv.${state.clickLevel} (현재 ${formatMoney(clickPower)})`;
+            buyClickBtn.textContent = formatMoney(clickCost);
+            buyClickBtn.disabled = state.money < clickCost;
+
+            // 쿨타임 업그레이드 버튼 갱신
+            const cdCost = getCooldownUpgradeCost();
+            cdLvBadge.textContent = `Lv.${state.cooldownLevel} (현재 ${cdSec.toFixed(2)}초)`;
+            if (cdSec <= 0.03) {
+                buyCdBtn.textContent = "최대 강화";
+                buyCdBtn.disabled = true;
+            } else {
+                buyCdBtn.textContent = formatMoney(cdCost);
+                buyCdBtn.disabled = state.money < cdCost;
+            }
+
+            // 인력 목록 갱신
+            let totalWorkers = 0;
+            workerConfigs.forEach((cfg, idx) => {
+                const count = state.workers[idx];
+                totalWorkers += count;
+                const cost = getWorkerCost(idx);
+                const badge = document.getElementById(`worker-badge-${idx}`);
+                const btn = document.getElementById(`buy-worker-${idx}`);
+                if (badge && btn) {
+                    badge.textContent = `${count}명 (초당 ${(count * cfg.cps).toFixed(1)}원)`;
+                    btn.textContent = formatMoney(cost);
+                    btn.disabled = state.money < cost;
+                }
+            });
+            totalWorkersDisplay.textContent = `${totalWorkers}명`;
+
+            // 사운드 버튼 UI
+            soundIcon.textContent = state.soundEnabled ? "🔊" : "🔇";
+            soundLabel.textContent = state.soundEnabled ? "효과음 켜짐" : "효과음 꺼짐";
+        }
+
+        // 떠오르는 숫자 이펙트
+        function spawnFloatingText(text) {
+            const el = document.createElement("div");
+            el.className = "floating-coin text-lg sm:text-xl";
+            el.textContent = text;
+
+            const btnRect = mainBtn.getBoundingClientRect();
+            const panelRect = clickPanel.getBoundingClientRect();
+            const offsetX = (Math.random() - 0.5) * 90;
+
+            el.style.left = (btnRect.left - panelRect.left + btnRect.width / 2 + offsetX) + "px";
+            el.style.top = (btnRect.top - panelRect.top + 15) + "px";
+
+            clickPanel.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        // ==========================================
+        // 5. 인터랙션 및 업그레이드 로직
+        // ==========================================
+        function triggerMainButton() {
+            if (isCoolingDown) return;
+
+            const earned = getClickPower();
+            state.money = Math.round((state.money + earned) * 1000) / 1000;
+            playSound("click");
+            spawnFloatingText("+" + formatMoney(earned));
+
+            // 쿨타임 적용
+            const cdMs = getCooldownSeconds() * 1000;
+            isCoolingDown = true;
+            currentCooldownDuration = cdMs;
+            cooldownEndTime = performance.now() + cdMs;
+            mainBtn.disabled = true;
+            cooldownStatus.textContent = "재충전 중...";
+            cooldownStatus.className = "text-purple-300";
+
+            updateUI();
+        }
+
+        mainBtn.addEventListener("click", triggerMainButton);
+
+        // 스페이스바 / 엔터키 지원
+        window.addEventListener("keydown", (e) => {
+            if ((e.code === "Space" || e.code === "Enter") && document.activeElement.tagName !== "BUTTON") {
+                e.preventDefault();
+                if (!isCoolingDown) {
+                    mainBtn.classList.add("pressed");
+                    triggerMainButton();
+                    setTimeout(() => mainBtn.classList.remove("pressed"), 90);
+                }
+            }
+        });
+
+        buyClickBtn.addEventListener("click", () => {
+            const cost = getClickUpgradeCost();
+            if (state.money >= cost) {
+                state.money = Math.round((state.money - cost) * 1000) / 1000;
+                state.clickLevel++;
+                playSound("upgrade");
+                saveGame();
+                updateUI();
+            }
+        });
+
+        buyCdBtn.addEventListener("click", () => {
+            const cost = getCooldownUpgradeCost();
+            if (state.money >= cost && getCooldownSeconds() > 0.03) {
+                state.money = Math.round((state.money - cost) * 1000) / 1000;
+                state.cooldownLevel++;
+                playSound("upgrade");
+                saveGame();
+                updateUI();
+            }
+        });
+
+        function buyWorker(index) {
+            const cost = getWorkerCost(index);
+            if (state.money >= cost) {
+                state.money = Math.round((state.money - cost) * 1000) / 1000;
+                state.workers[index]++;
+                playSound("upgrade");
+                saveGame();
+                updateUI();
+            }
+        }
+
+        soundToggleBtn.addEventListener("click", () => {
+            state.soundEnabled = !state.soundEnabled;
+            saveGame();
+            updateUI();
+        });
+
+        // ==========================================
+        // 6. 메인 게임 루프 (60fps 애니메이션 및 수익 정산)
+        // ==========================================
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // 초당 자동 수익 누적
+            const cps = getTotalCPS();
+            if (cps > 0) {
+                state.money = Math.round((state.money + cps * dt) * 1000) / 1000;
+            }
+
+            // 쿨타임 게이지 실시간 업데이트
+            if (isCoolingDown) {
+                const remaining = cooldownEndTime - now;
+                if (remaining <= 0) {
+                    isCoolingDown = false;
+                    mainBtn.disabled = false;
+                    cooldownBar.style.width = "100%";
+                    cooldownPercent.textContent = "100%";
+                    cooldownStatus.textContent = "누를 수 있습니다!";
+                    cooldownStatus.className = "text-sky-300";
+                } else {
+                    const ratio = Math.max(0, Math.min(1, 1 - remaining / currentCooldownDuration));
+                    const pct = Math.floor(ratio * 100);
+                    cooldownBar.style.width = (ratio * 100) + "%";
+                    cooldownPercent.textContent = pct + "%";
+                }
+            }
+
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==========================================
+        // 7. 저장 / 불러오기 / 초기화 모달 처리
+        // ==========================================
+        function saveGame() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                const saveStatus = document.getElementById("save-status");
+                if (saveStatus) {
+                    saveStatus.textContent = "● 저장 완료";
+                    setTimeout(() => {
+                        saveStatus.textContent = "● 자동 저장 활성화됨";
+                    }, 1200);
+                }
+            } catch (e) {}
+        }
+
+        function loadGame() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return {
+                        money: Number(parsed.money) || 0,
+                        clickLevel: Number(parsed.clickLevel) || 0,
+                        cooldownLevel: Number(parsed.cooldownLevel) || 0,
+                        workers: Array.isArray(parsed.workers) && parsed.workers.length === 5
+                            ? parsed.workers.map(v => Number(v) || 0)
+                            : [0, 0, 0, 0, 0],
+                        soundEnabled: parsed.soundEnabled !== undefined ? Boolean(parsed.soundEnabled) : true
+                    };
+                }
+            } catch (e) {}
+            return JSON.parse(JSON.stringify(defaultState));
+        }
+
+        openResetModalBtn.addEventListener("click", () => {
+            resetModal.classList.remove("hidden");
+            resetModal.classList.add("flex");
+        });
+
+        cancelResetBtn.addEventListener("click", () => {
+            resetModal.classList.add("hidden");
+            resetModal.classList.remove("flex");
+        });
+
+        confirmResetBtn.addEventListener("click", () => {
+            state = JSON.parse(JSON.stringify(defaultState));
+            saveGame();
+            updateUI();
+            resetModal.classList.add("hidden");
+            resetModal.classList.remove("flex");
+        });
+
+        // 5초마다 자동 저장
+        setInterval(saveGame, 5000);
+
+        // 창 로드 시 실행
+        window.onload = function () {
+            initWorkersUI();
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

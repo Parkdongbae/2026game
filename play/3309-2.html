@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEON GEOMETRY DASH (네온 지오메트리 대시)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { user-select: none; -webkit-user-select: none; box-sizing: border-box; }
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #03060d; font-family: 'Noto Sans KR', sans-serif; color: #f8fafc; }
+    .font-cyber { font-family: 'Orbitron', 'Noto Sans KR', sans-serif; }
+    
+    #canvasContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #0a0f1d 0%, #020408 100%);
+    }
+
+    canvas {
+      display: block;
+      background: #050811;
+      box-shadow: 0 0 50px rgba(6, 182, 212, 0.3), 0 0 25px rgba(236, 72, 153, 0.25);
+      border: 3px solid #1e293b;
+      border-radius: 18px;
+      max-width: 98vw;
+      max-height: 98vh;
+      object-fit: contain;
+    }
+
+    .neon-panel {
+      background: rgba(10, 15, 29, 0.94);
+      border: 1.5px solid rgba(6, 182, 212, 0.4);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8), 0 0 15px rgba(6, 182, 212, 0.2);
+    }
+    
+    .gold-panel { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 25px rgba(245, 158, 11, 0.3); }
+    .pink-panel { border-color: rgba(236, 72, 153, 0.6); box-shadow: 0 0 25px rgba(236, 72, 153, 0.3); }
+    .green-panel { border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 0 25px rgba(34, 197, 94, 0.3); }
+    .purple-panel { border-color: rgba(168, 85, 247, 0.6); box-shadow: 0 0 25px rgba(168, 85, 247, 0.3); }
+
+    .btn-cyber {
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .btn-cyber:hover {
+      transform: translateY(-2px) scale(1.02);
+      filter: brightness(1.15);
+    }
+    .btn-cyber:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.7); }
+    ::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <div id="canvasContainer">
+    <!-- 1280 x 720 Fixed Aspect Canvas -->
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- UI Overlay for In-Game HUD -->
+    <div id="hudOverlay" class="hidden fixed inset-0 pointer-events-none flex flex-col justify-between p-4 md:p-6 z-10">
+      <!-- Top HUD Header -->
+      <div class="flex items-center justify-between gap-4">
+        
+        <!-- Left: Attempt Counter & Stage Info -->
+        <div class="neon-panel px-4 py-2 rounded-2xl flex items-center gap-3 pointer-events-auto">
+          <span id="hudAttemptText" class="font-cyber font-black text-sm text-cyan-300">ATTEMPT 1</span>
+          <span class="text-slate-600">|</span>
+          <span id="hudStageTitle" class="font-cyber font-bold text-xs text-amber-300">STAGE 1: STEREO PULSE</span>
+          <span id="hudPracticeBadge" class="hidden px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-[10px] font-black text-emerald-300">PRACTICE MODE</span>
+        </div>
+
+        <!-- Center: Progress Bar -->
+        <div class="flex-1 max-w-md neon-panel px-4 py-2 rounded-2xl flex flex-col gap-1 pointer-events-none">
+          <div class="flex justify-between items-center text-[11px] font-black font-cyber">
+            <span class="text-slate-300">PROGRESS</span>
+            <span id="hudProgressText" class="text-cyan-300">0%</span>
+          </div>
+          <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-700 relative">
+            <div id="hudProgressBar" class="h-full bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-400 transition-all duration-75" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Right: Action Buttons (Speed Toggle, Practice, Mute, Pause) -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+          <button onclick="toggleSpeedMultiplier()" id="btnSpeedToggleHUD" class="btn-cyber neon-panel purple-panel px-3 py-1.5 rounded-xl text-xs font-black text-purple-300">
+            ⚡ 속도: 1.0x [S]
+          </button>
+          <button onclick="togglePracticeMode()" id="btnPracticeToggle" class="btn-cyber neon-panel green-panel px-3 py-1.5 rounded-xl text-xs font-black text-emerald-300 flex items-center gap-1">
+            <span>💎 연습 모드 [P]</span>
+          </button>
+          <button onclick="toggleAudio()" id="btnAudioToggle" class="btn-cyber neon-panel px-3 py-1.5 rounded-xl text-xs font-black text-cyan-300">
+            🔊 사운드 [M]
+          </button>
+          <button onclick="pauseGame()" class="btn-cyber neon-panel pink-panel px-3.5 py-1.5 rounded-xl text-xs font-black text-pink-300">
+            ⏸️ 일시정지 [ESC]
+          </button>
+        </div>
+      </div>
+
+      <!-- Practice Checkpoint Controls Overlay (Shown in Practice Mode) -->
+      <div id="practiceControlsHUD" class="hidden flex items-center justify-center gap-3 pointer-events-auto mb-2">
+        <button onclick="placePracticeCheckpoint()" class="btn-cyber neon-panel green-panel px-4 py-2 rounded-xl text-xs font-black text-emerald-300 shadow-lg">
+          ➕ 체크포인트 생성 [Z]
+        </button>
+        <button onclick="removePracticeCheckpoint()" class="btn-cyber neon-panel pink-panel px-4 py-2 rounded-xl text-xs font-black text-pink-300 shadow-lg">
+          ❌ 최근 체크포인트 삭제 [X]
+        </button>
+      </div>
+    </div>
+
+    <!-- TITLE & MAIN MENU MODAL -->
+    <div id="titleMenuModal" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+      <div class="neon-panel rounded-3xl max-w-4xl w-full p-6 md:p-8 flex flex-col gap-5 shadow-2xl border-2 border-cyan-400">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+          <div class="inline-block px-4 py-1 rounded-full bg-cyan-950 border border-cyan-400/50 text-xs font-cyber font-black text-cyan-300 tracking-widest">
+            HIGH-SPEED RHYTHM PLATFORMER (RE-BALANCED EDITION)
+          </div>
+          <h1 class="text-3xl md:text-5xl font-black font-cyber text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-300 drop-shadow">
+            NEON GEOMETRY DASH
+          </h1>
+          <p class="text-xs md:text-sm text-slate-300 font-bold">
+            억울한 사망 NO! 너그러운 피격 판정과 여유로운 9단계 스테이지에 도전하세요.
+          </p>
+        </div>
+
+        <!-- Stage Select Cards (9 Stages Grid) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[48vh] overflow-y-auto pr-1">
+          <!-- Stage 1 -->
+          <div onclick="selectStage(0)" id="stageCard_0" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-cyan-400 bg-cyan-950/40">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-cyan-400">STAGE 1 ★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-400 text-emerald-300">VERY EASY</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">STEREO PULSE</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">330 px/s | 쾌적한 기본 점프 & 넓은 비행선</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_0" class="font-cyber text-cyan-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 2 -->
+          <div onclick="selectStage(1)" id="stageCard_1" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-cyan-300">STAGE 2 ★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-teal-950 border border-teal-400 text-teal-300">EASY</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">NEON TRACK</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">350 px/s | 넓은 간격 가시 & 부드러운 패드</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_1" class="font-cyber text-cyan-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 3 -->
+          <div onclick="selectStage(2)" id="stageCard_2" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-amber-400">STAGE 3 ★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-950 border border-amber-400 text-amber-300">NORMAL</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">CYBER WAVE</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">370 px/s | 포용력 넓은 공중 점프 링</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_2" class="font-cyber text-amber-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 4 -->
+          <div onclick="selectStage(3)" id="stageCard_3" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-amber-400">STAGE 4 ★★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-orange-950 border border-orange-400 text-orange-300">HARDER</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">GRAVITY SHIFT</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">390 px/s | 여유 있는 천장 중력 반전</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_3" class="font-cyber text-amber-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 5 -->
+          <div onclick="selectStage(4)" id="stageCard_4" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-rose-400">STAGE 5 ★★★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-950 border border-rose-400 text-rose-300">HARD</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">OVERDRIVE</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">410 px/s | 신나는 패드-오브 리듬 콤보</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_4" class="font-cyber text-rose-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 6 -->
+          <div onclick="selectStage(5)" id="stageCard_5" class="btn-cyber neon-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11.px] font-black font-cyber text-purple-400">STAGE 6 ★★★★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-purple-950 border border-purple-400 text-purple-300">INTENSE</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">PLASMA CORE</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">430 px/s | 넉넉한 통로 비행선 코스</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_5" class="font-cyber text-purple-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 7 -->
+          <div onclick="selectStage(6)" id="stageCard_6" class="btn-cyber neon-panel pink-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-pink-400">STAGE 7 ★★★★★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-pink-950 border border-pink-400 text-pink-300">INSANE</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">VOID RUNNER</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">450 px/s | 시원한 비행 & 큐브 전환</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_6" class="font-cyber text-pink-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 8 -->
+          <div onclick="selectStage(7)" id="stageCard_7" class="btn-cyber neon-panel pink-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-slate-800">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-red-400">STAGE 8 ★★★★★★★★</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-950 border border-red-400 text-red-300">EXTREME</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">NIGHTMARE</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">475 px/s | 유쾌한 점프 링 스피드업</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_7" class="font-cyber text-red-300">0%</span>
+            </div>
+          </div>
+
+          <!-- Stage 9 -->
+          <div onclick="selectStage(8)" id="stageCard_8" class="btn-cyber neon-panel crimson-panel p-3.5 rounded-2xl flex flex-col justify-between gap-2 border-2 border-rose-500">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-black font-cyber text-rose-400">STAGE 9 🔥</span>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-950 border border-rose-500 text-rose-200 animate-pulse">DEMON</span>
+              </div>
+              <h3 class="font-cyber font-black text-sm text-white">DEMON CATACLYSM</h3>
+              <p class="text-[10px] text-slate-300 mt-0.5">500 px/s | 억울함 없는 데몬 최종전</p>
+            </div>
+            <div class="border-t border-slate-800 pt-1.5 flex items-center justify-between text-[11px] font-bold">
+              <span class="text-slate-400">BEST:</span>
+              <span id="bestProgress_8" class="font-cyber text-rose-400">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customizer Panel & Speed Toggle -->
+        <div class="neon-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-950/60">
+          <!-- Icon Face Picker -->
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-black text-slate-300">큐브 얼굴:</span>
+            <div class="flex gap-2">
+              <button onclick="selectFace(0)" id="faceBtn_0" class="w-10 h-10 rounded-xl bg-slate-900 border-2 border-cyan-400 text-lg flex items-center justify-center">🙂</button>
+              <button onclick="selectFace(1)" id="faceBtn_1" class="w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-700 text-lg flex items-center justify-center">🕶️</button>
+              <button onclick="selectFace(2)" id="faceBtn_2" class="w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-700 text-lg flex items-center justify-center">😈</button>
+              <button onclick="selectFace(3)" id="faceBtn_3" class="w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-700 text-lg flex items-center justify-center">⭐</button>
+            </div>
+          </div>
+
+          <!-- Color Palette Picker -->
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-black text-slate-300">네온 컬러 팔레트:</span>
+            <div class="flex gap-2">
+              <button onclick="selectPalette(0)" id="palBtn_0" class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-pink-500 border-2 border-white ring-2 ring-cyan-400"></button>
+              <button onclick="selectPalette(1)" id="palBtn_1" class="w-8 h-8 rounded-full bg-gradient-to-tr from-lime-400 to-amber-400 border-2 border-slate-700"></button>
+              <button onclick="selectPalette(2)" id="palBtn_2" class="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-500 to-orange-400 border-2 border-slate-700"></button>
+              <button onclick="selectPalette(3)" id="palBtn_3" class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 border-2 border-slate-700"></button>
+              <button onclick="selectPalette(4)" id="palBtn_4" class="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-100 to-amber-300 border-2 border-slate-700"></button>
+            </div>
+          </div>
+
+          <!-- Speed Multiplier Toggle Button -->
+          <button onclick="toggleSpeedMultiplier()" id="btnSpeedToggleTitle" class="btn-cyber neon-panel purple-panel px-4 py-2 rounded-xl text-xs font-black text-purple-300 shadow">
+            ⚡ 게임 속도: 1.0x (Normal) [S]
+          </button>
+        </div>
+
+        <!-- Start Game Button -->
+        <button onclick="startSelectedGame()" class="btn-cyber w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-400 font-cyber font-black text-base text-slate-950 shadow-xl">
+          GAME START - 스테이지 개시 ▶
+        </button>
+      </div>
+    </div>
+
+    <!-- PAUSE & VICTORY OVERLAY -->
+    <div id="pauseModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+      <div id="pauseCard" class="neon-panel rounded-3xl max-w-md w-full p-6 flex flex-col items-center text-center gap-5 shadow-2xl border-2 border-cyan-400">
+        <h2 id="pauseTitle" class="font-cyber font-black text-2xl text-cyan-300">GAME PAUSED</h2>
+        <p id="pauseSubtitle" class="text-xs text-slate-300">잠시 휴식 중입니다. 언제든 다시 도전하세요!</p>
+
+        <div class="w-full bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between text-xs font-bold">
+          <span class="text-slate-400">현재 진행도:</span>
+          <span id="pauseProgressText" class="font-cyber text-amber-300">45%</span>
+        </div>
+
+        <div class="flex flex-col gap-2.5 w-full">
+          <button onclick="resumeGame()" class="btn-cyber w-full py-3 rounded-xl bg-cyan-600 font-cyber font-black text-xs text-white">
+            ▶ 계속하기 (RESUME)
+          </button>
+          <button onclick="restartCurrentStage()" class="btn-cyber w-full py-3 rounded-xl bg-amber-600 font-cyber font-black text-xs text-white">
+            🔄 스테이지 재시작 (RESTART)
+          </button>
+          <button onclick="exitToMainMenu()" class="btn-cyber w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-cyber font-black text-xs text-slate-300">
+            🏠 메인 메뉴로 (MAIN MENU)
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================================
+    // PROCEDURAL WEB AUDIO SYNTHESIZER ENGINE (Zero External Files)
+    // ============================================================================
+    const AudioEngine = {
+      ctx: null,
+      enabled: true,
+      synthTimer: null,
+      step: 0,
+      bpm: 120,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+      },
+      playTone(freq, type, duration, vol = 0.1) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(); osc.stop(this.ctx.currentTime + duration);
+        } catch(e){}
+      },
+      playJump() { this.playTone(320, 'sine', 0.1, 0.12); },
+      playPad() { this.playTone(580, 'triangle', 0.18, 0.15); },
+      playOrb() { this.playTone(750, 'sine', 0.14, 0.15); },
+      playPortal() { this.playTone(440, 'sawtooth', 0.22, 0.12); },
+      playCrash() { this.playTone(120, 'square', 0.35, 0.22); },
+      playWin() {
+        if (!this.enabled || !this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.3, 0.18), i * 120);
+        });
+      },
+      startSynthTrack(bpm = 120) {
+        this.stopSynthTrack();
+        this.bpm = bpm;
+        const intervalMs = (60 / bpm / 4) * 1000;
+        this.step = 0;
+        const bassNotes = [110, 110, 130.81, 146.83, 110, 110, 164.81, 146.83];
+        this.synthTimer = setInterval(() => {
+          if (!this.enabled || !this.ctx) return;
+          if (this.step % 4 === 0) {
+            const freq = bassNotes[Math.floor(this.step / 4) % bassNotes.length];
+            this.playTone(freq, 'sawtooth', 0.18, 0.07);
+          }
+          if (this.step % 8 === 4) {
+            this.playTone(880, 'sine', 0.05, 0.03);
+          }
+          this.step++;
+        }, intervalMs);
+      },
+      stopSynthTrack() {
+        if (this.synthTimer) { clearInterval(this.synthTimer); this.synthTimer = null; }
+      }
+    };
+
+    function toggleAudio() {
+      AudioEngine.enabled = !AudioEngine.enabled;
+      const btn = document.getElementById('btnAudioToggle');
+      if (btn) btn.textContent = AudioEngine.enabled ? '🔊 사운드 [M]' : '🔇 음소거 [M]';
+    }
+
+    // ============================================================================
+    // CUSTOMIZER DATA & PALETTES
+    // ============================================================================
+    const FACES = ['🙂', '🕶️', '😈', '⭐'];
+    const PALETTES = [
+      { primary: '#06b6d4', secondary: '#ec4899', trail: 'rgba(6, 182, 212, 0.6)' },
+      { primary: '#84cc16', secondary: '#f59e0b', trail: 'rgba(132, 204, 22, 0.6)' },
+      { primary: '#f43f5e', secondary: '#fb923c', trail: 'rgba(244, 63, 94, 0.6)' },
+      { primary: '#a855f7', secondary: '#3b82f6', trail: 'rgba(168, 85, 247, 0.6)' },
+      { primary: '#f8fafc', secondary: '#f59e0b', trail: 'rgba(248, 250, 252, 0.6)' }
+    ];
+
+    let selectedStageIdx = 0;
+    let selectedFaceIdx = 0;
+    let selectedPalIdx = 0;
+    let speedMultiplier = 1.0; // 1.0x or 0.8x
+
+    function toggleSpeedMultiplier() {
+      speedMultiplier = speedMultiplier === 1.0 ? 0.8 : 1.0;
+      const label = speedMultiplier === 1.0 ? '⚡ 속도: 1.0x (Normal) [S]' : '🐢 속도: 0.8x (Slow-Mo) [S]';
+      const labelHUD = speedMultiplier === 1.0 ? '⚡ 속도: 1.0x [S]' : '🐢 속도: 0.8x [S]';
+      
+      const btnTitle = document.getElementById('btnSpeedToggleTitle');
+      const btnHUD = document.getElementById('btnSpeedToggleHUD');
+      if (btnTitle) btnTitle.textContent = label;
+      if (btnHUD) btnHUD.textContent = labelHUD;
+    }
+
+    // ============================================================================
+    // STAGE MAP BUILDER & LEVEL DATA (FORGIVING & COMFORTABLE - NO STAIRS)
+    // ============================================================================
+    const STAGES = [
+      {
+        id: 0, title: 'STAGE 1: STEREO PULSE (1★)', bpm: 118, speed: 330,
+        length: 8000, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          for (let x = 900; x < 2500; x += 500) {
+            objs.push({ type: 'spike', x, y: gY - 40, w: 40, h: 40 });
+          }
+          objs.push({ type: 'pad', x: 2900, y: gY - 15, w: 50, h: 15 });
+          objs.push({ type: 'spike', x: 3400, y: gY - 40, w: 40, h: 40 });
+          objs.push({ type: 'portal_ship', x: 3900, y: gY - 180, w: 50, h: 120 });
+          for (let x = 4400; x < 6000; x += 480) {
+            objs.push({ type: 'block', x, y: 80, w: 60, h: 110 });
+            objs.push({ type: 'block', x, y: gY - 110, w: 60, h: 110 });
+          }
+          objs.push({ type: 'portal_cube', x: 6300, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'orb', x: 6800, y: gY - 140, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 6800, y: gY - 40, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 7400, y: gY - 40, w: 75, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 1, title: 'STAGE 2: NEON TRACK (2★)', bpm: 122, speed: 350,
+        length: 8600, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'pad', x: 1400, y: gY - 15, w: 50, h: 15 });
+          objs.push({ type: 'spike', x: 1900, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'portal_ship', x: 2400, y: gY - 180, w: 50, h: 120 });
+          for (let x = 2900; x < 5200; x += 420) {
+            objs.push({ type: 'block', x, y: 80, w: 60, h: 110 });
+            objs.push({ type: 'block', x: x + 210, y: gY - 110, w: 60, h: 110 });
+          }
+          objs.push({ type: 'portal_cube', x: 5600, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'orb', x: 6200, y: gY - 140, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 6200, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'spike', x: 7200, y: gY - 40, w: 75, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 2, title: 'STAGE 3: CYBER WAVE (3★)', bpm: 126, speed: 370,
+        length: 9200, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'orb', x: 1400, y: gY - 140, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 1400, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'block', x: 2000, y: gY - 120, w: 450, h: 20 });
+          objs.push({ type: 'spike', x: 2225, y: gY - 160, w: 40, h: 40 });
+          objs.push({ type: 'portal_ship', x: 2900, y: gY - 180, w: 50, h: 120 });
+          for (let x = 3400; x < 6000; x += 400) {
+            objs.push({ type: 'block', x, y: (x % 800 === 0) ? 80 : gY - 130, w: 50, h: 130 });
+          }
+          objs.push({ type: 'portal_cube', x: 6400, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'pad', x: 6900, y: gY - 15, w: 50, h: 15 });
+          objs.push({ type: 'orb', x: 7600, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 7600, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 3, title: 'STAGE 4: GRAVITY SHIFT (4★)', bpm: 130, speed: 390,
+        length: 9800, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 75, h: 40 });
+          objs.push({ type: 'portal_grav_yellow', x: 1400, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 1900, y: 80, w: 75, h: 40, gravityFlipped: true });
+          objs.push({ type: 'spike', x: 2500, y: 80, w: 100, h: 40, gravityFlipped: true });
+          objs.push({ type: 'portal_grav_blue', x: 3000, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'portal_ship', x: 3600, y: gY - 180, w: 50, h: 120 });
+          for (let x = 4100; x < 6700; x += 380) {
+            objs.push({ type: 'block', x, y: 80, w: 50, h: 120 });
+            objs.push({ type: 'block', x: x + 190, y: gY - 120, w: 50, h: 120 });
+          }
+          objs.push({ type: 'portal_cube', x: 7000, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'orb', x: 7600, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 7600, y: gY - 40, w: 75, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 4, title: 'STAGE 5: OVERDRIVE (5★)', bpm: 134, speed: 410,
+        length: 10400, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'pad', x: 1350, y: gY - 15, w: 50, h: 15 });
+          objs.push({ type: 'orb', x: 1700, y: gY - 180, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 2050, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'portal_ship', x: 2600, y: gY - 180, w: 50, h: 120 });
+          for (let x = 3100; x < 5800; x += 350) {
+            objs.push({ type: 'block', x, y: (x % 700 === 0) ? 80 : gY - 140, w: 45, h: 140 });
+          }
+          objs.push({ type: 'portal_cube', x: 6100, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'portal_grav_yellow', x: 6600, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 7100, y: 80, w: 100, h: 40, gravityFlipped: true });
+          objs.push({ type: 'portal_grav_blue', x: 7700, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 8200, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 5, title: 'STAGE 6: PLASMA CORE (6★)', bpm: 138, speed: 430,
+        length: 11000, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'portal_ship', x: 1400, y: gY - 180, w: 50, h: 120 });
+          for (let x = 1900; x < 5200; x += 320) {
+            objs.push({ type: 'block', x, y: 80, w: 45, h: 140 });
+            objs.push({ type: 'block', x: x + 160, y: gY - 140, w: 45, h: 140 });
+          }
+          objs.push({ type: 'portal_cube', x: 5500, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'orb', x: 6000, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 6000, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'orb', x: 6600, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 6600, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 6, title: 'STAGE 7: VOID RUNNER (7★)', bpm: 142, speed: 450,
+        length: 11600, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'portal_grav_yellow', x: 1400, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 1900, y: 80, w: 100, h: 40, gravityFlipped: true });
+          objs.push({ type: 'portal_grav_blue', x: 2400, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'portal_ship', x: 2900, y: gY - 180, w: 50, h: 120 });
+          for (let x = 3400; x < 6600; x += 300) {
+            objs.push({ type: 'block', x, y: (x % 600 === 0) ? 80 : gY - 150, w: 45, h: 150 });
+          }
+          objs.push({ type: 'portal_cube', x: 6900, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'pad', x: 7400, y: gY - 15, w: 50, h: 15 });
+          objs.push({ type: 'spike', x: 7900, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 7, title: 'STAGE 8: NIGHTMARE (8★)', bpm: 146, speed: 475,
+        length: 12200, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'orb', x: 1350, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 1350, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'portal_grav_yellow', x: 1850, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'orb', x: 2350, y: 220, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 2350, y: 80, w: 100, h: 40, gravityFlipped: true });
+          objs.push({ type: 'portal_grav_blue', x: 2850, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'portal_ship', x: 3450, y: gY - 180, w: 50, h: 120 });
+          for (let x = 3900; x < 7600; x += 280) {
+            objs.push({ type: 'block', x, y: 80, w: 45, h: 150 });
+            objs.push({ type: 'block', x: x + 140, y: gY - 150, w: 45, h: 150 });
+          }
+          objs.push({ type: 'portal_cube', x: 7900, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 8400, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      },
+      {
+        id: 8, title: 'STAGE 9: DEMON CATACLYSM (🔥)', bpm: 150, speed: 500,
+        length: 13000, groundY: 580,
+        buildMap() {
+          const objs = []; const gY = 580;
+          objs.push({ type: 'spike', x: 900, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'orb', x: 1350, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 1350, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'portal_grav_yellow', x: 1800, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 2250, y: 80, w: 100, h: 40, gravityFlipped: true });
+          objs.push({ type: 'portal_grav_blue', x: 2700, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'portal_ship', x: 3150, y: gY - 180, w: 50, h: 120 });
+          for (let x = 3600; x < 8200; x += 260) {
+            objs.push({ type: 'block', x, y: (x % 520 === 0) ? 80 : gY - 160, w: 45, h: 160 });
+          }
+          objs.push({ type: 'portal_cube', x: 8500, y: gY - 180, w: 50, h: 120 });
+          objs.push({ type: 'spike', x: 9000, y: gY - 40, w: 100, h: 40 });
+          objs.push({ type: 'orb', x: 9500, y: gY - 150, w: 40, h: 40 });
+          objs.push({ type: 'spike', x: 9500, y: gY - 40, w: 100, h: 40 });
+          return objs;
+        }
+      }
+    ];
+
+    // ============================================================================
+    // GAME ENGINE STATE
+    // ============================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const gameState = {
+      isStarted: false,
+      isPaused: false,
+      isDead: false,
+      isWon: false,
+      isPracticeMode: false,
+      attemptCount: 1,
+      currentStage: STAGES[0],
+      mapObjects: [],
+      checkpoints: [],
+      
+      // Player Specs (Forgiving Jump Dynamics)
+      player: {
+        x: 100, y: 540, w: 40, h: 40,
+        vx: 330, vy: 0,
+        rotation: 0,
+        mode: 'cube', // 'cube' | 'ship'
+        gravityDir: 1, // 1 (normal) | -1 (flipped)
+        isGrounded: false,
+        trail: []
+      },
+
+      // Visual Effects
+      particles: [],
+      ringEffects: [],
+      cameraX: 0
+    };
+
+    const input = {
+      isHoldingJump: false,
+      jumpJustPressed: false
+    };
+
+    // ============================================================================
+    // INITIALIZATION & MENU BINDINGS
+    // ============================================================================
+    function init() {
+      setupInputListeners();
+      loadBestScores();
+      selectStage(0);
+      selectFace(0);
+      selectPalette(0);
+    }
+
+    function loadBestScores() {
+      STAGES.forEach((st, idx) => {
+        const saved = localStorage.getItem(`neon_gd_best_${idx}`) || 0;
+        const el = document.getElementById(`bestProgress_${idx}`);
+        if (el) el.textContent = `${saved}%`;
+      });
+    }
+
+    function saveBestScore(stageIdx, progress) {
+      const saved = parseInt(localStorage.getItem(`neon_gd_best_${stageIdx}`) || '0', 10);
+      if (progress > saved) {
+        localStorage.setItem(`neon_gd_best_${stageIdx}`, progress);
+        const el = document.getElementById(`bestProgress_${stageIdx}`);
+        if (el) el.textContent = `${progress}%`;
+      }
+    }
+
+    function selectStage(idx) {
+      selectedStageIdx = idx;
+      STAGES.forEach((_, i) => {
+        const card = document.getElementById(`stageCard_${i}`);
+        if (card) {
+          if (i === idx) {
+            card.classList.add('border-cyan-400', 'bg-cyan-950/40');
+            card.classList.remove('border-slate-800');
+          } else {
+            card.classList.remove('border-cyan-400', 'bg-cyan-950/40');
+            card.classList.add('border-slate-800');
+          }
+        }
+      });
+    }
+
+    function selectFace(idx) {
+      selectedFaceIdx = idx;
+      FACES.forEach((_, i) => {
+        const btn = document.getElementById(`faceBtn_${i}`);
+        if (btn) {
+          if (i === idx) btn.className = 'w-10 h-10 rounded-xl bg-slate-900 border-2 border-cyan-400 text-lg flex items-center justify-center';
+          else btn.className = 'w-10 h-10 rounded-xl bg-slate-900 border-2 border-slate-700 text-lg flex items-center justify-center';
+        }
+      });
+    }
+
+    function selectPalette(idx) {
+      selectedPalIdx = idx;
+      PALETTES.forEach((_, i) => {
+        const btn = document.getElementById(`palBtn_${i}`);
+        if (btn) {
+          if (i === idx) btn.classList.add('ring-2', 'ring-cyan-400', 'border-white');
+          else btn.classList.remove('ring-2', 'ring-cyan-400', 'border-white');
+        }
+      });
+    }
+
+    function startSelectedGame() {
+      AudioEngine.init();
+      document.getElementById('titleMenuModal').classList.add('hidden');
+      document.getElementById('hudOverlay').classList.remove('hidden');
+
+      gameState.currentStage = STAGES[selectedStageIdx];
+      gameState.mapObjects = gameState.currentStage.buildMap();
+      gameState.attemptCount = 1;
+      gameState.isPracticeMode = false;
+      gameState.checkpoints = [];
+
+      document.getElementById('hudStageTitle').textContent = gameState.currentStage.title;
+      document.getElementById('hudPracticeBadge').classList.add('hidden');
+      document.getElementById('practiceControlsHUD').classList.add('hidden');
+
+      resetPlayerToStart();
+      AudioEngine.startSynthTrack(gameState.currentStage.bpm);
+
+      gameState.isStarted = true;
+      gameState.isPaused = false;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resetPlayerToStart() {
+      const p = gameState.player;
+      p.x = 100; p.y = gameState.currentStage.groundY - 40;
+      p.vx = gameState.currentStage.speed * speedMultiplier;
+      p.vy = 0; p.rotation = 0;
+      p.mode = 'cube'; p.gravityDir = 1;
+      p.isGrounded = true; p.trail = [];
+      
+      gameState.isDead = false;
+      gameState.isWon = false;
+      gameState.particles = [];
+      gameState.ringEffects = [];
+      gameState.cameraX = 0;
+
+      document.getElementById('hudAttemptText').textContent = `ATTEMPT ${gameState.attemptCount}`;
+    }
+
+    // ============================================================================
+    // INPUT LISTENERS & TOUCH CONTROLS
+    // ============================================================================
+    function setupInputListeners() {
+      const handleJumpStart = () => {
+        if (!gameState.isStarted || gameState.isPaused) return;
+        if (!input.isHoldingJump) input.jumpJustPressed = true;
+        input.isHoldingJump = true;
+      };
+      const handleJumpEnd = () => {
+        input.isHoldingJump = false;
+        input.jumpJustPressed = false;
+      };
+
+      window.addEventListener('keydown', (e) => {
+        const k = e.key.toLowerCase();
+        if (e.code === 'Space' || k === 'w' || e.code === 'ArrowUp') {
+          e.preventDefault();
+          handleJumpStart();
+        }
+        if (k === 's') toggleSpeedMultiplier();
+        if (k === 'p') togglePracticeMode();
+        if (k === 'z' && gameState.isPracticeMode) placePracticeCheckpoint();
+        if (k === 'x' && gameState.isPracticeMode) removePracticeCheckpoint();
+        if (k === 'm') toggleAudio();
+        if (k === 'escape') pauseGame();
+      });
+
+      window.addEventListener('keyup', (e) => {
+        const k = e.key.toLowerCase();
+        if (e.code === 'Space' || k === 'w' || e.code === 'ArrowUp') {
+          handleJumpEnd();
+        }
+      });
+
+      canvas.addEventListener('mousedown', (e) => { if (e.button === 0) handleJumpStart(); });
+      canvas.addEventListener('mouseup', handleJumpEnd);
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleJumpStart(); }, { passive: false });
+      canvas.addEventListener('touchend', handleJumpEnd);
+    }
+
+    // ============================================================================
+    // PRACTICE MODE & CHECKPOINTS
+    // ============================================================================
+    function togglePracticeMode() {
+      gameState.isPracticeMode = !gameState.isPracticeMode;
+      const badge = document.getElementById('hudPracticeBadge');
+      const ctrl = document.getElementById('practiceControlsHUD');
+      if (gameState.isPracticeMode) {
+        badge.classList.remove('hidden');
+        ctrl.classList.remove('hidden');
+        placePracticeCheckpoint();
+      } else {
+        badge.classList.add('hidden');
+        ctrl.classList.add('hidden');
+        gameState.checkpoints = [];
+      }
+    }
+
+    function placePracticeCheckpoint() {
+      if (!gameState.isPracticeMode || gameState.isDead) return;
+      const p = gameState.player;
+      gameState.checkpoints.push({
+        x: p.x, y: p.y, vy: p.vy, mode: p.mode, gravityDir: p.gravityDir
+      });
+      AudioEngine.playOrb();
+    }
+
+    function removePracticeCheckpoint() {
+      if (!gameState.isPracticeMode || gameState.checkpoints.length === 0) return;
+      gameState.checkpoints.pop();
+    }
+
+    function respawnAtLastCheckpoint() {
+      if (gameState.checkpoints.length === 0) {
+        resetPlayerToStart();
+        return;
+      }
+      const cp = gameState.checkpoints[gameState.checkpoints.length - 1];
+      const p = gameState.player;
+      p.x = cp.x; p.y = cp.y; p.vy = cp.vy; p.mode = cp.mode; p.gravityDir = cp.gravityDir;
+      p.rotation = 0; p.trail = [];
+      gameState.isDead = false;
+      gameState.particles = [];
+    }
+
+    // ============================================================================
+    // PAUSE & RESUME
+    // ============================================================================
+    function pauseGame() {
+      if (!gameState.isStarted || gameState.isDead) return;
+      gameState.isPaused = true;
+      const modal = document.getElementById('pauseModal');
+      document.getElementById('pauseTitle').textContent = 'GAME PAUSED';
+      document.getElementById('pauseSubtitle').textContent = '잠시 휴식 중입니다. 언제든 다시 도전하세요!';
+      const pct = Math.floor((gameState.player.x / gameState.currentStage.length) * 100);
+      document.getElementById('pauseProgressText').textContent = `${Math.min(100, pct)}%`;
+      modal.classList.remove('hidden');
+    }
+
+    function resumeGame() {
+      gameState.isPaused = false;
+      document.getElementById('pauseModal').classList.add('hidden');
+    }
+
+    function restartCurrentStage() {
+      document.getElementById('pauseModal').classList.add('hidden');
+      gameState.attemptCount++;
+      resetPlayerToStart();
+      gameState.isPaused = false;
+    }
+
+    function exitToMainMenu() {
+      document.getElementById('pauseModal').classList.add('hidden');
+      document.getElementById('hudOverlay').classList.add('hidden');
+      document.getElementById('titleMenuModal').classList.remove('hidden');
+      gameState.isStarted = false;
+      AudioEngine.stopSynthTrack();
+      loadBestScores();
+    }
+
+    // ============================================================================
+    // MAIN GAME PHYSICS & UPDATES (FORGIVING & COMFORTABLE)
+    // ============================================================================
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      if (gameState.isStarted && !gameState.isPaused) {
+        update(dt);
+      }
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      if (gameState.isDead) return;
+
+      const p = gameState.player;
+      const gY = gameState.currentStage.groundY;
+
+      // Apply Speed Multiplier to horizontal velocity
+      p.vx = gameState.currentStage.speed * speedMultiplier;
+      p.x += p.vx * dt;
+
+      // Smooth Camera Tracking
+      gameState.cameraX = p.x - 220;
+
+      // Progress Percentage
+      const progressPct = Math.min(100, Math.floor((p.x / gameState.currentStage.length) * 100));
+      document.getElementById('hudProgressBar').style.width = `${progressPct}%`;
+      document.getElementById('hudProgressText').textContent = `${progressPct}%`;
+      saveBestScore(selectedStageIdx, progressPct);
+
+      // Check Stage Clear Win Condition
+      if (p.x >= gameState.currentStage.length) {
+        gameState.isWon = true;
+        AudioEngine.playWin();
+        pauseGame();
+        document.getElementById('pauseTitle').textContent = '🎉 STAGE CLEAR!';
+        document.getElementById('pauseSubtitle').textContent = '축하합니다! 스테이지를 완벽하게 정복하셨습니다!';
+        return;
+      }
+
+      // Trail Ribbon Tracking
+      p.trail.unshift({ x: p.x + p.w / 2, y: p.y + p.h / 2 });
+      if (p.trail.length > 14) p.trail.pop();
+
+      // Mode Dynamics: CUBE vs SHIP (Forgiving Dynamics)
+      if (p.mode === 'cube') {
+        const gravityAcc = 1850 * p.gravityDir; // Comfortable gravity hang-time
+        p.vy += gravityAcc * dt;
+        p.y += p.vy * dt;
+
+        // Ground & Ceiling Collision
+        if (p.gravityDir === 1 && p.y >= gY - p.h) {
+          p.y = gY - p.h; p.vy = 0; p.isGrounded = true;
+        } else if (p.gravityDir === -1 && p.y <= 80) {
+          p.y = 80; p.vy = 0; p.isGrounded = true;
+        } else {
+          p.isGrounded = false;
+        }
+
+        // Jump Handling (Generous Jump Impulse: -680)
+        if (p.isGrounded && input.isHoldingJump) {
+          p.vy = -680 * p.gravityDir;
+          p.isGrounded = false;
+          AudioEngine.playJump();
+        }
+
+        // Cube Rotation in Air
+        if (!p.isGrounded) {
+          p.rotation += 380 * p.gravityDir * dt;
+        } else {
+          p.rotation = Math.round(p.rotation / 90) * 90;
+        }
+
+      } else if (p.mode === 'ship') {
+        // Ship Mode: Gentler acceleration & capped velocity for smooth control
+        const shipThrust = input.isHoldingJump ? -480 * p.gravityDir : 380 * p.gravityDir;
+        p.vy += shipThrust * dt;
+        p.vy = Math.max(-360, Math.min(360, p.vy));
+        p.y += p.vy * dt;
+
+        // Boundaries
+        if (p.y <= 80) { p.y = 80; p.vy = 0; }
+        if (p.y >= gY - p.h) { p.y = gY - p.h; p.vy = 0; }
+
+        p.rotation = (p.vy / 360) * 22 * p.gravityDir;
+      }
+
+      // Map Object Collisions & Interactions
+      checkObjectCollisions(dt);
+
+      // Reset Single Jump Press
+      input.jumpJustPressed = false;
+
+      // Update Particle Systems
+      updateParticles(dt);
+    }
+
+    // ============================================================================
+    // FORGIVING COLLISION DETECTION ENGINE
+    // ============================================================================
+    function checkObjectCollisions(dt) {
+      const p = gameState.player;
+      const pRect = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
+
+      gameState.mapObjects.forEach(obj => {
+        if (Math.abs(obj.x - p.x) > 400) return;
+
+        // 1. Spikes: Inner Core Hitbox (~42% width, ~45% height) centered near base
+        if (obj.type === 'spike') {
+          const spikeCoreWidth = obj.w * 0.42;
+          const spikeCoreHeight = obj.h * 0.45;
+          const spikeCoreX = obj.x + (obj.w - spikeCoreWidth) / 2;
+          const spikeCoreY = obj.gravityFlipped ? obj.y + 4 : obj.y + obj.h - spikeCoreHeight;
+          const spikeRect = { x: spikeCoreX, y: spikeCoreY, w: spikeCoreWidth, h: spikeCoreHeight };
+
+          if (rectOverlap(pRect, spikeRect)) {
+            triggerDeath();
+          }
+        }
+
+        // 2. Solid Blocks: 14px Top-Landing Edge Forgiveness
+        else if (obj.type === 'block') {
+          const oRect = { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+
+          if (rectOverlap(pRect, oRect)) {
+            const prevY = p.y - p.vy * dt;
+
+            if (p.gravityDir === 1) {
+              // Descending onto block top OR clipped within 14px top surface
+              if ((prevY + p.h <= obj.y + 14) || (p.y + p.h - obj.y <= 14 && p.vy >= 0)) {
+                p.y = obj.y - p.h; p.vy = 0; p.isGrounded = true;
+              } else {
+                triggerDeath();
+              }
+            } else if (p.gravityDir === -1) {
+              // Ascending onto ceiling block bottom OR clipped within 14px bottom surface
+              if ((prevY >= obj.y + obj.h - 14) || (obj.y + obj.h - p.y <= 14 && p.vy <= 0)) {
+                p.y = obj.y + obj.h; p.vy = 0; p.isGrounded = true;
+              } else {
+                triggerDeath();
+              }
+            }
+          }
+        }
+
+        // 3. Jump Pad (Automatic high boost)
+        else if (obj.type === 'pad') {
+          const padRect = { x: obj.x - 5, y: obj.y - 5, w: obj.w + 10, h: obj.h + 10 };
+          if (rectOverlap(pRect, padRect)) {
+            p.vy = -880 * p.gravityDir;
+            p.isGrounded = false;
+            AudioEngine.playPad();
+            spawnRingEffect(obj.x + obj.w / 2, obj.y, '#f59e0b');
+          }
+        }
+
+        // 4. Jump Orb (Expanded 65px mid-air tap radius)
+        else if (obj.type === 'orb') {
+          const orbCenterX = obj.x + obj.w / 2;
+          const orbCenterY = obj.y + obj.h / 2;
+          const pCenterX = p.x + p.w / 2;
+          const pCenterY = p.y + p.h / 2;
+          const dist = Math.hypot(pCenterX - orbCenterX, pCenterY - orbCenterY);
+
+          if (dist <= 65 && input.jumpJustPressed) {
+            p.vy = -720 * p.gravityDir;
+            input.jumpJustPressed = false;
+            AudioEngine.playOrb();
+            spawnRingEffect(orbCenterX, orbCenterY, '#f59e0b');
+          }
+        }
+
+        // 5. Portals (Mode & Gravity Shifts)
+        else if (obj.type === 'portal_ship' && rectOverlap(pRect, { x: obj.x, y: obj.y, w: obj.w, h: obj.h })) {
+          if (p.mode !== 'ship') { p.mode = 'ship'; AudioEngine.playPortal(); }
+        }
+        else if (obj.type === 'portal_cube' && rectOverlap(pRect, { x: obj.x, y: obj.y, w: obj.w, h: obj.h })) {
+          if (p.mode !== 'cube') { p.mode = 'cube'; AudioEngine.playPortal(); }
+        }
+        else if (obj.type === 'portal_grav_yellow' && rectOverlap(pRect, { x: obj.x, y: obj.y, w: obj.w, h: obj.h })) {
+          if (p.gravityDir !== -1) { p.gravityDir = -1; AudioEngine.playPortal(); }
+        }
+        else if (obj.type === 'portal_grav_blue' && rectOverlap(pRect, { x: obj.x, y: obj.y, w: obj.w, h: obj.h })) {
+          if (p.gravityDir !== 1) { p.gravityDir = 1; AudioEngine.playPortal(); }
+        }
+      });
+    }
+
+    function rectOverlap(r1, r2) {
+      return r1.x < r2.x + r2.w && r1.x + r1.w > r2.x &&
+             r1.y < r2.y + r2.h && r1.y + r1.h > r2.y;
+    }
+
+    function triggerDeath() {
+      if (gameState.isDead) return;
+      gameState.isDead = true;
+      AudioEngine.playCrash();
+      spawnDeathShards(gameState.player.x + 20, gameState.player.y + 20);
+
+      setTimeout(() => {
+        if (gameState.isPracticeMode && gameState.checkpoints.length > 0) {
+          respawnAtLastCheckpoint();
+        } else {
+          gameState.attemptCount++;
+          resetPlayerToStart();
+        }
+      }, 450);
+    }
+
+    // ============================================================================
+    // PARTICLE & RING EFFECTS
+    // ============================================================================
+    function spawnDeathShards(x, y) {
+      const pal = PALETTES[selectedPalIdx];
+      for (let i = 0; i < 40; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 120 + Math.random() * 380;
+        gameState.particles.push({
+          x, y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          color: Math.random() < 0.5 ? pal.primary : pal.secondary,
+          size: 4 + Math.random() * 6,
+          life: 0.45
+        });
+      }
+    }
+
+    function spawnRingEffect(x, y, color) {
+      gameState.ringEffects.push({ x, y, radius: 10, maxRadius: 50, color, life: 0.3 });
+    }
+
+    function updateParticles(dt) {
+      for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const p = gameState.particles[i];
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) gameState.particles.splice(i, 1);
+      }
+
+      for (let i = gameState.ringEffects.length - 1; i >= 0; i--) {
+        const r = gameState.ringEffects[i];
+        r.radius += 140 * dt;
+        r.life -= dt;
+        if (r.life <= 0) gameState.ringEffects.splice(i, 1);
+      }
+    }
+
+    // ============================================================================
+    // CANVAS RENDER ENGINE
+    // ============================================================================
+    function render() {
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Camera Offset
+      ctx.translate(-gameState.cameraX, 0);
+
+      // 1. Parallax City Skyline & Pulsing Background Grid
+      drawBackgroundGrid();
+
+      // 2. Ground Floor & Scrolling Energy Lines
+      drawGroundFloor();
+
+      // 3. Level Objects (Platforms, Spikes, Orbs, Portals)
+      drawLevelObjects();
+
+      // 4. Checkpoint Markers (Practice Mode)
+      if (gameState.isPracticeMode) {
+        gameState.checkpoints.forEach(cp => {
+          ctx.save();
+          ctx.fillStyle = '#22c55e';
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.moveTo(cp.x, cp.y - 15);
+          ctx.lineTo(cp.x + 12, cp.y);
+          ctx.lineTo(cp.x, cp.y + 15);
+          ctx.lineTo(cp.x - 12, cp.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      // 5. Motion Trail Ribbons
+      drawPlayerTrail();
+
+      // 6. Player Icon / Ship Character
+      if (!gameState.isDead) {
+        drawPlayer();
+      }
+
+      // 7. Shockwave Rings & Particles
+      gameState.ringEffects.forEach(r => {
+        ctx.save();
+        ctx.strokeStyle = r.color;
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = Math.max(0, r.life / 0.3);
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      gameState.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    function drawBackgroundGrid() {
+      const camX = gameState.cameraX;
+      ctx.fillStyle = '#050811';
+      ctx.fillRect(camX, 0, canvas.width, canvas.height);
+
+      // Distant Parallax Neon Pillars
+      ctx.fillStyle = '#0a0f24';
+      for (let i = 0; i < 20; i++) {
+        const px = Math.floor(camX * 0.7) + i * 160;
+        ctx.fillRect(px, 120 + (i % 3) * 40, 70, 460);
+      }
+
+      // Pulsing Neon Grid Lines
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
+      ctx.lineWidth = 1.5;
+      const step = 60;
+      const startX = Math.floor(camX / step) * step;
+      for (let x = startX; x < camX + canvas.width + step; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += step) {
+        ctx.beginPath(); ctx.moveTo(camX, y); ctx.lineTo(camX + canvas.width, y); ctx.stroke();
+      }
+    }
+
+    function drawGroundFloor() {
+      const camX = gameState.cameraX;
+      const gY = gameState.currentStage.groundY;
+
+      // Bottom Main Ground
+      ctx.fillStyle = '#090d1a';
+      ctx.fillRect(camX, gY, canvas.width, canvas.height - gY);
+
+      // Top Ceiling Boundary
+      ctx.fillRect(camX, 0, canvas.width, 80);
+
+      // Glowing Neon Energy Floor Border Lines
+      const pal = PALETTES[selectedPalIdx];
+      ctx.strokeStyle = pal.primary;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = pal.primary;
+      ctx.shadowBlur = 15;
+
+      ctx.beginPath();
+      ctx.moveTo(camX, gY); ctx.lineTo(camX + canvas.width, gY);
+      ctx.moveTo(camX, 80); ctx.lineTo(camX + canvas.width, 80);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawLevelObjects() {
+      const pal = PALETTES[selectedPalIdx];
+
+      gameState.mapObjects.forEach(obj => {
+        if (obj.x + obj.w < gameState.cameraX || obj.x > gameState.cameraX + canvas.width) return;
+
+        ctx.save();
+        // 1. Spikes
+        if (obj.type === 'spike') {
+          ctx.fillStyle = pal.secondary;
+          ctx.shadowColor = pal.secondary;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          if (obj.gravityFlipped) {
+            ctx.moveTo(obj.x, obj.y);
+            ctx.lineTo(obj.x + obj.w / 2, obj.y + obj.h);
+            ctx.lineTo(obj.x + obj.w, obj.y);
+          } else {
+            ctx.moveTo(obj.x, obj.y + obj.h);
+            ctx.lineTo(obj.x + obj.w / 2, obj.y);
+            ctx.lineTo(obj.x + obj.w, obj.y + obj.h);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+        // 2. Solid Blocks
+        else if (obj.type === 'block') {
+          ctx.fillStyle = '#0f172a';
+          ctx.strokeStyle = pal.primary;
+          ctx.lineWidth = 2.5;
+          ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+          ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+        }
+        // 3. Jump Pad
+        else if (obj.type === 'pad') {
+          ctx.fillStyle = '#f59e0b';
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 12;
+          ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+        }
+        // 4. Jump Orb
+        else if (obj.type === 'orb') {
+          ctx.fillStyle = '#f59e0b';
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+          ctx.arc(obj.x + obj.w / 2, obj.y + obj.h / 2, obj.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // 5. Portals
+        else if (obj.type.startsWith('portal')) {
+          let pColor = '#ec4899';
+          if (obj.type === 'portal_cube') pColor = '#22c55e';
+          if (obj.type === 'portal_grav_yellow') pColor = '#eab308';
+          if (obj.type === 'portal_grav_blue') pColor = '#3b82f6';
+
+          ctx.strokeStyle = pColor;
+          ctx.lineWidth = 4;
+          ctx.shadowColor = pColor;
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.ellipse(obj.x + obj.w / 2, obj.y + obj.h / 2, obj.w / 2, obj.h / 2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+    }
+
+    function drawPlayerTrail() {
+      const p = gameState.player;
+      if (p.trail.length < 2) return;
+
+      const pal = PALETTES[selectedPalIdx];
+      ctx.save();
+      ctx.strokeStyle = pal.trail;
+      ctx.shadowColor = pal.trail;
+      ctx.shadowBlur = 10;
+
+      for (let i = 0; i < p.trail.length - 1; i++) {
+        const pt1 = p.trail[i];
+        const pt2 = p.trail[i + 1];
+        const alpha = (1 - i / p.trail.length) * 0.6;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = (1 - i / p.trail.length) * 14;
+        ctx.beginPath();
+        ctx.moveTo(pt1.x, pt1.y);
+        ctx.lineTo(pt2.x, pt2.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPlayer() {
+      const p = gameState.player;
+      const pal = PALETTES[selectedPalIdx];
+
+      ctx.save();
+      ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+
+      ctx.fillStyle = pal.primary;
+      ctx.strokeStyle = '#050811';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = pal.primary;
+      ctx.shadowBlur = 14;
+
+      if (p.mode === 'cube') {
+        // Outer Cube Body
+        ctx.beginPath();
+        ctx.roundRect(-p.w / 2, -p.h / 2, p.w, p.h, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Inner Face Graphic
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#050811';
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(FACES[selectedFaceIdx], 0, 1);
+
+      } else if (p.mode === 'ship') {
+        // Rocket / Ship Body
+        ctx.beginPath();
+        ctx.moveTo(p.w / 2 + 6, 0);
+        ctx.lineTo(-p.w / 2, -p.h / 2);
+        ctx.lineTo(-p.w / 4, 0);
+        ctx.lineTo(-p.w / 2, p.h / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Rocket Thruster Flame
+        if (input.isHoldingJump) {
+          ctx.fillStyle = pal.secondary;
+          ctx.beginPath();
+          ctx.moveTo(-p.w / 2, -6);
+          ctx.lineTo(-p.w / 2 - 18, 0);
+          ctx.lineTo(-p.w / 2, 6);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // Launch Application
+    window.onload = init;
+  </script>
+</body>
+</html>

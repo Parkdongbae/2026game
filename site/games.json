@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-24T11:32:56.572Z",
+  "updatedAt": "2026-11-25T02:18:28.987Z",
   "games": [
     {
       "id": "2105",
@@ -145,6 +145,32 @@
       "updatedAt": "2026-11-24T01:28:53.407Z"
     },
     {
+      "id": "3210",
+      "studentNo": "3210",
+      "name": "이정민",
+      "title": "엑스칼리버! 고대 성소의 성검 뽑기",
+      "file": "3210.html",
+      "driveId": "1Lnt0WNL5aY23pgPzUof5vc8TeiCPfi2H",
+      "sourceName": "code_artifact (1) - 3210이정민.html",
+      "hash": "61926e86879e1bb1",
+      "size": 215029,
+      "addedAt": "2026-11-25T02:18:28.987Z",
+      "updatedAt": "2026-11-25T02:18:28.987Z"
+    },
+    {
+      "id": "3211",
+      "studentNo": "3211",
+      "name": "이지호",
+      "title": "버튼 클리커 타이쿤",
+      "file": "3211.html",
+      "driveId": "18Sc9IQIOv0zAg5GNB1C4CaZj4I30NUGN",
+      "sourceName": "code_artifact (3) - 3211이지호.html",
+      "hash": "1d19f1d033262874",
+      "size": 34744,
+      "addedAt": "2026-11-25T02:18:28.987Z",
+      "updatedAt": "2026-11-25T02:18:28.987Z"
+    },
+    {
       "id": "3303",
       "studentNo": "3303",
       "name": "김성민",
@@ -225,6 +251,19 @@
       "size": 96236,
       "addedAt": "2026-11-24T05:14:19.512Z",
       "updatedAt": "2026-11-24T05:14:19.512Z"
+    },
+    {
+      "id": "3309-2",
+      "studentNo": "3309",
+      "name": "이이든",
+      "title": "NEON GEOMETRY DASH (네온 지오메트리 대시)",
+      "file": "3309-2.html",
+      "driveId": "15I8FMrMnG6KlCxQVIhuIid130IV0cM-U",
+      "sourceName": "neon_geometry_dash (3) - 3309이이든.html",
+      "hash": "93c3170629a743db",
+      "size": 63155,
+      "addedAt": "2026-11-25T02:18:28.987Z",
+      "updatedAt": "2026-11-25T02:18:28.987Z"
     },
     {
       "id": "3311",
@@ -319,11 +358,6 @@
     }
   ],
   "rejected": [
-    {
-      "who": "neon_geometry_dash (3) - 이이든.html",
-      "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
-    },
     {
       "who": "3114 이주형",
       "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
