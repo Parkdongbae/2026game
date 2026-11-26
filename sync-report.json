@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T02:01:00.691Z",
+  "updatedAt": "2026-11-26T02:05:38.033Z",
   "skipped": [
     {
       "sourceName": "3d - 3207심윤호.html",
@@ -7,27 +7,6 @@
       "reason": "새 버전으로 교체됨 (옛 파일)",
       "studentNo": "3207",
       "name": "심윤호"
-    },
-    {
-      "sourceName": "거북목 오예준의 무술대회 격투 게임 - Google Gemini - 3114이주형.html",
-      "driveId": "1F3DNgS9TtQ-QaW8sHpfgKnWT5qdWA1va",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3114",
-      "name": "이주형"
-    },
-    {
-      "sourceName": "주술회전 철권 스타일 대전 게임 제작 - Google Gemini - 3109오예준.html",
-      "driveId": "1wZTLcVTa_euSvOI2m_wn4h4OyoawnJBo",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3109",
-      "name": "오예준"
-    },
-    {
-      "sourceName": "철권 스타일 격투 게임 제작 - Google Gemini - 3103김재훈.html",
-      "driveId": "140hd6hYYp1eH16gmnvfI2gQiHKBYmP-K",
-      "reason": "AI 대화 화면 저장본 (게임 파일 아님)",
-      "studentNo": "3103",
-      "name": "김재훈"
     },
     {
       "sourceName": "seashell-game (3) - 3303김성민.html",
