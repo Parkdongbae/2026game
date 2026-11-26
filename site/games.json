@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T02:05:38.033Z",
+  "updatedAt": "2026-11-26T05:19:31.717Z",
   "games": [
     {
       "id": "2105",
@@ -361,14 +361,15 @@
       "name": "김성민",
       "title": "조개마을 — 파도와 장사",
       "file": "3303.html",
-      "driveId": "1zpcg7Co-hCqeJPG2UF9opO65wB8rHdwr",
-      "sourceName": "seashell-game (6) - 3303김성민.html",
-      "hash": "23d1ee0a15e1f1e8",
-      "size": 69011,
+      "driveId": "1ua1IGkiUGsehfoPFB24EALmQK9sT-gZ7",
+      "sourceName": "seashell-game (7) - 3303김성민.html",
+      "hash": "b23f15965702a67a",
+      "size": 69060,
       "addedAt": "2026-11-24T04:28:20.180Z",
-      "updatedAt": "2026-11-25T03:12:05.307Z",
+      "updatedAt": "2026-11-26T05:19:31.717Z",
       "replaced": [
-        "1mduf7ngtizPRNB9hyPzldvbaWSARihto"
+        "1mduf7ngtizPRNB9hyPzldvbaWSARihto",
+        "1zpcg7Co-hCqeJPG2UF9opO65wB8rHdwr"
       ]
     },
     {
@@ -541,5 +542,11 @@
       "updatedAt": "2026-11-24T05:13:29.653Z"
     }
   ],
-  "rejected": []
+  "rejected": [
+    {
+      "who": "fc_27_web_edition (1) - 학생서민영.html",
+      "reason": "파일명에서 학번·이름을 찾지 못함",
+      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
+    }
+  ]
 }
