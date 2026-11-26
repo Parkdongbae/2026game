@@ -1,0 +1,2959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>주술회전: 영역전개 대전 (60fps 초경량 완결판)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #06070d;
+      color: #f8fafc;
+      font-family: 'Noto Sans KR', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+    .font-impact {
+      font-family: 'Black Han Sans', sans-serif;
+      letter-spacing: 0.04em;
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #6366f1;
+      border-radius: 4px;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { border-color: #fbbf24; background-color: rgba(245, 158, 11, 0.22); }
+      50% { border-color: #f472b6; background-color: rgba(236, 72, 153, 0.34); }
+    }
+    .ult-ready {
+      animation: pulseGlow 0.9s infinite;
+    }
+    @keyframes skillFlash {
+      0% { transform: scale(1.08); filter: brightness(1.6); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    .skill-triggered {
+      animation: skillFlash 0.3s ease-out;
+    }
+    .char-card {
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .char-card:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+    .glass-panel {
+      background: rgba(13, 16, 28, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white">
+
+  <!-- ==================== 1. CHARACTER & MODE SELECT SCREEN ==================== -->
+  <div id="select-screen" class="fixed inset-0 z-30 flex flex-col justify-between p-3 sm:p-5 bg-gradient-to-br from-[#060710] via-[#120b24] to-[#070811] overflow-y-auto">
+    
+    <!-- Top Header -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-rose-600 flex items-center justify-center font-impact text-2xl">
+          呪
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-impact text-xl sm:text-3xl bg-gradient-to-r from-white via-purple-200 to-rose-300 bg-clip-text text-transparent">
+              주술회전 : 영역전개 대전
+            </h1>
+            <span class="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-black">60FPS 초경량</span>
+          </div>
+          <p class="text-[11px] text-slate-400">제로 렉 2.5D 다관절 리깅 · 원작 술식 & 실제 주령 소환수 · 1인 AI / 2인 대전</p>
+        </div>
+      </div>
+
+      <!-- Mode, AI Difficulty, Stage & Audio Controls -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex bg-slate-900 p-1 rounded-xl border border-white/15 text-xs font-bold">
+          <button id="mode-cpu" onclick="setGameMode('CPU')" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white transition">
+            🤖 1인 모드 (VS AI)
+          </button>
+          <button id="mode-pvp" onclick="setGameMode('PVP')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            👥 2인 대전 (1P vs 2P)
+          </button>
+        </div>
+
+        <div id="ai-diff-wrapper" class="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-xl border border-emerald-500/30 text-xs">
+          <span class="text-emerald-300 font-bold">AI 난이도:</span>
+          <select id="ai-difficulty" onchange="setAiDifficulty(this.value)" class="bg-transparent font-black text-amber-300 focus:outline-none cursor-pointer">
+            <option value="EASY" class="bg-slate-900 text-emerald-300">입문 (연습용 · 매우 쉬움)</option>
+            <option value="NORMAL" selected class="bg-slate-900 text-amber-300">보통 (쾌적한 대전)</option>
+            <option value="GRADE1" class="bg-slate-900 text-rose-400">1급 주술사 (도전)</option>
+          </select>
+        </div>
+
+        <select id="stage-select" onchange="setStage(this.value)" class="bg-slate-900 border border-white/15 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 focus:outline-none">
+          <option value="shibuya">스테이지: 시부야 역 지하 (야간)</option>
+          <option value="school">스테이지: 도쿄 주술고전 (도리이)</option>
+          <option value="shrine">스테이지: 복마어주자 (생득영역)</option>
+        </select>
+
+        <button id="btn-sound-select" onclick="toggleSound()" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-white/15 hover:bg-slate-800 text-xs font-bold">
+          🔊 효과음 ON
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Selection Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 my-auto py-2 items-stretch">
+      
+      <!-- Player 1 Preview Panel -->
+      <div class="lg:col-span-3 glass-panel rounded-2xl p-3 flex flex-col justify-between border-l-4 border-l-cyan-400">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-black text-xs">PLAYER 1 (나)</span>
+            <span class="text-[11px] text-slate-400">A/D 이동 · Space 점프</span>
+          </div>
+          <div class="flex items-center gap-3 my-2">
+            <canvas id="p1-portrait" width="88" height="88" class="w-20 h-20 rounded-xl bg-slate-900 border border-cyan-400/40 shrink-0"></canvas>
+            <div>
+              <div id="p1-grade" class="text-[11px] font-bold text-cyan-400">특급 주술사</div>
+              <h2 id="p1-name" class="font-impact text-2xl text-white">고죠 사토루</h2>
+              <p id="p1-style" class="text-xs text-slate-300">무하한 주술 · 육안</p>
+            </div>
+          </div>
+        </div>
+        <div id="p1-skills" class="space-y-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-white/5"></div>
+      </div>
+
+      <!-- Center 8-Character Roster -->
+      <div class="lg:col-span-6 flex flex-col justify-center">
+        <div class="text-center mb-2">
+          <span id="roster-guide-text" class="text-xs font-bold text-purple-200 bg-purple-950/90 px-3.5 py-1 rounded-full border border-purple-500/40">
+            🤖 1인 AI 모드: [내 캐릭터]와 [상대 AI 캐릭터]를 각각 선택하세요!
+          </span>
+        </div>
+
+        <div id="roster-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+
+        <!-- Start Battle Button -->
+        <div class="mt-3.5 flex flex-col items-center gap-2">
+          <button onclick="startMatch()" class="w-full sm:w-4/5 py-3.5 px-6 rounded-2xl font-impact text-xl sm:text-2xl tracking-wider bg-gradient-to-r from-cyan-500 via-indigo-600 to-rose-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-rose-500 text-white shadow-lg transform hover:scale-[1.01] active:scale-[0.99] transition cursor-pointer">
+            ⚔️ 영역전개 대전 시작 (FIGHT!)
+          </button>
+          <div class="flex flex-wrap justify-center gap-4 text-[11px] text-slate-400">
+            <span><strong class="text-cyan-300">1P 조작:</strong> A(뒤/가드) D(앞) Space(점프) | 기술: Q, W, E | 궁극기: R</span>
+            <span id="p2-control-hint"><strong class="text-emerald-300">AI 상대:</strong> 렉 없이 부드럽게 콤보를 즐기며 승리할 수 있도록 여유롭게 조정되었습니다</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 2 / AI Preview Panel -->
+      <div class="lg:col-span-3 glass-panel rounded-2xl p-3 flex flex-col justify-between border-r-4 border-r-rose-500">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <span id="p2-badge" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-black text-xs">CPU AI (보통)</span>
+            <span id="p2-sub-hint" class="text-[11px] text-slate-400">1인 AI 대전</span>
+          </div>
+          <div class="flex items-center gap-3 my-2">
+            <canvas id="p2-portrait" width="88" height="88" class="w-20 h-20 rounded-xl bg-slate-900 border border-rose-500/40 shrink-0"></canvas>
+            <div>
+              <div id="p2-grade" class="text-[11px] font-bold text-rose-400">특급 주저사</div>
+              <h2 id="p2-name" class="font-impact text-2xl text-white">게토 스구르</h2>
+              <p id="p2-style" class="text-xs text-slate-300">주령조술 · 극번 소용돌이</p>
+            </div>
+          </div>
+        </div>
+        <div id="p2-skills" class="space-y-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-white/5"></div>
+      </div>
+
+    </div>
+
+    <div class="text-center text-[11px] text-slate-500 pt-1 border-t border-white/5">
+      💡 팁: 상대 공격 시 반대 방향키(1P: <kbd class="px-1 bg-slate-800 rounded text-slate-300">A</kbd> / 2P: <kbd class="px-1 bg-slate-800 rounded text-slate-300">&gt;</kbd>)를 누르면 <span class="text-cyan-300 font-bold">주력 가드</span>가 발동됩니다!
+    </div>
+  </div>
+
+  <!-- ==================== 2. BATTLE ARENA SCREEN ==================== -->
+  <div id="battle-screen" class="hidden relative w-full h-full flex flex-col bg-black">
+    
+    <!-- Top Tekken-Style HUD -->
+    <div class="absolute top-0 left-0 right-0 z-10 p-2 sm:p-3 pointer-events-none">
+      <div class="max-w-7xl mx-auto flex items-start justify-between gap-2 sm:gap-4">
+        
+        <!-- P1 HUD -->
+        <div class="flex-1 flex flex-col">
+          <div class="flex items-center gap-2 sm:gap-3 mb-1">
+            <canvas id="hud-p1-icon" width="56" height="56" class="w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-slate-900 border-2 border-cyan-400 shrink-0"></canvas>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between">
+                <span id="hud-p1-name" class="font-impact text-base sm:text-xl text-white truncate">고죠 사토루</span>
+                <div id="hud-p1-rounds" class="flex gap-1.5">
+                  <span class="w-3 h-3 rounded-full border border-cyan-300 bg-slate-800"></span>
+                  <span class="w-3 h-3 rounded-full border border-cyan-300 bg-slate-800"></span>
+                </div>
+              </div>
+              <div class="relative w-full h-5 sm:h-6 bg-slate-900/90 rounded-lg border border-white/25 overflow-hidden p-0.5">
+                <div id="hud-p1-hp-lag" class="absolute top-0.5 bottom-0.5 left-0.5 bg-amber-500/80 rounded transition-all duration-300" style="width: 100%;"></div>
+                <div id="hud-p1-hp" class="relative h-full bg-gradient-to-r from-cyan-500 via-sky-400 to-emerald-400 rounded" style="width: 100%;"></div>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <div class="flex-1 h-2.5 bg-slate-900/90 rounded-full border border-white/15 overflow-hidden p-[1px]">
+                  <div id="hud-p1-ce" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full" style="width: 0%;"></div>
+                </div>
+                <span id="hud-p1-ce-text" class="text-[10px] sm:text-xs font-black text-purple-300 w-20 text-right">주력 0%</span>
+              </div>
+            </div>
+          </div>
+          <div id="hud-p1-combo" class="hidden mt-0.5 pl-2">
+            <span class="font-impact text-2xl sm:text-4xl text-cyan-300">0 HITS!</span>
+          </div>
+        </div>
+
+        <!-- Center Timer, FPS Meter & Controls -->
+        <div class="flex flex-col items-center shrink-0">
+          <div class="px-3 sm:px-5 py-1 rounded-2xl bg-slate-950/90 border-2 border-amber-400/60 text-center">
+            <div class="flex items-center justify-center gap-1.5 text-[9px] font-bold text-amber-300 tracking-widest">
+              <span>TIME</span>
+              <span id="fps-counter" class="text-emerald-400 font-mono">60 FPS</span>
+            </div>
+            <div id="hud-timer" class="font-impact text-2xl sm:text-4xl text-white leading-none">99</div>
+          </div>
+          <div class="flex gap-1.5 mt-1.5 pointer-events-auto">
+            <button onclick="togglePause()" id="btn-pause" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-[11px] font-bold text-slate-200 transition">
+              ⏸ 일시정지
+            </button>
+            <button onclick="returnToSelect()" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-[11px] font-bold text-slate-200 transition">
+              캐릭터 변경
+            </button>
+            <button id="btn-sound-battle" onclick="toggleSound()" class="px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-[11px] font-bold text-slate-200 transition">
+              🔊
+            </button>
+          </div>
+        </div>
+
+        <!-- P2 / AI HUD -->
+        <div class="flex-1 flex flex-col">
+          <div class="flex items-center gap-2 sm:gap-3 mb-1 flex-row-reverse">
+            <canvas id="hud-p2-icon" width="56" height="56" class="w-11 h-11 sm:w-14 sm:h-14 rounded-xl bg-slate-900 border-2 border-rose-500 shrink-0"></canvas>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between flex-row-reverse">
+                <span id="hud-p2-name" class="font-impact text-base sm:text-xl text-white truncate">게토 스구르</span>
+                <div id="hud-p2-rounds" class="flex gap-1.5">
+                  <span class="w-3 h-3 rounded-full border border-rose-400 bg-slate-800"></span>
+                  <span class="w-3 h-3 rounded-full border border-rose-400 bg-slate-800"></span>
+                </div>
+              </div>
+              <div class="relative w-full h-5 sm:h-6 bg-slate-900/90 rounded-lg border border-white/25 overflow-hidden p-0.5">
+                <div id="hud-p2-hp-lag" class="absolute top-0.5 bottom-0.5 right-0.5 bg-amber-500/80 rounded transition-all duration-300" style="width: 100%;"></div>
+                <div id="hud-p2-hp" class="relative h-full ml-auto bg-gradient-to-l from-rose-500 via-orange-400 to-amber-300 rounded" style="width: 100%;"></div>
+              </div>
+              <div class="flex items-center gap-2 mt-1 flex-row-reverse">
+                <div class="flex-1 h-2.5 bg-slate-900/90 rounded-full border border-white/15 overflow-hidden p-[1px]">
+                  <div id="hud-p2-ce" class="h-full ml-auto bg-gradient-to-l from-rose-500 via-purple-500 to-indigo-500 rounded-full" style="width: 0%;"></div>
+                </div>
+                <span id="hud-p2-ce-text" class="text-[10px] sm:text-xs font-black text-rose-300 w-20 text-left">주력 0%</span>
+              </div>
+            </div>
+          </div>
+          <div id="hud-p2-combo" class="hidden mt-0.5 pr-2 text-right">
+            <span class="font-impact text-2xl sm:text-4xl text-rose-400">0 HITS!</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Center Round / KO Banner -->
+    <div id="center-banner" class="hidden absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none">
+      <div id="banner-sub" class="text-sm sm:text-lg font-black tracking-widest text-amber-300 uppercase">ROUND 1</div>
+      <div id="banner-main" class="font-impact text-5xl sm:text-8xl text-white tracking-wider">FIGHT!</div>
+    </div>
+
+    <!-- Center-Bottom Active Skill Callout Toast -->
+    <div id="skill-callout-container" class="pointer-events-none absolute bottom-24 left-0 right-0 z-20 flex justify-center gap-6 px-4">
+      <div id="p1-skill-callout" class="opacity-0 transition-opacity duration-150 px-4 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400/70 text-cyan-200 font-impact text-base sm:text-xl tracking-wide">
+        술식순전: 창 (蒼)
+      </div>
+      <div id="p2-skill-callout" class="opacity-0 transition-opacity duration-150 px-4 py-1.5 rounded-xl bg-rose-950/95 border border-rose-400/70 text-rose-200 font-impact text-base sm:text-xl tracking-wide">
+        무지개룡 소환
+      </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-modal" class="hidden absolute inset-0 z-30 bg-black/75 flex items-center justify-center p-4">
+      <div class="glass-panel rounded-3xl p-6 max-w-sm w-full text-center border border-white/20">
+        <h3 class="font-impact text-3xl text-white mb-2">일시정지 (PAUSED)</h3>
+        <p class="text-xs text-slate-400 mb-5">전투가 일시정지되었습니다.</p>
+        <div class="flex flex-col gap-2.5">
+          <button onclick="togglePause()" class="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white">계속 싸우기</button>
+          <button onclick="rematch(); togglePause();" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-slate-200">라운드 재시작</button>
+          <button onclick="returnToSelect()" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-rose-300">캐릭터 선택으로</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Match Over Result Modal -->
+    <div id="match-over-modal" class="hidden absolute inset-0 z-30 bg-black/80 flex items-center justify-center p-4">
+      <div class="glass-panel rounded-3xl p-6 sm:p-8 max-w-md w-full text-center border-2 border-purple-500/40">
+        <div class="text-xs font-bold text-amber-400 tracking-widest mb-1">MATCH RESULT</div>
+        <h2 id="winner-title" class="font-impact text-3xl sm:text-5xl text-white mb-2">고죠 사토루 승리!</h2>
+        <p id="winner-quote" class="text-sm text-slate-300 italic mb-6">"괜찮아, 최강이니까."</p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button onclick="rematch()" class="flex-1 py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition">
+            다시 싸우기 (REMATCH)
+          </button>
+          <button onclick="returnToSelect()" class="flex-1 py-3 px-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
+            캐릭터 변경
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Battle Canvas -->
+    <div class="flex-1 w-full h-full relative min-h-0">
+      <canvas id="game-canvas" class="w-full h-full"></canvas>
+    </div>
+
+    <!-- ==================== 3. BOTTOM SKILL BAR HUD (ALWAYS VISIBLE) ==================== -->
+    <div class="bg-[#080a12] border-t border-white/15 px-2 sm:px-4 py-2 z-20 shrink-0">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-4 items-center">
+        
+        <!-- 1P Skill Slots & Controls -->
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 px-1">
+            <span class="font-black text-cyan-300">1P 스킬 커맨드 (이동: A/D · 점프: Space · 가드: A)</span>
+            <span id="p1-bar-charname" class="font-bold text-slate-300">고죠 사토루</span>
+          </div>
+          <div id="p1-skill-bar" class="grid grid-cols-4 gap-1.5"></div>
+        </div>
+
+        <!-- 2P / AI Skill Slots & Controls -->
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 px-1">
+            <span id="p2-bar-controls" class="font-black text-rose-300">AI 스킬 목록 (보통 난이도)</span>
+            <span id="p2-bar-charname" class="font-bold text-slate-300">게토 스구르</span>
+          </div>
+          <div id="p2-skill-bar" class="grid grid-cols-4 gap-1.5"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+/**
+ * ============================================================================
+ *  주술회전: 영역전개 대전 (60fps 초경량 완결판)
+ *  - Zero-Lag Offscreen Background Pre-Rendering Cache (배경 1회 캐싱)
+ *  - No shadowBlur / No WebGL Overhead -> 60fps 완벽 방어
+ *  - 2.5D 다관절 계층 리깅 (팔·다리·머리·몸통·무기 자연스러운 관절 모션)
+ *  - 원작 고증 소환수 & 술식 (게토 외눈·지네 주령·무지개룡·소용돌이,
+ *    고죠 창+혁 융합 허식 자, 토우지 잔상연참·만리쇄·유운·무형일섬 등)
+ *  - 하단 실시간 스킬명 HUD & 누구나 쾌적하게 이길 수 있는 하향 조정 AI
+ * ============================================================================
+ */
+
+// ==================== 1. WEB AUDIO SOUND ENGINE ====================
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+  playTone(freq, endFreq, duration, type = 'sine', vol = 0.14) {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {}
+  }
+  playNoise(duration, vol = 0.18, filterFreq = 1200) {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(filterFreq, now);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(now);
+    } catch (e) {}
+  }
+  slash() {
+    this.playNoise(0.13, 0.18, 2500);
+    this.playTone(680, 150, 0.11, 'sawtooth', 0.10);
+  }
+  heavyHit() {
+    this.playNoise(0.20, 0.24, 420);
+    this.playTone(155, 36, 0.22, 'triangle', 0.22);
+  }
+  block() {
+    this.playTone(440, 260, 0.08, 'square', 0.10);
+  }
+  energyCharge() {
+    this.playTone(230, 890, 0.42, 'sine', 0.13);
+    this.playTone(340, 1140, 0.42, 'triangle', 0.08);
+  }
+  curseRoar() {
+    this.playTone(110, 48, 0.42, 'sawtooth', 0.15);
+    this.playNoise(0.28, 0.15, 500);
+  }
+  domainExpand() {
+    this.playTone(90, 40, 0.85, 'sawtooth', 0.20);
+    this.playTone(185, 52, 0.80, 'sine', 0.22);
+    this.playNoise(0.45, 0.18, 600);
+  }
+  blackFlash() {
+    this.playNoise(0.32, 0.30, 950);
+    this.playTone(990, 42, 0.36, 'sawtooth', 0.22);
+  }
+  jump() {
+    this.playTone(180, 420, 0.12, 'sine', 0.08);
+  }
+}
+
+const sfx = new SoundEngine();
+
+function toggleSound() {
+  sfx.enabled = !sfx.enabled;
+  document.getElementById('btn-sound-select').textContent = sfx.enabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
+  document.getElementById('btn-sound-battle').textContent = sfx.enabled ? '🔊' : '🔇';
+}
+
+// ==================== 2. CHARACTER ROSTER DATA ====================
+const CHARACTERS = [
+  {
+    id: 'gojo',
+    name: '고죠 사토루',
+    grade: '특급 주술사 · 현대 최강',
+    style: '무하한 주술 & 육안',
+    quote: '"괜찮아, 내가 최강이니까."',
+    themeColor: '#38bdf8',
+    speed: 6.4,
+    jumpPower: -15.6,
+    maxHp: 1000,
+    skills: {
+      Q: { name: '술식순전: 창 (蒼)', desc: '푸른 인력 특이점으로 적을 끌어당겨 압착 타격', cd: 50 },
+      W: { name: '술식반전: 혁 (赫)', desc: '붉은 척력 충격파를 발사해 상대를 강하게 날림', cd: 62 },
+      E: { name: '무하한 배리어 반격', desc: '무하한 역장을 전개해 적의 공격을 튕겨내고 반격', cd: 78 },
+      R: { name: '허식: 자 (茈)', desc: '파란 힘(창)과 빨간 힘(혁)이 융합해 거대 보라 빔 발사!', cd: 0 }
+    }
+  },
+  {
+    id: 'sukuna',
+    name: '스쿠나',
+    grade: '특급 주물 · 저주의 왕',
+    style: '어주자 (해·팔·푸가)',
+    quote: '"자신의 분수를 알아라, 애송이."',
+    themeColor: '#f43f5e',
+    speed: 6.5,
+    jumpPower: -15.4,
+    maxHp: 1050,
+    skills: {
+      Q: { name: '해 (解)', desc: '고속 다중 참격파를 날려 전방의 적을 베어냄', cd: 42 },
+      W: { name: '팔 (捌)', desc: '순간 돌진 후 거미줄 격자 절단으로 난도질', cd: 68 },
+      E: { name: '푸가 (開)', desc: '불화살을 발사해 거대한 화염 폭발 유발', cd: 88 },
+      R: { name: '영역전개: 복마어주자', desc: '소 해골 사당이 배경에 현현하며 전방위 참격 난무!', cd: 0 }
+    }
+  },
+  {
+    id: 'itadori',
+    name: '이타도리 유지',
+    grade: '1급 주술사 후보',
+    style: '경정권 & 흑섬',
+    quote: '"나는 주술사다! 너를 쓰러뜨린다!"',
+    themeColor: '#fb7185',
+    speed: 6.9,
+    jumpPower: -16.0,
+    maxHp: 1040,
+    skills: {
+      Q: { name: '경정권 (逕庭拳)', desc: '주먹 강타 직후 푸른 주력이 시차로 이중 폭발', cd: 40 },
+      W: { name: '만자차기 (卍蹴り)', desc: '공중 회전 발차기로 빈틈을 파고드는 강습기', cd: 58 },
+      E: { name: '섬광 어퍼컷 연격', desc: '초인적 순보 돌진 후 어퍼컷으로 높이 띄움', cd: 74 },
+      R: { name: '흑섬 (黒閃)', desc: '0.000001초의 주력 충돌! 검붉은 번개가 터지는 필살 일격!', cd: 0 }
+    }
+  },
+  {
+    id: 'megumi',
+    name: '후시구로 메구미',
+    grade: '2급 주술사 · 젠인가 당주',
+    style: '십종영법술',
+    quote: '"자신까지 내던져서 이기는 것과, 죽어서 이기는 것은 전혀 달라."',
+    themeColor: '#6366f1',
+    speed: 6.1,
+    jumpPower: -15.4,
+    maxHp: 980,
+    skills: {
+      Q: { name: '옥견: 혼 (玉犬)', desc: '거대한 검은 늑대 식신이 달려들어 발톱으로 할퀴기', cd: 48 },
+      W: { name: '누에 (鵺)', desc: '가면 올빼미 식신이 급강하하며 노란 번개를 방출', cd: 66 },
+      E: { name: '탈토 (脱兎)', desc: '수십 마리의 흰 토끼 떼가 쏟아져 상대를 교란·연타', cd: 82 },
+      R: { name: '영역전개: 감합암예정', desc: '전장이 칠흑 그림자 늪으로 변하며 식신 군단 총공격!', cd: 0 }
+    }
+  },
+  {
+    id: 'inumaki',
+    name: '이누마키 토게',
+    grade: '준1급 주술사 · 주언사',
+    style: '주언 (뱀과 송곳니)',
+    quote: '"연어. 가다랑어포!"',
+    themeColor: '#c084fc',
+    speed: 6.4,
+    jumpPower: -15.6,
+    maxHp: 940,
+    skills: {
+      Q: { name: '「움직이지 마」', desc: '보라색 주언 음파와 止まれ 문자로 상대를 경직', cd: 72 },
+      W: { name: '「날아가라」', desc: '거대한 충격 음파 飛べ 로 상대를 벽 끝까지 날림', cd: 48 },
+      E: { name: '「비틀려라」', desc: '공간 뒤틀림 파동으로 상대를 쥐어짜며 큰 피해', cd: 72 },
+      R: { name: '대주언: 「붕괴·떨어져라」', desc: '성대의 한계를 넘는 초대형 주언 음파 폭발!', cd: 0 }
+    }
+  },
+  {
+    id: 'geto',
+    name: '게토 스구르',
+    grade: '특급 주저사',
+    style: '주령조술 · 극번 소용돌이',
+    quote: '"원숭이 놈들... 대의를 위해 사라져라."',
+    themeColor: '#f59e0b',
+    speed: 6.1,
+    jumpPower: -15.2,
+    maxHp: 1020,
+    skills: {
+      Q: { name: '주령조술: 군체', desc: '외눈박이·지네형 기괴 주령 3마리가 기어 나와 돌진', cd: 45 },
+      W: { name: '특급 주령: 무지개룡', desc: '거대한 비늘 달린 백색 동양 용이 화면을 가로질러 강타', cd: 70 },
+      E: { name: '특급 주령: 다중안 반격', desc: '수십 개의 눈을 가진 기괴 주령을 소환해 전방 방어 및 반격', cd: 74 },
+      R: { name: '극번: 소용돌이 (うずまき)', desc: '수천의 주령 눈알이 소용돌이치는 검은 구체 발사!', cd: 0 }
+    }
+  },
+  {
+    id: 'yuta',
+    name: '옷코츠 유타',
+    grade: '특급 주술사',
+    style: '모방 & 특급과주원령 리카',
+    quote: '"실례지만, 이건 순애야."',
+    themeColor: '#ec4899',
+    speed: 6.5,
+    jumpPower: -15.6,
+    maxHp: 1020,
+    skills: {
+      Q: { name: '주언 모방: 「멈춰라」', desc: '주언 확성기를 소환해 상대를 경직시키는 파동 발사', cd: 74 },
+      W: { name: '참격 연무 (검기)', desc: '주력이 깃든 일본도로 고속 참격파를 휘둘러 베어냄', cd: 45 },
+      E: { name: '리카 부분 현현', desc: '거대한 괴수 리카의 거대한 손이 나타나 전방을 내려침', cd: 72 },
+      R: { name: '순애포 (純愛砲)', desc: '완전 현현한 리카와 함께 발사하는 초고밀도 분홍/보라 빔!', cd: 0 }
+    }
+  },
+  {
+    id: 'toji',
+    name: '후시구로 토우지',
+    grade: '천여주박 · 주술사 킬러',
+    style: '완전한 육체 & 특급주구',
+    quote: '"주력 제로. 그게 바로 나다."',
+    themeColor: '#a855f7',
+    speed: 7.4,
+    jumpPower: -16.6,
+    maxHp: 1030,
+    skills: {
+      Q: { name: '천역모: 잔상연참', desc: '특급주구 천역모를 들고 5중 보라 잔상을 남기며 돌진 베기', cd: 42 },
+      W: { name: '만리쇄 사슬 투척', desc: '끝없이 늘어나는 사슬과 무기를 던져 상대를 끌어당김', cd: 68 },
+      E: { name: '유운 삼절곤 난무', desc: '붉은 삼절곤 유운을 고속 회전시켜 강하게 띄움', cd: 74 },
+      R: { name: '천여주박: 무형 일섬', desc: '암전 속 사방에서 수십 번의 초고속 참격이 교차하는 필살기!', cd: 0 }
+    }
+  }
+];
+
+// ==================== 3. GLOBAL GAME STATE & OFFSCREEN BG CACHE ====================
+let gameMode = 'CPU';
+let aiDifficulty = 'NORMAL'; // 'EASY', 'NORMAL', 'GRADE1'
+let selectedStage = 'shibuya';
+let p1Choice = CHARACTERS[0]; // Gojo
+let p2Choice = CHARACTERS[5]; // Geto
+
+let canvas, ctx;
+let bgCacheCanvas = document.createElement('canvas');
+let bgCacheCtx = bgCacheCanvas.getContext('2d');
+let cachedStageKey = '';
+
+let gameState = 'SELECT';
+let isPaused = false;
+let animationFrameId = null;
+let lastTime = 0;
+
+// FPS Counter
+let fpsFrames = 0;
+let fpsLastTime = 0;
+
+let hitStopFrames = 0;
+let screenShake = { intensity: 0 };
+let domainOverlay = { active: false, type: '', timer: 0, ownerSide: 1 };
+let cutInEffect = { active: false, char: null, skillName: '', timer: 0, side: 1 };
+
+let roundNumber = 1;
+let p1Wins = 0;
+let p2Wins = 0;
+let matchTimer = 99;
+let timerAccumulator = 0;
+
+let player1 = null;
+let player2 = null;
+let projectiles = [];
+let particles = [];
+let floatingTexts = [];
+let afterimages = [];
+
+const MAX_PARTICLES = 65; // Hard cap to guarantee 60fps
+const keys = {};
+
+// ==================== 4. 2.5D ARTICULATED SKELETAL CHARACTER RENDERER ====================
+/**
+ * Zero-lag 2.5D articulated limb kinematics renderer.
+ * Uses 3D-like cylindrical shading gradients without expensive shadowBlur.
+ */
+function getPoseAngles(charId, state, animTimer, skillPose) {
+  const t = animTimer;
+  let pose = {
+    torsoLean: 0.08,
+    hipY: 0,
+    headTilt: -0.04,
+    lUpperArm: -0.45,
+    lForeArm: -0.85,
+    rUpperArm: 0.35,
+    rForeArm: -0.95,
+    lThigh: -0.25,
+    lCalf: 0.35,
+    rThigh: 0.25,
+    rCalf: 0.25,
+    weaponAngle: -0.4,
+    activeWeapon: charId === 'toji' ? 'spear' : (charId === 'yuta' ? 'katana' : 'none')
+  };
+
+  if (state === 'IDLE') {
+    const b = Math.sin(t * 0.11);
+    pose.hipY = b * 2.2;
+    pose.torsoLean = 0.08 + b * 0.03;
+    pose.lUpperArm = -0.45 + b * 0.08;
+    pose.rUpperArm = 0.35 - b * 0.08;
+  } else if (state === 'RUN') {
+    const s = Math.sin(t * 0.36);
+    const c = Math.cos(t * 0.36);
+    pose.torsoLean = 0.28;
+    pose.hipY = -Math.abs(c) * 4.2;
+    pose.lThigh = s * 0.85;
+    pose.lCalf = Math.max(0.1, -s * 0.7 + 0.4);
+    pose.rThigh = -s * 0.85;
+    pose.rCalf = Math.max(0.1, s * 0.7 + 0.4);
+    pose.lUpperArm = -s * 0.75;
+    pose.lForeArm = -0.7;
+    pose.rUpperArm = s * 0.75;
+    pose.rForeArm = -0.7;
+  } else if (state === 'JUMP') {
+    pose.torsoLean = 0.15;
+    pose.lThigh = -0.65;
+    pose.lCalf = 0.95;
+    pose.rThigh = 0.35;
+    pose.rCalf = 0.75;
+    pose.lUpperArm = -0.9;
+    pose.rUpperArm = -0.6;
+  } else if (state === 'BLOCK') {
+    pose.torsoLean = -0.12;
+    pose.lUpperArm = -0.95;
+    pose.lForeArm = -1.35;
+    pose.rUpperArm = -0.75;
+    pose.rForeArm = -1.45;
+    pose.lThigh = -0.35;
+    pose.rThigh = 0.35;
+  } else if (state === 'HURT' || state === 'STUNNED') {
+    pose.torsoLean = -0.35;
+    pose.headTilt = -0.3;
+    pose.lUpperArm = -0.2;
+    pose.lForeArm = -0.3;
+    pose.rUpperArm = 0.5;
+    pose.rForeArm = -0.2;
+  } else if (state === 'ATTACK' || state === 'ULT') {
+    if (skillPose === 'KICK') {
+      pose.torsoLean = -0.25;
+      pose.rThigh = -1.35;
+      pose.rCalf = 0.15;
+      pose.lThigh = 0.2;
+      pose.rUpperArm = -0.5;
+      pose.lUpperArm = 0.5;
+    } else if (skillPose === 'SLASH') {
+      pose.torsoLean = 0.38;
+      pose.rUpperArm = -0.15;
+      pose.rForeArm = -0.1;
+      pose.lUpperArm = 0.6;
+      pose.weaponAngle = 0.35;
+      if (charId === 'toji') pose.activeWeapon = 'soul_katana';
+    } else if (skillPose === 'CHAIN') {
+      pose.torsoLean = 0.3;
+      pose.rUpperArm = -0.2;
+      pose.rForeArm = -0.05;
+      pose.activeWeapon = 'playful_cloud';
+    } else if (skillPose === 'HAND_SIGN') {
+      pose.torsoLean = 0.05;
+      pose.lUpperArm = -0.65;
+      pose.lForeArm = -1.1;
+      pose.rUpperArm = -0.55;
+      pose.rForeArm = -1.15;
+    } else {
+      pose.torsoLean = 0.32;
+      pose.rUpperArm = -0.22;
+      pose.rForeArm = -0.05;
+      pose.lUpperArm = 0.55;
+      pose.lForeArm = -0.8;
+      pose.lThigh = -0.45;
+      pose.rThigh = 0.45;
+    }
+  }
+  return pose;
+}
+
+function drawLimbSegment(c, x1, y1, angle, length, widthTop, widthBot, color, highlightColor) {
+  c.save();
+  c.translate(x1, y1);
+  c.rotate(angle);
+
+  // 2.5D cylindrical volume gradient
+  const grad = c.createLinearGradient(-widthTop * 0.5, 0, widthTop * 0.5, 0);
+  grad.addColorStop(0, color);
+  grad.addColorStop(0.35, highlightColor || color);
+  grad.addColorStop(1, '#09090b');
+
+  c.fillStyle = grad;
+  c.strokeStyle = '#09090b';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.moveTo(-widthTop / 2, 0);
+  c.lineTo(widthTop / 2, 0);
+  c.lineTo(widthBot / 2, length);
+  c.lineTo(-widthBot / 2, length);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  c.fillStyle = color;
+  c.beginPath();
+  c.arc(0, length, widthBot * 0.46, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  return {
+    x: x1 - Math.sin(angle) * length,
+    y: y1 + Math.cos(angle) * length
+  };
+}
+
+function drawArticulatedCharacter(c, charId, x, y, scale, facing, state, animTimer, skillPose = 'BLAST', isPortrait = false) {
+  c.save();
+  c.translate(x, y);
+  if (!isPortrait) {
+    c.scale(facing * scale, scale);
+  } else {
+    c.scale(scale, scale);
+  }
+
+  const pose = getPoseAngles(charId, state, animTimer, skillPose);
+  const hipX = 0;
+  const hipY = -42 + pose.hipY;
+
+  const palettes = {
+    gojo:    { top: '#111827', hi: '#334155', pants: '#111827', skin: '#fed7aa', sleeve: '#111827', shoe: '#09090b', aura: 'rgba(56, 189, 248, 0.22)' },
+    sukuna:  { top: '#f1f5f9', hi: '#ffffff', pants: '#18181b', skin: '#fed7aa', sleeve: '#f1f5f9', shoe: '#b45309', aura: 'rgba(244, 63, 94, 0.22)' },
+    itadori: { top: '#111827', hi: '#334155', pants: '#111827', skin: '#fed7aa', sleeve: '#111827', shoe: '#e11d48', aura: 'rgba(251, 113, 133, 0.22)' },
+    megumi:  { top: '#0f172a', hi: '#1e293b', pants: '#0f172a', skin: '#fed7aa', sleeve: '#0f172a', shoe: '#09090b', aura: 'rgba(99, 102, 241, 0.22)' },
+    inumaki: { top: '#1e1b4b', hi: '#312e81', pants: '#1e1b4b', skin: '#fed7aa', sleeve: '#1e1b4b', shoe: '#09090b', aura: 'rgba(192, 132, 252, 0.22)' },
+    geto:    { top: '#09090b', hi: '#27272a', pants: '#09090b', skin: '#fed7aa', sleeve: '#09090b', shoe: '#d97706', aura: 'rgba(245, 158, 11, 0.22)' },
+    yuta:    { top: '#e2e8f0', hi: '#ffffff', pants: '#09090b', skin: '#fed7aa', sleeve: '#e2e8f0', shoe: '#09090b', aura: 'rgba(236, 72, 153, 0.22)' },
+    toji:    { top: '#18181b', hi: '#3f3f46', pants: '#d6d3d1', skin: '#fed7aa', sleeve: '#18181b', shoe: '#09090b', aura: 'rgba(168, 85, 247, 0.18)' }
+  };
+  const pal = palettes[charId] || palettes.gojo;
+
+  // Lightweight Aura Circle
+  if (!isPortrait) {
+    c.fillStyle = pal.aura;
+    c.beginPath();
+    c.arc(0, -48, 46, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 1. Back Arm
+  const shoulderX = hipX + Math.sin(pose.torsoLean) * 32;
+  const shoulderY = hipY - Math.cos(pose.torsoLean) * 32;
+
+  if (!isPortrait) {
+    const lElbow = drawLimbSegment(c, shoulderX - 3, shoulderY + 2, pose.lUpperArm, 18, 8.5, 7, pal.sleeve, pal.hi);
+    const lHandSkin = (charId === 'toji' || charId === 'sukuna') ? pal.skin : pal.sleeve;
+    const lHand = drawLimbSegment(c, lElbow.x, lElbow.y, pose.lUpperArm + pose.lForeArm, 16, 7, 5.5, lHandSkin, pal.hi);
+    c.fillStyle = pal.skin;
+    c.beginPath();
+    c.arc(lHand.x, lHand.y, 4.2, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 2. Legs
+  if (!isPortrait) {
+    const lKnee = drawLimbSegment(c, hipX - 3, hipY, pose.lThigh, 21, 11, 8.5, pal.pants, pal.hi);
+    const lAnkle = drawLimbSegment(c, lKnee.x, lKnee.y, pose.lThigh + pose.lCalf, 20, 8.5, 6.5, pal.pants, pal.hi);
+    c.fillStyle = pal.shoe;
+    c.beginPath();
+    c.ellipse(lAnkle.x + 3, lAnkle.y + 2, 8.5, 4, 0, 0, Math.PI * 2);
+    c.fill();
+
+    const rKnee = drawLimbSegment(c, hipX + 3, hipY, pose.rThigh, 21, 11.5, 9, pal.pants, pal.hi);
+    const rAnkle = drawLimbSegment(c, rKnee.x, rKnee.y, pose.rThigh + pose.rCalf, 20, 9, 7, pal.pants, pal.hi);
+    c.fillStyle = pal.shoe;
+    c.beginPath();
+    c.ellipse(rAnkle.x + 4, rAnkle.y + 2, 9, 4.2, 0, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 3. Torso with 2.5D Volume Shading
+  c.save();
+  c.translate(hipX, hipY);
+  c.rotate(pose.torsoLean);
+
+  const torsoGrad = c.createLinearGradient(-14, 0, 14, 0);
+  torsoGrad.addColorStop(0, pal.top);
+  torsoGrad.addColorStop(0.4, pal.hi);
+  torsoGrad.addColorStop(1, '#09090b');
+
+  c.fillStyle = torsoGrad;
+  c.strokeStyle = '#09090b';
+  c.lineWidth = 1.7;
+  c.beginPath();
+  c.moveTo(-11, 0);
+  c.lineTo(11, 0);
+  c.lineTo(14, -34);
+  c.lineTo(-14, -34);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // Outfit Details
+  if (charId === 'sukuna') {
+    c.strokeStyle = '#09090b';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(-7, -34); c.lineTo(3, -15); c.lineTo(8, -34);
+    c.stroke();
+    c.fillStyle = '#18181b';
+    c.fillRect(-12, -9, 24, 8);
+    c.fillStyle = '#f8fafc';
+    c.fillRect(-13, 0, 26, 12);
+  } else if (charId === 'itadori') {
+    c.fillStyle = '#e11d48';
+    c.beginPath();
+    c.ellipse(0, -33, 12, 5.5, 0, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+  } else if (charId === 'geto') {
+    c.fillStyle = '#eab308';
+    c.beginPath();
+    c.moveTo(-13, -34); c.lineTo(-2, -34); c.lineTo(12, 0); c.lineTo(2, 0);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'yuta') {
+    c.strokeStyle = '#94a3b8';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(-4, -34); c.lineTo(5, -14); c.lineTo(5, 0);
+    c.stroke();
+    c.fillStyle = '#09090b';
+    c.fillRect(-11, -5, 22, 5);
+  } else if (charId === 'toji') {
+    // Purple Inventory Curse Worm wrapped around torso
+    c.strokeStyle = '#9333ea';
+    c.lineWidth = 7.5;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-12, -33);
+    c.quadraticCurveTo(15, -20, -10, -4);
+    c.stroke();
+    c.strokeStyle = '#d8b4fe';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(-11, -34);
+    c.quadraticCurveTo(14, -21, -9, -5);
+    c.stroke();
+  } else {
+    c.fillStyle = '#fbbf24';
+    c.beginPath();
+    c.arc(4, -25, 2.2, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 4. Head & Hair
+  c.save();
+  c.translate(0, -37);
+  c.rotate(pose.headTilt);
+
+  c.fillStyle = pal.skin;
+  c.fillRect(-4, -5, 8, 7);
+
+  c.fillStyle = pal.skin;
+  c.strokeStyle = '#09090b';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.arc(0, -12, 11, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  if (charId === 'gojo') {
+    if (state === 'ULT') {
+      c.fillStyle = '#38bdf8';
+      c.beginPath();
+      c.arc(4, -12, 2.5, 0, Math.PI * 2);
+      c.arc(-2, -12, 2.5, 0, Math.PI * 2);
+      c.fill();
+    } else {
+      c.fillStyle = '#09090b';
+      c.fillRect(-11, -17, 22, 7.5);
+    }
+    c.fillStyle = '#f8fafc';
+    c.beginPath();
+    c.moveTo(-12, -14); c.lineTo(-15, -27); c.lineTo(-6, -23);
+    c.lineTo(-2, -33); c.lineTo(3, -24); c.lineTo(9, -31);
+    c.lineTo(10, -22); c.lineTo(15, -24); c.lineTo(11, -14);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'sukuna') {
+    c.strokeStyle = '#09090b';
+    c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(-7, -15); c.lineTo(-10, -9);
+    c.moveTo(5, -15); c.lineTo(8, -9);
+    c.moveTo(-4, -19); c.lineTo(4, -19);
+    c.stroke();
+    c.fillStyle = '#ef4444';
+    c.fillRect(3, -13, 3, 2);
+    c.fillStyle = '#fb7185';
+    c.beginPath();
+    c.moveTo(-11, -15); c.lineTo(-14, -27); c.lineTo(-4, -23);
+    c.lineTo(0, -30); c.lineTo(6, -23); c.lineTo(13, -25); c.lineTo(11, -15);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'itadori') {
+    c.fillStyle = '#78350f';
+    c.fillRect(3, -13, 3, 2.2);
+    c.fillStyle = '#18181b';
+    c.fillRect(-11, -16, 22, 3.5);
+    c.fillStyle = '#f472b6';
+    c.beginPath();
+    c.moveTo(-12, -15); c.lineTo(-9, -26); c.lineTo(-1, -23);
+    c.lineTo(5, -27); c.lineTo(12, -21); c.lineTo(10, -14);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'megumi') {
+    c.fillStyle = '#1d4ed8';
+    c.fillRect(3, -13, 3, 2.2);
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.moveTo(-12, -13); c.lineTo(-17, -24); c.lineTo(-9, -23);
+    c.lineTo(-8, -32); c.lineTo(0, -24); c.lineTo(4, -32);
+    c.lineTo(8, -23); c.lineTo(16, -25); c.lineTo(11, -13);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'inumaki') {
+    if (state === 'ATTACK' || state === 'ULT') {
+      c.fillStyle = '#a855f7';
+      c.beginPath();
+      c.arc(6, -8, 1.5, 0, Math.PI * 2);
+      c.fill();
+    } else {
+      c.fillStyle = '#f8fafc';
+      c.fillRect(-11, -11, 22, 11);
+      c.strokeRect(-11, -11, 22, 11);
+    }
+    c.fillStyle = '#a855f7';
+    c.fillRect(3, -14, 3, 2.2);
+    c.fillStyle = '#e2e8f0';
+    c.beginPath();
+    c.arc(0, -16, 12, Math.PI, 0);
+    c.lineTo(12, -12); c.lineTo(-12, -12);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'geto') {
+    c.strokeStyle = '#09090b';
+    c.lineWidth = 1.2;
+    c.beginPath();
+    c.moveTo(-7, -18); c.lineTo(7, -18);
+    c.moveTo(2, -13); c.lineTo(7, -13);
+    c.stroke();
+    c.fillStyle = '#09090b';
+    c.beginPath();
+    c.arc(-11, -22, 4.8, 0, Math.PI * 2);
+    c.arc(0, -15, 12, Math.PI, 0);
+    c.fill();
+    c.beginPath();
+    c.moveTo(4, -22); c.quadraticCurveTo(9, -14, 7, -6);
+    c.lineWidth = 2.4;
+    c.stroke();
+  } else if (charId === 'yuta') {
+    c.fillStyle = '#1e293b';
+    c.fillRect(3, -13, 3, 2.2);
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.moveTo(-12, -11); c.lineTo(-12, -23); c.lineTo(-3, -26);
+    c.lineTo(5, -25); c.lineTo(12, -20); c.lineTo(10, -12);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  } else if (charId === 'toji') {
+    c.strokeStyle = '#9f1239';
+    c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(5, -7); c.lineTo(8, -4);
+    c.stroke();
+    c.fillStyle = '#15803d';
+    c.fillRect(3, -13, 3.2, 2.2);
+    c.fillStyle = '#09090b';
+    c.beginPath();
+    c.moveTo(-12, -12); c.lineTo(-11, -24); c.lineTo(0, -25);
+    c.lineTo(12, -21); c.lineTo(9, -12); c.lineTo(4, -14); c.lineTo(-2, -11);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  }
+
+  c.restore(); // Head
+  c.restore(); // Torso
+
+  // 5. Front Arm & Weapons
+  if (!isPortrait) {
+    const rElbow = drawLimbSegment(c, shoulderX + 3, shoulderY + 2, pose.rUpperArm, 18, 9, 7.5, pal.sleeve, pal.hi);
+    const rHandSkin = (charId === 'toji' || charId === 'sukuna') ? pal.skin : pal.sleeve;
+    const rHand = drawLimbSegment(c, rElbow.x, rElbow.y, pose.rUpperArm + pose.rForeArm, 16, 7.5, 6, rHandSkin, pal.hi);
+
+    c.fillStyle = pal.skin;
+    c.beginPath();
+    c.arc(rHand.x, rHand.y, 4.5, 0, Math.PI * 2);
+    c.fill();
+
+    if (charId === 'itadori' && (state === 'ATTACK' || state === 'ULT')) {
+      c.fillStyle = state === 'ULT' ? '#f43f5e' : '#38bdf8';
+      c.beginPath();
+      c.arc(rHand.x, rHand.y, 9, 0, Math.PI * 2);
+      c.fill();
+    }
+
+    if (pose.activeWeapon === 'spear') {
+      c.save();
+      c.translate(rHand.x, rHand.y);
+      c.rotate(pose.weaponAngle);
+      c.fillStyle = '#e2e8f0';
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.moveTo(0, -3); c.lineTo(26, -5); c.lineTo(32, 0);
+      c.lineTo(26, 5); c.lineTo(14, 3); c.lineTo(10, 9);
+      c.lineTo(6, 3); c.lineTo(0, 3);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.restore();
+    } else if (pose.activeWeapon === 'soul_katana') {
+      c.save();
+      c.translate(rHand.x, rHand.y);
+      c.rotate(pose.weaponAngle);
+      c.strokeStyle = '#34d399';
+      c.lineWidth = 4;
+      c.beginPath();
+      c.moveTo(0, 0); c.lineTo(44, -6);
+      c.stroke();
+      c.restore();
+    } else if (pose.activeWeapon === 'playful_cloud') {
+      c.save();
+      c.translate(rHand.x, rHand.y);
+      c.strokeStyle = '#dc2626';
+      c.lineWidth = 4.5;
+      c.beginPath();
+      c.moveTo(-12, -10); c.lineTo(14, 4); c.lineTo(34, -12);
+      c.stroke();
+      c.restore();
+    } else if (pose.activeWeapon === 'katana') {
+      c.save();
+      c.translate(rHand.x, rHand.y);
+      c.rotate(pose.weaponAngle);
+      c.strokeStyle = '#f8fafc';
+      c.lineWidth = 3.2;
+      c.beginPath();
+      c.moveTo(0, 0); c.lineTo(38, -3);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  c.restore();
+}
+
+// ==================== 5. CUSTOM ANIME SUMMON & SKILL ARTWORK RENDERER ====================
+function drawCustomSkillEntity(c, p) {
+  c.save();
+  const dir = p.vx >= 0 ? 1 : -1;
+
+  if (p.type === 'geto_curse_swarm') {
+    // Authentic Cursed Spirit: One-Eyed Centipede Monster
+    c.translate(p.x, p.y);
+    c.scale(dir, 1);
+
+    for (let s = 3; s >= 0; s--) {
+      const segX = -s * 12;
+      const segY = Math.sin(p.life * 0.4 + s) * 5;
+      c.fillStyle = s === 0 ? '#311042' : '#1e0b2b';
+      c.strokeStyle = '#a855f7';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.ellipse(segX, segY, 13 - s * 1.5, 11 - s * 1.2, 0, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+
+      c.strokeStyle = '#c084fc';
+      c.beginPath();
+      c.moveTo(segX, segY + 8); c.lineTo(segX - 4, segY + 17);
+      c.moveTo(segX, segY - 8); c.lineTo(segX - 4, segY - 16);
+      c.stroke();
+    }
+
+    c.fillStyle = '#fef08a';
+    c.beginPath();
+    c.arc(5, -3, 6, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#dc2626';
+    c.beginPath();
+    c.arc(6.5, -3, 2.6, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.moveTo(2, 4); c.lineTo(5, 9); c.lineTo(8, 4); c.lineTo(11, 9); c.lineTo(13, 4);
+    c.fill();
+
+  } else if (p.type === 'geto_rainbow_dragon') {
+    // Special Grade Cursed Spirit: Rainbow Dragon (무지개룡)
+    c.translate(p.x, p.y);
+    c.scale(dir, 1);
+
+    for (let i = 7; i >= 0; i--) {
+      const bx = -i * 18;
+      const by = Math.sin(p.life * 0.25 + i * 0.7) * 14;
+      const rad = 22 - i * 1.6;
+      c.fillStyle = i % 2 === 0 ? '#f8fafc' : '#bae6fd';
+      c.beginPath();
+      c.arc(bx, by, rad, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 1.8;
+      c.stroke();
+    }
+
+    c.fillStyle = '#f8fafc';
+    c.strokeStyle = '#0284c7';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(-10, -18); c.lineTo(28, -10); c.lineTo(34, 4);
+    c.lineTo(12, 16); c.lineTo(-12, 12);
+    c.closePath();
+    c.fill();
+    c.stroke();
+
+    c.strokeStyle = '#f59e0b';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(-2, -16); c.lineTo(-22, -34);
+    c.moveTo(-10, -24); c.lineTo(-14, -36);
+    c.stroke();
+
+    c.fillStyle = '#ef4444';
+    c.beginPath();
+    c.arc(14, -5, 4, 0, Math.PI * 2);
+    c.fill();
+
+  } else if (p.type === 'geto_uzumaki') {
+    // Maximum: Uzumaki (극번: 소용돌이)
+    c.translate(p.x, p.y);
+    const spin = p.life * 0.25;
+
+    c.fillStyle = 'rgba(88, 28, 135, 0.35)';
+    c.beginPath();
+    c.arc(0, 0, p.radius * 1.35, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = '#2e1065';
+    c.strokeStyle = '#9333ea';
+    c.lineWidth = 4;
+    c.beginPath();
+    c.arc(0, 0, p.radius, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+
+    for (let k = 0; k < 10; k++) {
+      const ang = spin + (k * Math.PI * 2) / 10;
+      const dist = 20 + (k % 3) * 16;
+      const ex = Math.cos(ang) * dist;
+      const ey = Math.sin(ang) * dist;
+
+      c.fillStyle = '#fef08a';
+      c.beginPath();
+      c.ellipse(ex, ey, 7, 4.5, ang, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = '#dc2626';
+      c.beginPath();
+      c.arc(ex, ey, 2.5, 0, Math.PI * 2);
+      c.fill();
+    }
+
+  } else if (p.type === 'megumi_dog') {
+    // Divine Dog: Totality (옥견: 혼)
+    c.translate(p.x, p.y);
+    c.scale(dir, 1);
+    c.fillStyle = '#09090b';
+    c.strokeStyle = '#38bdf8';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(-36, 10); c.lineTo(-20, -22); c.lineTo(8, -24);
+    c.lineTo(28, -32); c.lineTo(24, -14); c.lineTo(42, -4);
+    c.lineTo(22, 12); c.lineTo(-10, 16);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#ef4444';
+    c.beginPath();
+    c.arc(18, -12, 3.5, 0, Math.PI * 2);
+    c.fill();
+
+  } else if (p.type === 'megumi_nue') {
+    // Nue (누에)
+    c.translate(p.x, p.y);
+    c.fillStyle = '#78350f';
+    c.strokeStyle = '#facc15';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.quadraticCurveTo(-45, -35, -62, 5);
+    c.lineTo(-20, 12); c.lineTo(0, 18); c.lineTo(20, 12); c.lineTo(62, 5);
+    c.quadraticCurveTo(45, -35, 0, 0);
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#f8fafc';
+    c.beginPath();
+    c.arc(0, 4, 13, 0, Math.PI * 2);
+    c.fill();
+
+  } else if (p.type === 'gojo_blue') {
+    c.fillStyle = 'rgba(56, 189, 248, 0.35)';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 1.25, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#0284c7';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.75, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.35, 0, Math.PI * 2); c.fill();
+
+  } else if (p.type === 'gojo_red') {
+    c.fillStyle = 'rgba(244, 63, 94, 0.35)';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 1.35, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#e11d48';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.85, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffffff';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.4, 0, Math.PI * 2); c.fill();
+
+  } else if (p.type === 'gojo_purple_beam') {
+    c.fillStyle = 'rgba(168, 85, 247, 0.35)';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 1.35, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#9333ea';
+    c.beginPath(); c.arc(p.x, p.y, p.radius, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#f5d0fe';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.55, 0, Math.PI * 2); c.fill();
+
+  } else if (p.type === 'sukuna_dismantle' || p.type === 'yuta_slash') {
+    c.strokeStyle = p.type === 'sukuna_dismantle' ? '#f43f5e' : '#38bdf8';
+    c.lineWidth = 5;
+    c.beginPath();
+    c.arc(p.x, p.y, p.radius, -0.95, 0.95);
+    c.moveTo(p.x - 10, p.y - 22);
+    c.lineTo(p.x + 18, p.y + 22);
+    c.stroke();
+
+  } else if (p.type === 'sukuna_fuga') {
+    c.fillStyle = 'rgba(249, 115, 22, 0.4)';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 1.3, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ea580c';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.85, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fef08a';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.45, 0, Math.PI * 2); c.fill();
+
+  } else if (p.type === 'inumaki_wave' || p.type === 'inumaki_stun' || p.type === 'inumaki_ult') {
+    c.strokeStyle = '#c084fc';
+    c.lineWidth = 4;
+    c.beginPath();
+    c.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    c.stroke();
+    c.fillStyle = '#f3e8ff';
+    c.font = `900 ${p.type === 'inumaki_ult' ? 32 : 20}px "Noto Sans KR"`;
+    c.textAlign = 'center';
+    c.fillText(p.kanji || '呪言', p.x, p.y + 7);
+
+  } else if (p.type === 'toji_chain') {
+    c.strokeStyle = '#cbd5e1';
+    c.lineWidth = 3.5;
+    c.beginPath();
+    c.moveTo(p.owner.x, p.owner.y - 52);
+    c.lineTo(p.x, p.y);
+    c.stroke();
+    c.fillStyle = '#ef4444';
+    c.beginPath();
+    c.arc(p.x, p.y, 13, 0, Math.PI * 2);
+    c.fill();
+
+  } else if (p.type === 'yuta_love_beam') {
+    c.fillStyle = 'rgba(236, 72, 153, 0.38)';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 1.35, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#db2777';
+    c.beginPath(); c.arc(p.x, p.y, p.radius, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fbcfe8';
+    c.beginPath(); c.arc(p.x, p.y, p.radius * 0.55, 0, Math.PI * 2); c.fill();
+  }
+
+  c.restore();
+}
+
+// ==================== 6. UI PORTRAIT & SKILL BARS ====================
+function renderPortraitToCanvas(canvasId, charId) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  const pCtx = el.getContext('2d');
+  pCtx.clearRect(0, 0, el.width, el.height);
+
+  const char = CHARACTERS.find(ch => ch.id === charId);
+  const grad = pCtx.createLinearGradient(0, 0, el.width, el.height);
+  grad.addColorStop(0, '#0f172a');
+  grad.addColorStop(1, char ? char.themeColor + '44' : '#1e1b4b');
+  pCtx.fillStyle = grad;
+  pCtx.fillRect(0, 0, el.width, el.height);
+
+  drawArticulatedCharacter(pCtx, charId, el.width * 0.5, el.height * 1.56, 1.38, 1, 'IDLE', 0, 'BLAST', true);
+}
+
+function updateSelectionUI() {
+  document.getElementById('p1-name').textContent = p1Choice.name;
+  document.getElementById('p1-grade').textContent = p1Choice.grade;
+  document.getElementById('p1-style').textContent = p1Choice.style;
+  renderPortraitToCanvas('p1-portrait', p1Choice.id);
+
+  document.getElementById('p1-skills').innerHTML = ['Q', 'W', 'E', 'R'].map(k => `
+    <div class="flex items-start gap-1.5">
+      <span class="px-1.5 py-0.5 rounded font-black text-[10px] ${k === 'R' ? 'bg-amber-500 text-black' : 'bg-cyan-500/25 text-cyan-300'}">${k}</span>
+      <div class="leading-tight">
+        <div class="font-bold text-slate-100">${p1Choice.skills[k].name}</div>
+        <div class="text-[10px] text-slate-400">${p1Choice.skills[k].desc}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('p2-name').textContent = p2Choice.name;
+  document.getElementById('p2-grade').textContent = p2Choice.grade;
+  document.getElementById('p2-style').textContent = p2Choice.style;
+  const diffLabel = { EASY: '입문', NORMAL: '보통', GRADE1: '1급 주술사' }[aiDifficulty];
+  document.getElementById('p2-badge').textContent = gameMode === 'CPU' ? `CPU AI (${diffLabel})` : 'PLAYER 2 (오른쪽)';
+  document.getElementById('p2-sub-hint').textContent = gameMode === 'CPU' ? '쾌적한 AI 대전' : '< / > 이동 · Enter 점프';
+  renderPortraitToCanvas('p2-portrait', p2Choice.id);
+
+  const p2KeyMap = gameMode === 'CPU' ? { Q: 'AI-1', W: 'AI-2', E: 'AI-3', R: 'AI궁극' } : { Q: 'H', W: 'J', E: 'K', R: 'L' };
+  document.getElementById('p2-skills').innerHTML = ['Q', 'W', 'E', 'R'].map(k => `
+    <div class="flex items-start gap-1.5">
+      <span class="px-1.5 py-0.5 rounded font-black text-[10px] ${k === 'R' ? 'bg-amber-500 text-black' : 'bg-rose-500/25 text-rose-300'}">${p2KeyMap[k]}</span>
+      <div class="leading-tight">
+        <div class="font-bold text-slate-100">${p2Choice.skills[k].name}</div>
+        <div class="text-[10px] text-slate-400">${p2Choice.skills[k].desc}</div>
+      </div>
+    </div>
+  `).join('');
+
+  CHARACTERS.forEach(ch => {
+    const card = document.getElementById(`card-${ch.id}`);
+    if (!card) return;
+    const isP1 = p1Choice.id === ch.id;
+    const isP2 = p2Choice.id === ch.id;
+    card.className = 'char-card glass-panel rounded-xl p-2 flex flex-col items-center relative cursor-pointer border-2 ' +
+      (isP1 && isP2 ? 'border-purple-400' :
+       isP1 ? 'border-cyan-400' :
+       isP2 ? 'border-rose-500' : 'border-white/10 hover:border-white/30');
+
+    const btn2 = card.querySelector('.btn-pick-2p');
+    if (btn2) btn2.textContent = gameMode === 'CPU' ? 'AI 선택' : '2P 선택';
+
+    const badgeContainer = card.querySelector('.badges');
+    badgeContainer.innerHTML = `
+      ${isP1 ? '<span class="px-1.5 py-0.2 rounded bg-cyan-500 text-slate-950 font-black text-[10px]">1P</span>' : ''}
+      ${isP2 ? `<span class="px-1.5 py-0.2 rounded bg-rose-500 text-white font-black text-[10px]">${gameMode === 'CPU' ? 'AI' : '2P'}</span>` : ''}
+    `;
+  });
+}
+
+function buildRosterGrid() {
+  const grid = document.getElementById('roster-grid');
+  grid.innerHTML = '';
+
+  CHARACTERS.forEach(ch => {
+    const card = document.createElement('div');
+    card.id = `card-${ch.id}`;
+    card.innerHTML = `
+      <div class="badges absolute top-1.5 right-1.5 flex gap-1 z-10"></div>
+      <canvas id="roster-canvas-${ch.id}" width="72" height="72" class="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-lg mb-1.5 border border-white/10"></canvas>
+      <div class="font-impact text-sm sm:text-base text-white text-center leading-tight">${ch.name}</div>
+      <div class="text-[10px] text-slate-400 text-center truncate w-full mb-1.5">${ch.style}</div>
+      <div class="flex gap-1 w-full">
+        <button type="button" class="btn-pick-1p flex-1 py-1 rounded bg-cyan-500/20 hover:bg-cyan-500 hover:text-slate-950 text-cyan-300 font-bold text-[10px] transition">1P 선택</button>
+        <button type="button" class="btn-pick-2p flex-1 py-1 rounded bg-rose-500/20 hover:bg-rose-500 hover:text-white text-rose-300 font-bold text-[10px] transition">AI 선택</button>
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-pick-2p')) {
+        p2Choice = ch;
+      } else {
+        p1Choice = ch;
+      }
+      sfx.playTone(540, 700, 0.08, 'sine', 0.1);
+      updateSelectionUI();
+    });
+
+    card.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      p2Choice = ch;
+      sfx.playTone(440, 620, 0.08, 'sine', 0.1);
+      updateSelectionUI();
+    });
+
+    grid.appendChild(card);
+    renderPortraitToCanvas(`roster-canvas-${ch.id}`, ch.id);
+  });
+
+  updateSelectionUI();
+}
+
+function setGameMode(mode) {
+  gameMode = mode;
+  document.getElementById('mode-cpu').className = mode === 'CPU'
+    ? 'px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white transition'
+    : 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+  document.getElementById('mode-pvp').className = mode === 'PVP'
+    ? 'px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition'
+    : 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition';
+
+  document.getElementById('ai-diff-wrapper').style.display = mode === 'CPU' ? 'flex' : 'none';
+  document.getElementById('roster-guide-text').textContent = mode === 'CPU'
+    ? '🤖 1인 AI 모드: [내 캐릭터]와 [상대 AI 캐릭터]를 각각 선택하세요!'
+    : '👥 2인 대전 모드: 좌클릭(1P 선택) / 우클릭 또는 2P 버튼(2P 선택)';
+  document.getElementById('p2-control-hint').innerHTML = mode === 'CPU'
+    ? '<strong class="text-emerald-300">AI 상대:</strong> 렉 없이 부드럽게 콤보를 즐기며 승리할 수 있도록 여유롭게 조정되었습니다'
+    : '<strong class="text-rose-300">2P 조작:</strong> &lt;(앞) &gt;(뒤/가드) Enter(점프) | 기술: H, J, K | 궁극기: L';
+
+  updateSelectionUI();
+}
+
+function setAiDifficulty(val) {
+  aiDifficulty = val;
+  updateSelectionUI();
+}
+
+function setStage(val) {
+  selectedStage = val;
+  cachedStageKey = ''; // Force redraw of offscreen background cache
+}
+
+function buildBottomSkillBars() {
+  document.getElementById('p1-bar-charname').textContent = p1Choice.name;
+  document.getElementById('p2-bar-charname').textContent = gameMode === 'CPU' ? `${p2Choice.name} (AI)` : p2Choice.name;
+  const diffLabel = { EASY: '입문', NORMAL: '보통', GRADE1: '1급' }[aiDifficulty];
+  document.getElementById('p2-bar-controls').textContent = gameMode === 'CPU'
+    ? `AI 스킬 목록 (${diffLabel} 난이도)`
+    : '2P 스킬 커맨드 (이동: </> · 점프: Enter · 가드: >)';
+
+  const p1Slots = ['Q', 'W', 'E', 'R'];
+  document.getElementById('p1-skill-bar').innerHTML = p1Slots.map(k => {
+    const isUlt = k === 'R';
+    return `
+      <div id="p1-slot-${k}" class="relative overflow-hidden rounded-lg border ${isUlt ? 'border-amber-500/40 bg-amber-950/25' : 'border-cyan-500/30 bg-slate-900/95'} px-2 py-1.5 flex flex-col justify-between">
+        <div id="p1-cd-${k}" class="absolute inset-0 bg-cyan-500/15 origin-left" style="transform: scaleX(1);"></div>
+        <div class="relative z-10 flex items-center justify-between gap-1">
+          <span class="px-1.5 py-0.2 rounded text-[10px] font-black ${isUlt ? 'bg-amber-400 text-slate-950' : 'bg-cyan-500 text-slate-950'}">${k}</span>
+          <span id="p1-status-${k}" class="text-[9px] font-bold ${isUlt ? 'text-amber-300' : 'text-cyan-300'}">${isUlt ? '0%' : 'READY'}</span>
+        </div>
+        <div class="relative z-10 text-[11px] font-bold text-white truncate mt-0.5" title="${p1Choice.skills[k].name}">
+          ${p1Choice.skills[k].name}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const p2KeyLabels = gameMode === 'CPU' ? { Q: 'Q', W: 'W', E: 'E', R: 'ULT' } : { Q: 'H', W: 'J', E: 'K', R: 'L' };
+  document.getElementById('p2-skill-bar').innerHTML = p1Slots.map(k => {
+    const isUlt = k === 'R';
+    return `
+      <div id="p2-slot-${k}" class="relative overflow-hidden rounded-lg border ${isUlt ? 'border-amber-500/40 bg-amber-950/25' : 'border-rose-500/30 bg-slate-900/95'} px-2 py-1.5 flex flex-col justify-between">
+        <div id="p2-cd-${k}" class="absolute inset-0 bg-rose-500/15 origin-left" style="transform: scaleX(1);"></div>
+        <div class="relative z-10 flex items-center justify-between gap-1">
+          <span class="px-1.5 py-0.2 rounded text-[10px] font-black ${isUlt ? 'bg-amber-400 text-slate-950' : 'bg-rose-500 text-white'}">${p2KeyLabels[k]}</span>
+          <span id="p2-status-${k}" class="text-[9px] font-bold ${isUlt ? 'text-amber-300' : 'text-rose-300'}">${isUlt ? '0%' : 'READY'}</span>
+        </div>
+        <div class="relative z-10 text-[11px] font-bold text-white truncate mt-0.5" title="${p2Choice.skills[k].name}">
+          ${p2Choice.skills[k].name}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+let calloutTimers = { 1: null, 2: null };
+function triggerSkillCallout(side, slot, skillName) {
+  const slotEl = document.getElementById(`p${side}-slot-${slot}`);
+  if (slotEl) {
+    slotEl.classList.remove('skill-triggered');
+    void slotEl.offsetWidth;
+    slotEl.classList.add('skill-triggered');
+  }
+
+  const toast = document.getElementById(`p${side}-skill-callout`);
+  if (toast) {
+    toast.textContent = `⚡ ${skillName}`;
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+    clearTimeout(calloutTimers[side]);
+    calloutTimers[side] = setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0');
+    }, 1150);
+  }
+}
+
+// ==================== 7. FIGHTER CLASS & RELAXED AI ====================
+class Fighter {
+  constructor(charData, side, x, groundY) {
+    this.data = charData;
+    this.side = side;
+    this.x = x;
+    this.y = groundY;
+    this.groundY = groundY;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = side === 1 ? 1 : -1;
+
+    this.maxHp = charData.maxHp;
+    this.hp = this.maxHp;
+    this.ce = 35;
+    this.maxCe = 100;
+
+    this.state = 'IDLE';
+    this.skillPose = 'BLAST';
+    this.stateTimer = 0;
+    this.animTimer = 0;
+    this.cooldowns = { Q: 0, W: 0, E: 0 };
+
+    this.comboCount = 0;
+    this.comboResetTimer = 0;
+    this.invulnTimer = 0;
+    this.counterShieldTimer = 0;
+    this.specialAction = null;
+
+    // Relaxed AI state
+    this.aiThinkTimer = 30;
+    this.aiActionCooldown = 45;
+    this.aiDesiredMove = 0;
+  }
+
+  isGrounded() {
+    return this.y >= this.groundY - 0.5;
+  }
+
+  gainCe(amount) {
+    this.ce = Math.min(this.maxCe, this.ce + amount);
+  }
+
+  takeDamage(amount, knockbackX, knockbackY, opponent, options = {}) {
+    if (this.state === 'DEAD' || this.invulnTimer > 0) return false;
+
+    // Counter Shield (Gojo E / Geto E)
+    if (this.counterShieldTimer > 0 && !options.unblockable) {
+      this.counterShieldTimer = 0;
+      sfx.curseRoar();
+      spawnParticles(this.x + this.facing * 25, this.y - 55, this.data.themeColor, 14, 7);
+      spawnFloatingText(this.x, this.y - 105, '술식 반격 성공!!', this.data.themeColor, 20);
+      if (opponent) {
+        opponent.takeDamage(90, this.facing * 13, -7, this, { hitstop: 5, shake: 10, color: this.data.themeColor, label: '반격!' });
+      }
+      return false;
+    }
+
+    const isUnblockable = options.unblockable || false;
+    const isBlocking = !isUnblockable && this.isGrounded() && this.isHoldingBack(opponent) &&
+                       ['IDLE', 'RUN', 'BLOCK'].includes(this.state);
+
+    if (isBlocking) {
+      const chipDamage = Math.max(4, Math.floor(amount * 0.15));
+      this.hp = Math.max(1, this.hp - chipDamage);
+      this.vx = knockbackX * 0.35;
+      this.state = 'BLOCK';
+      this.stateTimer = 14;
+      this.gainCe(6);
+      sfx.block();
+      spawnFloatingText(this.x, this.y - 98, `GUARD (-${chipDamage})`, '#93c5fd', 15);
+      return false;
+    }
+
+    this.hp = Math.max(0, this.hp - amount);
+    this.vx = knockbackX;
+    this.vy = knockbackY;
+    if (knockbackY < 0) this.y -= 2;
+
+    if (options.stunFrames) {
+      this.state = 'STUNNED';
+      this.stateTimer = options.stunFrames;
+    } else {
+      this.state = 'HURT';
+      this.stateTimer = options.hitstun || 18;
+    }
+
+    this.gainCe(amount * 0.08);
+    if (opponent) {
+      opponent.gainCe(amount * 0.085);
+      opponent.comboCount++;
+      opponent.comboResetTimer = 120;
+    }
+
+    hitStopFrames = Math.max(hitStopFrames, options.hitstop || 3);
+    triggerScreenShake(options.shake || 6);
+    spawnFloatingText(
+      this.x,
+      this.y - 108,
+      options.label ? `${options.label} -${amount}` : `-${amount}`,
+      options.color || '#facc15',
+      options.isCrit ? 24 : 18
+    );
+
+    if (this.hp <= 0) {
+      this.state = 'DEAD';
+      this.vy = -8;
+      this.vx = -this.facing * 6;
+    }
+    return true;
+  }
+
+  isHoldingBack(opponent) {
+    if (!opponent) return false;
+    const oppDir = opponent.x > this.x ? 1 : -1;
+    if (this.side === 1) {
+      return (oppDir === 1 && keys['KeyA']) || (oppDir === -1 && keys['KeyD']);
+    } else {
+      if (gameMode === 'CPU') {
+        const guardProb = { EASY: 0.05, NORMAL: 0.15, GRADE1: 0.30 }[aiDifficulty] || 0.15;
+        return opponent.state === 'ATTACK' && Math.random() < guardProb;
+      }
+      return (oppDir === -1 && (keys['Period'] || keys['>'])) || (oppDir === 1 && (keys['Comma'] || keys['<']));
+    }
+  }
+
+  useSkill(slot, opponent) {
+    if (['HURT', 'STUNNED', 'ULT', 'DEAD'].includes(this.state)) return;
+    if (slot !== 'R' && this.cooldowns[slot] > 0) return;
+
+    if (slot === 'R') {
+      if (this.ce < 100) {
+        if (this.side === 1 || gameMode === 'PVP') {
+          spawnFloatingText(this.x, this.y - 115, '주력 부족! (100% 필요)', '#c084fc', 14);
+        }
+        return;
+      }
+      this.ce = 0;
+      triggerSkillCallout(this.side, 'R', this.data.skills.R.name);
+      this.executeUltimate(opponent);
+      return;
+    }
+
+    this.cooldowns[slot] = this.data.skills[slot].cd;
+    this.state = 'ATTACK';
+    this.stateTimer = 24;
+    triggerSkillCallout(this.side, slot, this.data.skills[slot].name);
+
+    const id = this.data.id;
+    const dir = this.facing;
+
+    if (id === 'gojo') {
+      if (slot === 'Q') {
+        this.skillPose = 'BLAST';
+        sfx.energyCharge();
+        projectiles.push({
+          type: 'gojo_blue', owner: this, x: this.x + dir * 135, y: this.y - 55,
+          vx: dir * 2.5, vy: 0, radius: 44, life: 54, damage: 82, hitTimer: 0
+        });
+      } else if (slot === 'W') {
+        this.skillPose = 'BLAST';
+        sfx.heavyHit();
+        projectiles.push({
+          type: 'gojo_red', owner: this, x: this.x + dir * 45, y: this.y - 58,
+          vx: dir * 18, vy: 0, radius: 24, life: 45, damage: 96
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'HAND_SIGN';
+        sfx.energyCharge();
+        this.counterShieldTimer = 42;
+        spawnParticles(this.x, this.y - 55, '#38bdf8', 12, 5);
+        spawnFloatingText(this.x, this.y - 110, '무하한 배리어 전개!', '#38bdf8', 15);
+      }
+    } else if (id === 'sukuna') {
+      if (slot === 'Q') {
+        this.skillPose = 'SLASH';
+        sfx.slash();
+        projectiles.push({
+          type: 'sukuna_dismantle', owner: this, x: this.x + dir * 40, y: this.y - 55,
+          vx: dir * 19.5, vy: 0, radius: 34, life: 40, damage: 76
+        });
+      } else if (slot === 'W') {
+        this.skillPose = 'SLASH';
+        sfx.slash();
+        spawnAfterimage(this);
+        this.vx = dir * 18;
+        if (Math.abs(opponent.x - this.x) < 165 && Math.abs(opponent.y - this.y) < 80) {
+          opponent.takeDamage(98, dir * 9, -4, this, { hitstop: 5, shake: 9, color: '#f43f5e', label: '팔 (捌)!' });
+          spawnSlashWeb(opponent.x, opponent.y - 50, '#f43f5e');
+        }
+      } else if (slot === 'E') {
+        this.skillPose = 'BLAST';
+        sfx.heavyHit();
+        projectiles.push({
+          type: 'sukuna_fuga', owner: this, x: this.x + dir * 50, y: this.y - 55,
+          vx: dir * 15.5, vy: 0, radius: 38, life: 50, damage: 124
+        });
+      }
+    } else if (id === 'itadori') {
+      if (slot === 'Q') {
+        this.skillPose = 'BLAST';
+        sfx.heavyHit();
+        this.vx = dir * 10;
+        if (Math.abs(opponent.x - this.x) < 98 && Math.abs(opponent.y - this.y) < 75) {
+          opponent.takeDamage(54, dir * 5, -2, this, { color: '#fb7185', label: '경정권 1타' });
+          setTimeout(() => {
+            if (opponent && opponent.state !== 'DEAD') {
+              sfx.heavyHit();
+              spawnParticles(opponent.x, opponent.y - 50, '#38bdf8', 12, 7);
+              opponent.takeDamage(48, dir * 11, -5, this, { color: '#38bdf8', label: '시차 주력 폭발!' });
+            }
+          }, 180);
+        }
+      } else if (slot === 'W') {
+        this.skillPose = 'KICK';
+        sfx.slash();
+        this.vx = dir * 16.5;
+        this.vy = -5.5;
+        if (Math.abs(opponent.x - this.x) < 145 && Math.abs(opponent.y - this.y) < 80) {
+          opponent.takeDamage(90, dir * 12, -6, this, { color: '#f472b6', label: '만자차기!' });
+        }
+      } else if (slot === 'E') {
+        this.skillPose = 'BLAST';
+        sfx.heavyHit();
+        this.vx = dir * 9;
+        if (Math.abs(opponent.x - this.x) < 98 && Math.abs(opponent.y - this.y) < 80) {
+          opponent.takeDamage(112, dir * 7, -13, this, { hitstop: 5, shake: 10, color: '#22d3ee', label: '섬광 어퍼컷!' });
+        }
+      }
+    } else if (id === 'megumi') {
+      if (slot === 'Q') {
+        this.skillPose = 'HAND_SIGN';
+        sfx.curseRoar();
+        projectiles.push({
+          type: 'megumi_dog', owner: this, x: this.x + dir * 40, y: this.y - 26,
+          vx: dir * 15.5, vy: 0, radius: 38, life: 45, damage: 82
+        });
+      } else if (slot === 'W') {
+        this.skillPose = 'HAND_SIGN';
+        sfx.energyCharge();
+        projectiles.push({
+          type: 'megumi_nue', owner: this, x: opponent.x - dir * 80, y: this.y - 245,
+          vx: dir * 7, vy: 14, radius: 46, life: 36, damage: 96
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'HAND_SIGN';
+        sfx.slash();
+        for (let r = 0; r < 5; r++) {
+          spawnParticles(this.x + dir * (40 + r * 32), this.groundY - 15 - (r % 2) * 18, '#f8fafc', 4, 4);
+        }
+        if (Math.abs(opponent.x - this.x) < 230 && Math.abs(opponent.y - this.y) < 90) {
+          opponent.takeDamage(95, dir * 8, -6, this, { hitstop: 4, shake: 8, color: '#e2e8f0', label: '탈토 군체!' });
+        }
+      }
+    } else if (id === 'inumaki') {
+      if (slot === 'Q') {
+        this.skillPose = 'BLAST';
+        sfx.domainExpand();
+        projectiles.push({
+          type: 'inumaki_stun', owner: this, x: this.x + dir * 45, y: this.y - 60,
+          vx: dir * 15, vy: 0, radius: 42, life: 40, damage: 38, kanji: '止まれ'
+        });
+      } else if (slot === 'W') {
+        this.skillPose = 'BLAST';
+        sfx.energyCharge();
+        projectiles.push({
+          type: 'inumaki_wave', owner: this, x: this.x + dir * 40, y: this.y - 60,
+          vx: dir * 17, vy: 0, radius: 40, life: 44, damage: 86, kanji: '飛べ'
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'BLAST';
+        sfx.heavyHit();
+        const targetX = Math.max(80, Math.min(arenaWidth - 80, this.x + dir * 155));
+        spawnParticles(targetX, this.groundY - 45, '#c084fc', 16, 8);
+        if (Math.abs(opponent.x - targetX) < 95) {
+          opponent.takeDamage(106, 0, 12, this, { hitstop: 5, shake: 10, color: '#c084fc', label: '「비틀려라」!' });
+        }
+      }
+    } else if (id === 'geto') {
+      if (slot === 'Q') {
+        this.skillPose = 'BLAST';
+        sfx.curseRoar();
+        for (let i = 0; i < 3; i++) {
+          projectiles.push({
+            type: 'geto_curse_swarm', owner: this,
+            x: this.x + dir * (40 + i * 24),
+            y: this.y - 24 - i * 22,
+            vx: dir * (12.5 + i * 1.4),
+            vy: 0, radius: 26, life: 52, damage: 34
+          });
+        }
+      } else if (slot === 'W') {
+        this.skillPose = 'BLAST';
+        sfx.curseRoar();
+        projectiles.push({
+          type: 'geto_rainbow_dragon', owner: this, x: this.x + dir * 55, y: this.y - 54,
+          vx: dir * 15.5, vy: 0, radius: 48, life: 50, damage: 112
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'HAND_SIGN';
+        sfx.curseRoar();
+        this.counterShieldTimer = 40;
+        spawnParticles(this.x + dir * 30, this.y - 55, '#a855f7', 12, 5);
+        spawnFloatingText(this.x, this.y - 110, '다중안 주령 방어전개!', '#e879f9', 15);
+      }
+    } else if (id === 'yuta') {
+      if (slot === 'Q') {
+        this.skillPose = 'BLAST';
+        sfx.domainExpand();
+        projectiles.push({
+          type: 'inumaki_stun', owner: this, x: this.x + dir * 45, y: this.y - 60,
+          vx: dir * 15.5, vy: 0, radius: 40, life: 38, damage: 40, kanji: '止まれ'
+        });
+      } else if (slot === 'W') {
+        this.skillPose = 'SLASH';
+        sfx.slash();
+        projectiles.push({
+          type: 'yuta_slash', owner: this, x: this.x + dir * 42, y: this.y - 55,
+          vx: dir * 18.5, vy: 0, radius: 38, life: 42, damage: 85
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'SLASH';
+        sfx.curseRoar();
+        const slamX = Math.max(80, Math.min(arenaWidth - 80, this.x + dir * 130));
+        spawnParticles(slamX, this.groundY - 50, '#ec4899', 16, 8);
+        triggerScreenShake(10);
+        if (Math.abs(opponent.x - slamX) < 100 && Math.abs(opponent.y - this.y) < 105) {
+          opponent.takeDamage(116, dir * 10, -10, this, { hitstop: 6, shake: 11, color: '#ec4899', label: '리카 부분 현현!' });
+        }
+      }
+    } else if (id === 'toji') {
+      if (slot === 'Q') {
+        this.skillPose = 'SLASH';
+        sfx.slash();
+        for (let i = 0; i < 4; i++) {
+          afterimages.push({
+            charId: 'toji', x: this.x + dir * i * 26, y: this.y, facing: dir, alpha: 0.70 - i * 0.14
+          });
+        }
+        this.x = Math.max(60, Math.min(arenaWidth - 60, this.x + dir * 125));
+        spawnSlashWeb(this.x + dir * 25, this.y - 50, '#c084fc');
+        if (Math.abs(opponent.x - this.x) < 108 && Math.abs(opponent.y - this.y) < 80) {
+          opponent.takeDamage(94, dir * 8, -4, this, { hitstop: 4, shake: 8, color: '#c084fc', label: '천역모 잔상연참!' });
+        }
+      } else if (slot === 'W') {
+        this.skillPose = 'CHAIN';
+        sfx.slash();
+        projectiles.push({
+          type: 'toji_chain', owner: this, x: this.x + dir * 40, y: this.y - 55,
+          vx: dir * 21.5, vy: 0, radius: 28, life: 32, damage: 90
+        });
+      } else if (slot === 'E') {
+        this.skillPose = 'SLASH';
+        sfx.heavyHit();
+        this.vy = -12;
+        this.vx = dir * 9.5;
+        spawnParticles(this.x + dir * 35, this.y - 55, '#ef4444', 14, 7);
+        spawnSlashWeb(this.x + dir * 35, this.y - 65, '#f87171');
+        if (Math.abs(opponent.x - this.x) < 108 && Math.abs(opponent.y - this.y) < 95) {
+          opponent.takeDamage(116, dir * 9, -13, this, { hitstop: 6, shake: 11, color: '#ef4444', label: '유운 삼절곤 난무!' });
+        }
+      }
+    }
+  }
+
+  executeUltimate(opponent) {
+    this.state = 'ULT';
+    this.skillPose = 'HAND_SIGN';
+    this.stateTimer = 65;
+    this.invulnTimer = 70;
+    const id = this.data.id;
+    const dir = this.facing;
+
+    sfx.domainExpand();
+    hitStopFrames = 12;
+    cutInEffect = {
+      active: true,
+      char: this.data,
+      skillName: this.data.skills.R.name,
+      timer: 50,
+      side: this.side
+    };
+
+    if (id === 'gojo') {
+      this.skillPose = 'BLAST';
+      this.specialAction = { type: 'hollow_purple', timer: 50, dir };
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.blackFlash();
+        triggerScreenShake(18);
+        projectiles.push({
+          type: 'gojo_purple_beam', owner: this, x: this.x + dir * 65, y: this.y - 60,
+          vx: dir * 20.5, vy: 0, radius: 78, life: 54, damage: 285
+        });
+      }, 450);
+    } else if (id === 'sukuna') {
+      domainOverlay = { active: true, type: 'shrine', timer: 90, ownerSide: this.side };
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          if (!opponent || opponent.state === 'DEAD') return;
+          sfx.slash();
+          spawnSlashWeb(opponent.x + (Math.random() - 0.5) * 70, opponent.y - 50, i % 2 === 0 ? '#f43f5e' : '#ffffff');
+          opponent.takeDamage(47, dir * 3, -2, this, {
+            unblockable: true, hitstop: 2, shake: 8, color: '#f43f5e', label: i === 5 ? '복마어주자!' : ''
+          });
+        }, 250 + i * 130);
+      }
+    } else if (id === 'itadori') {
+      this.skillPose = 'BLAST';
+      spawnAfterimage(this);
+      this.x = Math.max(70, Math.min(arenaWidth - 70, opponent.x - dir * 55));
+      this.y = opponent.y;
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.blackFlash();
+        triggerScreenShake(20);
+        spawnParticles(opponent.x, opponent.y - 50, '#f43f5e', 24, 12);
+        opponent.takeDamage(280, dir * 22, -11, this, {
+          unblockable: true, hitstop: 10, shake: 20, color: '#f43f5e', isCrit: true, label: '흑섬 (黒閃)!!'
+        });
+      }, 320);
+    } else if (id === 'megumi') {
+      domainOverlay = { active: true, type: 'shadow', timer: 90, ownerSide: this.side };
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.curseRoar();
+        for (let i = 0; i < 4; i++) {
+          projectiles.push({
+            type: 'megumi_dog', owner: this,
+            x: Math.max(60, Math.min(arenaWidth - 60, opponent.x + (i - 1.5) * 110)),
+            y: this.groundY - 25, vx: (i < 2 ? 1 : -1) * 12, vy: -3, radius: 46, life: 40, damage: 70
+          });
+        }
+      }, 300);
+    } else if (id === 'inumaki') {
+      this.skillPose = 'BLAST';
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.blackFlash();
+        triggerScreenShake(18);
+        projectiles.push({
+          type: 'inumaki_ult', owner: this, x: this.x + dir * 55, y: this.y - 60,
+          vx: dir * 18, vy: 0, radius: 75, life: 48, damage: 270, kanji: '堕ちろ'
+        });
+      }, 320);
+    } else if (id === 'geto') {
+      this.skillPose = 'BLAST';
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.curseRoar();
+        sfx.blackFlash();
+        triggerScreenShake(18);
+        projectiles.push({
+          type: 'geto_uzumaki', owner: this, x: this.x + dir * 65, y: this.y - 60,
+          vx: dir * 19, vy: 0, radius: 76, life: 52, damage: 280
+        });
+      }, 360);
+    } else if (id === 'yuta') {
+      this.skillPose = 'BLAST';
+      setTimeout(() => {
+        if (!opponent || opponent.state === 'DEAD') return;
+        sfx.blackFlash();
+        triggerScreenShake(18);
+        projectiles.push({
+          type: 'yuta_love_beam', owner: this, x: this.x + dir * 65, y: this.y - 60,
+          vx: dir * 21, vy: 0, radius: 76, life: 50, damage: 285
+        });
+      }, 350);
+    } else if (id === 'toji') {
+      this.skillPose = 'SLASH';
+      domainOverlay = { active: true, type: 'toji_zero', timer: 80, ownerSide: this.side };
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          if (!opponent || opponent.state === 'DEAD') return;
+          sfx.slash();
+          const angleOffset = (i % 2 === 0 ? 1 : -1) * (60 + i * 10);
+          spawnAfterimage(this);
+          this.x = Math.max(60, Math.min(arenaWidth - 60, opponent.x + angleOffset));
+          this.facing = opponent.x > this.x ? 1 : -1;
+          spawnSlashWeb(opponent.x, opponent.y - 50, i === 5 ? '#34d399' : '#c084fc');
+          opponent.takeDamage(i === 5 ? 98 : 38, this.facing * (i === 5 ? 18 : 2), i === 5 ? -12 : -2, this, {
+            unblockable: true, hitstop: i === 5 ? 9 : 2, shake: i === 5 ? 18 : 7, color: '#c084fc',
+            isCrit: i === 5, label: i === 5 ? '천여주박: 무형 일섬!!' : ''
+          });
+        }, 220 + i * 105);
+      }
+    }
+  }
+
+  update(opponent) {
+    this.animTimer++;
+    this.gainCe(0.055);
+
+    for (const k of ['Q', 'W', 'E']) {
+      if (this.cooldowns[k] > 0) this.cooldowns[k]--;
+    }
+    if (this.invulnTimer > 0) this.invulnTimer--;
+    if (this.counterShieldTimer > 0) this.counterShieldTimer--;
+
+    if (this.comboResetTimer > 0) {
+      this.comboResetTimer--;
+      if (this.comboResetTimer === 0) this.comboCount = 0;
+    }
+
+    if (this.specialAction) {
+      this.specialAction.timer--;
+      if (this.specialAction.timer <= 0) this.specialAction = null;
+    }
+
+    if (this.stateTimer > 0) {
+      this.stateTimer--;
+      if (this.stateTimer === 0 && this.state !== 'DEAD') {
+        this.state = this.isGrounded() ? 'IDLE' : 'JUMP';
+      }
+    }
+
+    if (opponent && this.isGrounded() && ['IDLE', 'RUN', 'BLOCK'].includes(this.state)) {
+      this.facing = opponent.x >= this.x ? 1 : -1;
+    }
+
+    if (['IDLE', 'RUN', 'JUMP', 'BLOCK'].includes(this.state)) {
+      if (this.side === 1) {
+        this.handlePlayer1Movement();
+      } else {
+        if (gameMode === 'CPU') {
+          this.handleRelaxedAi(opponent);
+        } else {
+          this.handlePlayer2Movement();
+        }
+      }
+    }
+
+    this.vy += 0.72;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.isGrounded()) {
+      this.vx *= 0.78;
+      if (Math.abs(this.vx) < 0.2) this.vx = 0;
+    } else {
+      this.vx *= 0.94;
+    }
+
+    if (this.y >= this.groundY) {
+      this.y = this.groundY;
+      this.vy = 0;
+      if (this.state === 'JUMP') this.state = 'IDLE';
+    }
+
+    const margin = 48;
+    if (this.x < margin) this.x = margin;
+    if (this.x > arenaWidth - margin) this.x = arenaWidth - margin;
+  }
+
+  handlePlayer1Movement() {
+    let moving = false;
+    if (keys['KeyA']) { this.vx = -this.data.speed; moving = true; }
+    if (keys['KeyD']) { this.vx = this.data.speed; moving = true; }
+    if (keys['Space'] && this.isGrounded()) {
+      this.vy = this.data.jumpPower;
+      this.state = 'JUMP';
+      sfx.jump();
+    }
+    if (this.isGrounded() && !['ATTACK', 'BLOCK'].includes(this.state)) {
+      this.state = moving ? 'RUN' : 'IDLE';
+    }
+  }
+
+  handlePlayer2Movement() {
+    let moving = false;
+    if (keys['Comma'] || keys['<']) { this.vx = -this.data.speed; moving = true; }
+    if (keys['Period'] || keys['>']) { this.vx = this.data.speed; moving = true; }
+    if (keys['Enter'] && this.isGrounded()) {
+      this.vy = this.data.jumpPower;
+      this.state = 'JUMP';
+      sfx.jump();
+    }
+    if (this.isGrounded() && !['ATTACK', 'BLOCK'].includes(this.state)) {
+      this.state = moving ? 'RUN' : 'IDLE';
+    }
+  }
+
+  // Relaxed AI so players can comfortably land combos and win
+  handleRelaxedAi(opponent) {
+    if (!opponent || gameState !== 'FIGHT') return;
+
+    const dist = Math.abs(opponent.x - this.x);
+    const dir = opponent.x >= this.x ? 1 : -1;
+
+    const cfg = {
+      EASY:   { thinkFrames: 42, actionDelay: 85, skillChance: 0.24, ultChance: 0.08, speedMult: 0.55 },
+      NORMAL: { thinkFrames: 28, actionDelay: 58, skillChance: 0.40, ultChance: 0.16, speedMult: 0.72 },
+      GRADE1: { thinkFrames: 18, actionDelay: 38, skillChance: 0.62, ultChance: 0.28, speedMult: 0.88 }
+    }[aiDifficulty] || { thinkFrames: 28, actionDelay: 58, skillChance: 0.40, ultChance: 0.16, speedMult: 0.72 };
+
+    this.aiThinkTimer--;
+    if (this.aiThinkTimer <= 0) {
+      this.aiThinkTimer = cfg.thinkFrames;
+      if (dist > 270) {
+        this.aiDesiredMove = dir;
+      } else if (dist < 85) {
+        this.aiDesiredMove = Math.random() < 0.65 ? -dir : 0;
+      } else {
+        const roll = Math.random();
+        this.aiDesiredMove = roll < 0.30 ? dir : (roll < 0.55 ? -dir : 0);
+      }
+    }
+
+    if (this.aiDesiredMove !== 0) {
+      this.vx = this.aiDesiredMove * (this.data.speed * cfg.speedMult);
+      if (this.isGrounded()) this.state = 'RUN';
+    } else if (this.isGrounded()) {
+      this.state = 'IDLE';
+    }
+
+    if (this.aiActionCooldown > 0) {
+      this.aiActionCooldown--;
+      return;
+    }
+
+    if (Math.random() < cfg.skillChance) {
+      this.aiActionCooldown = cfg.actionDelay;
+
+      if (this.ce >= 100 && Math.random() < cfg.ultChance) {
+        this.useSkill('R', opponent);
+        return;
+      }
+
+      if (dist < 130 && this.cooldowns.E === 0) {
+        this.useSkill('E', opponent);
+      } else if (dist >= 115 && dist < 340 && this.cooldowns.W === 0) {
+        this.useSkill('W', opponent);
+      } else if (this.cooldowns.Q === 0) {
+        this.useSkill('Q', opponent);
+      }
+    }
+  }
+}
+
+// ==================== 8. PROJECTILES, PARTICLES & CACHED 2D BACKGROUND ====================
+function triggerScreenShake(intensity) {
+  screenShake.intensity = Math.max(screenShake.intensity, intensity);
+}
+
+function spawnParticles(x, y, color, count = 10, speed = 6) {
+  for (let i = 0; i < count; i++) {
+    if (particles.length >= MAX_PARTICLES) particles.shift();
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (0.3 + Math.random() * 0.8) * speed;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd - 1.5,
+      size: 2.5 + Math.random() * 4,
+      color,
+      life: 16 + Math.floor(Math.random() * 14),
+      maxLife: 30
+    });
+  }
+}
+
+function spawnSlashWeb(x, y, color) {
+  for (let i = 0; i < 5; i++) {
+    if (particles.length >= MAX_PARTICLES) particles.shift();
+    const angle = (Math.PI / 5) * i + (Math.random() - 0.5) * 0.4;
+    particles.push({
+      isSlashLine: true, x, y, angle,
+      length: 50 + Math.random() * 40,
+      color, life: 12, maxLife: 12
+    });
+  }
+}
+
+function spawnFloatingText(x, y, text, color = '#fff', size = 18) {
+  floatingTexts.push({ x, y, text, color, size, vy: -1.8, life: 38 });
+}
+
+function spawnAfterimage(fighter) {
+  afterimages.push({
+    charId: fighter.data.id, x: fighter.x, y: fighter.y, facing: fighter.facing, alpha: 0.6
+  });
+}
+
+function updateProjectiles() {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+
+    const target = p.owner.side === 1 ? player2 : player1;
+    const dist = Math.hypot(target.x - p.x, (target.y - 50) - p.y);
+
+    if (p.type === 'gojo_blue') {
+      if (dist < 175 && target.state !== 'DEAD') {
+        target.x += (p.x - target.x) * 0.085;
+      }
+      if (dist < p.radius + 32 && p.hitTimer <= 0) {
+        p.hitTimer = 14;
+        target.takeDamage(Math.floor(p.damage / 3), 0, -2, p.owner, { color: '#38bdf8', label: '창 (蒼)' });
+      }
+      if (p.hitTimer > 0) p.hitTimer--;
+    } else if (dist < p.radius + 32 && target.state !== 'DEAD') {
+      const dir = p.vx >= 0 ? 1 : -1;
+
+      if (p.type === 'inumaki_stun') {
+        target.takeDamage(p.damage, 0, 0, p.owner, {
+          stunFrames: 82, hitstop: 6, color: '#c084fc', label: `「${p.kanji}」 경직!`
+        });
+        spawnParticles(target.x, target.y - 55, '#c084fc', 14, 7);
+        p.life = 0;
+      } else if (p.type === 'toji_chain') {
+        target.takeDamage(p.damage, -dir * 14, -4, p.owner, {
+          hitstop: 6, shake: 10, color: '#a855f7', label: '만리쇄 포박!'
+        });
+        target.x = p.owner.x + p.owner.facing * 65;
+        spawnSlashWeb(target.x, target.y - 50, '#38bdf8');
+        p.life = 0;
+      } else if (['gojo_purple_beam', 'yuta_love_beam', 'geto_uzumaki', 'inumaki_ult'].includes(p.type)) {
+        if (!p.hasHit) {
+          p.hasHit = true;
+          const labelMap = {
+            gojo_purple_beam: '허식: 자 (茈)!!',
+            yuta_love_beam: '순애포 (純愛砲)!!',
+            geto_uzumaki: '극번: 소용돌이!!',
+            inumaki_ult: '주언: 「붕괴·떨어져라」!!'
+          };
+          const colorMap = {
+            gojo_purple_beam: '#c084fc',
+            yuta_love_beam: '#f472b6',
+            geto_uzumaki: '#a855f7',
+            inumaki_ult: '#d8b4fe'
+          };
+          target.takeDamage(p.damage, dir * 24, -12, p.owner, {
+            unblockable: true, hitstop: 10, shake: 20, color: colorMap[p.type], isCrit: true, label: labelMap[p.type]
+          });
+          spawnParticles(target.x, target.y - 55, colorMap[p.type], 26, 12);
+        }
+      } else {
+        sfx.heavyHit();
+        target.takeDamage(p.damage, dir * 11, -5, p.owner, {
+          hitstop: 4, shake: 8, color: p.owner.data.themeColor
+        });
+        spawnParticles(p.x, p.y, p.owner.data.themeColor, 12, 7);
+        p.life = 0;
+      }
+    }
+
+    if (p.life <= 0 || p.x < -180 || p.x > arenaWidth + 180) {
+      projectiles.splice(i, 1);
+    }
+  }
+}
+
+let arenaWidth = 1280;
+let arenaHeight = 720;
+
+function resizeCanvas() {
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  arenaWidth = parent.clientWidth || window.innerWidth;
+  arenaHeight = parent.clientHeight || window.innerHeight;
+  canvas.width = arenaWidth;
+  canvas.height = arenaHeight;
+  cachedStageKey = ''; // Invalidate offscreen background cache on resize
+
+  const newGroundY = arenaHeight - 44;
+  if (player1) {
+    const diff = newGroundY - player1.groundY;
+    player1.groundY = newGroundY;
+    player1.y += diff;
+  }
+  if (player2) {
+    const diff = newGroundY - player2.groundY;
+    player2.groundY = newGroundY;
+    player2.y += diff;
+  }
+}
+
+/**
+ * Renders the static 2D stage background onto an offscreen canvas ONCE per stage/resize.
+ * Eliminates all per-frame gradient and vector overhead!
+ */
+function renderBackgroundCache() {
+  const key = `${selectedStage}_${arenaWidth}_${arenaHeight}`;
+  if (cachedStageKey === key) return;
+  cachedStageKey = key;
+
+  bgCacheCanvas.width = arenaWidth;
+  bgCacheCanvas.height = arenaHeight;
+  const c = bgCacheCtx;
+  const groundY = arenaHeight - 44;
+
+  if (selectedStage === 'shibuya') {
+    const bgGrad = c.createLinearGradient(0, 0, 0, groundY);
+    bgGrad.addColorStop(0, '#090d16');
+    bgGrad.addColorStop(0.6, '#131b2e');
+    bgGrad.addColorStop(1, '#1e293b');
+    c.fillStyle = bgGrad;
+    c.fillRect(0, 0, arenaWidth, groundY);
+
+    for (let x = 120; x < arenaWidth; x += 280) {
+      c.fillStyle = '#0f172a';
+      c.fillRect(x, 60, 44, groundY - 60);
+      c.fillStyle = '#1e293b';
+      c.fillRect(x - 24, 120, 92, 28);
+      c.strokeStyle = '#22c55e';
+      c.lineWidth = 2;
+      c.strokeRect(x - 24, 120, 92, 28);
+      c.fillStyle = '#f8fafc';
+      c.font = 'bold 13px "Noto Sans KR"';
+      c.textAlign = 'center';
+      c.fillText('渋谷 SHIBUYA', x + 22, 139);
+    }
+  } else if (selectedStage === 'school') {
+    const bgGrad = c.createLinearGradient(0, 0, 0, groundY);
+    bgGrad.addColorStop(0, '#050814');
+    bgGrad.addColorStop(0.55, '#17153b');
+    bgGrad.addColorStop(1, '#2e236c');
+    c.fillStyle = bgGrad;
+    c.fillRect(0, 0, arenaWidth, groundY);
+
+    c.fillStyle = 'rgba(254, 240, 138, 0.16)';
+    c.beginPath(); c.arc(arenaWidth * 0.5, arenaHeight * 0.25, 68, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fef9c3';
+    c.beginPath(); c.arc(arenaWidth * 0.5, arenaHeight * 0.25, 48, 0, Math.PI * 2); c.fill();
+
+    c.fillStyle = '#090d1a';
+    c.fillRect(arenaWidth * 0.2, groundY - 170, 22, 170);
+    c.fillRect(arenaWidth * 0.8 - 22, groundY - 170, 22, 170);
+    c.fillRect(arenaWidth * 0.16, groundY - 185, arenaWidth * 0.68, 18);
+  } else {
+    const bgGrad = c.createLinearGradient(0, 0, 0, groundY);
+    bgGrad.addColorStop(0, '#190409');
+    bgGrad.addColorStop(0.5, '#450a0a');
+    bgGrad.addColorStop(1, '#7f1d1d');
+    c.fillStyle = bgGrad;
+    c.fillRect(0, 0, arenaWidth, groundY);
+
+    const cx = arenaWidth * 0.5;
+    c.fillStyle = '#090204';
+    c.beginPath();
+    c.moveTo(cx - 170, groundY); c.lineTo(cx - 130, groundY - 160);
+    c.lineTo(cx + 130, groundY - 160); c.lineTo(cx + 170, groundY);
+    c.fill();
+    c.beginPath();
+    c.moveTo(cx - 210, groundY - 155);
+    c.quadraticCurveTo(cx, groundY - 230, cx + 210, groundY - 155);
+    c.lineTo(cx + 180, groundY - 140);
+    c.quadraticCurveTo(cx, groundY - 195, cx - 180, groundY - 140);
+    c.fill();
+  }
+
+  // Clean 2D Arena Floor
+  const floorGrad = c.createLinearGradient(0, groundY, 0, arenaHeight);
+  floorGrad.addColorStop(0, '#334155');
+  floorGrad.addColorStop(1, '#090d16');
+  c.fillStyle = floorGrad;
+  c.fillRect(0, groundY, arenaWidth, arenaHeight - groundY);
+
+  c.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(0, groundY);
+  c.lineTo(arenaWidth, groundY);
+  c.stroke();
+}
+
+function drawArenaBackground() {
+  renderBackgroundCache();
+  ctx.drawImage(bgCacheCanvas, 0, 0);
+
+  const groundY = arenaHeight - 44;
+  if (domainOverlay.active) {
+    domainOverlay.timer--;
+    if (domainOverlay.timer <= 0) domainOverlay.active = false;
+
+    if (domainOverlay.type === 'shrine') {
+      ctx.fillStyle = 'rgba(127, 29, 29, 0.55)';
+      ctx.fillRect(0, 0, arenaWidth, groundY);
+    } else if (domainOverlay.type === 'shadow') {
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+      ctx.fillRect(0, 0, arenaWidth, groundY);
+    } else if (domainOverlay.type === 'toji_zero') {
+      ctx.fillStyle = 'rgba(9, 9, 11, 0.80)';
+      ctx.fillRect(0, 0, arenaWidth, groundY);
+    }
+  }
+}
+
+function drawSpecialOverlaysAndProjectiles() {
+  [player1, player2].forEach(p => {
+    if (p && p.specialAction && p.specialAction.type === 'hollow_purple') {
+      const progress = 1 - (p.specialAction.timer / 50);
+      const centerX = p.x + p.facing * 65;
+      const centerY = p.y - 60;
+      const sep = Math.max(0, (1 - progress) * 85);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(centerX - sep, centerY - sep * 0.3, 20 + progress * 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(centerX + sep, centerY + sep * 0.3, 20 + progress * 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (progress > 0.55) {
+        ctx.fillStyle = '#a855f7';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, (progress - 0.55) * 95, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (p && p.counterShieldTimer > 0) {
+      const sx = p.x + p.facing * 36;
+      const sy = p.y - 54;
+      ctx.fillStyle = 'rgba(88, 28, 135, 0.78)';
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, 18, 36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      for (let e = -1; e <= 1; e++) {
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(sx, sy + e * 16, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(sx + p.facing * 2, sy + e * 16, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+
+  projectiles.forEach(p => drawCustomSkillEntity(ctx, p));
+}
+
+function drawParticlesAndTexts() {
+  for (let i = afterimages.length - 1; i >= 0; i--) {
+    const a = afterimages[i];
+    ctx.save();
+    ctx.globalAlpha = a.alpha;
+    drawArticulatedCharacter(ctx, a.charId, a.x, a.y, 1.18, a.facing, 'ATTACK', 0, 'SLASH', false);
+    ctx.restore();
+    a.alpha -= 0.06;
+    if (a.alpha <= 0) afterimages.splice(i, 1);
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const pt = particles[i];
+    pt.life--;
+    if (pt.isSlashLine) {
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate(pt.angle);
+      ctx.strokeStyle = pt.color;
+      ctx.globalAlpha = pt.life / pt.maxLife;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-pt.length / 2, 0);
+      ctx.lineTo(pt.length / 2, 0);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      ctx.fillStyle = pt.color;
+      ctx.globalAlpha = pt.life / pt.maxLife;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (pt.life <= 0) particles.splice(i, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life--;
+    ctx.globalAlpha = Math.min(1, ft.life / 12);
+    ctx.font = `900 ${ft.size}px "Noto Sans KR"`;
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(ft.text, ft.x, ft.y);
+    ctx.fillStyle = ft.color;
+    ctx.fillText(ft.text, ft.x, ft.y);
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawUltimateCutIn() {
+  if (!cutInEffect.active) return;
+  cutInEffect.timer--;
+  if (cutInEffect.timer <= 0) {
+    cutInEffect.active = false;
+    return;
+  }
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+  ctx.fillRect(0, arenaHeight * 0.25, arenaWidth, arenaHeight * 0.34);
+
+  const grad = ctx.createLinearGradient(0, 0, arenaWidth, 0);
+  grad.addColorStop(0, cutInEffect.side === 1 ? '#06b6d4' : '#1e1b4b');
+  grad.addColorStop(1, cutInEffect.side === 2 ? '#e11d48' : '#1e1b4b');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, arenaHeight * 0.27, arenaWidth, arenaHeight * 0.30);
+
+  const px = cutInEffect.side === 1 ? arenaWidth * 0.22 : arenaWidth * 0.78;
+  drawArticulatedCharacter(ctx, cutInEffect.char.id, px, arenaHeight * 0.64, 2.3, cutInEffect.side === 1 ? 1 : -1, 'ULT', 0, 'HAND_SIGN', true);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 36px "Black Han Sans"';
+  ctx.textAlign = 'center';
+  ctx.fillText(cutInEffect.skillName, arenaWidth * 0.5, arenaHeight * 0.44);
+
+  ctx.fillStyle = '#fde047';
+  ctx.font = 'bold 16px "Noto Sans KR"';
+  ctx.fillText(cutInEffect.char.quote, arenaWidth * 0.5, arenaHeight * 0.50);
+}
+
+// ==================== 9. HUD & MATCH FLOW ====================
+function updateHUD() {
+  if (!player1 || !player2) return;
+
+  const p1Pct = Math.max(0, (player1.hp / player1.maxHp) * 100);
+  const p2Pct = Math.max(0, (player2.hp / player2.maxHp) * 100);
+  document.getElementById('hud-p1-hp').style.width = `${p1Pct}%`;
+  document.getElementById('hud-p1-hp-lag').style.width = `${p1Pct}%`;
+  document.getElementById('hud-p2-hp').style.width = `${p2Pct}%`;
+  document.getElementById('hud-p2-hp-lag').style.width = `${p2Pct}%`;
+
+  const p1Ce = Math.floor(player1.ce);
+  const p2Ce = Math.floor(player2.ce);
+  const p1CeBar = document.getElementById('hud-p1-ce');
+  const p2CeBar = document.getElementById('hud-p2-ce');
+  p1CeBar.style.width = `${p1Ce}%`;
+  p2CeBar.style.width = `${p2Ce}%`;
+
+  document.getElementById('hud-p1-ce-text').textContent = p1Ce >= 100 ? '🔥 R 궁극기!' : `주력 ${p1Ce}%`;
+  document.getElementById('hud-p2-ce-text').textContent = p2Ce >= 100 ? (gameMode === 'CPU' ? '🔥 AI 궁극!' : '🔥 L 궁극기!') : `주력 ${p2Ce}%`;
+
+  p1CeBar.parentElement.classList.toggle('ult-ready', p1Ce >= 100);
+  p2CeBar.parentElement.classList.toggle('ult-ready', p2Ce >= 100);
+
+  for (const k of ['Q', 'W', 'E']) {
+    const readyRatio1 = 1 - (player1.cooldowns[k] / player1.data.skills[k].cd);
+    const cdEl1 = document.getElementById(`p1-cd-${k}`);
+    const stEl1 = document.getElementById(`p1-status-${k}`);
+    if (cdEl1 && stEl1) {
+      cdEl1.style.transform = `scaleX(${readyRatio1})`;
+      stEl1.textContent = player1.cooldowns[k] > 0 ? `${(player1.cooldowns[k] / 60).toFixed(1)}s` : 'READY';
+    }
+
+    const readyRatio2 = 1 - (player2.cooldowns[k] / player2.data.skills[k].cd);
+    const cdEl2 = document.getElementById(`p2-cd-${k}`);
+    const stEl2 = document.getElementById(`p2-status-${k}`);
+    if (cdEl2 && stEl2) {
+      cdEl2.style.transform = `scaleX(${readyRatio2})`;
+      stEl2.textContent = player2.cooldowns[k] > 0 ? `${(player2.cooldowns[k] / 60).toFixed(1)}s` : 'READY';
+    }
+  }
+
+  const p1UltSlot = document.getElementById('p1-slot-R');
+  const p1UltCd = document.getElementById('p1-cd-R');
+  const p1UltSt = document.getElementById('p1-status-R');
+  if (p1UltSlot && p1UltCd && p1UltSt) {
+    p1UltCd.style.transform = `scaleX(${p1Ce / 100})`;
+    p1UltSt.textContent = p1Ce >= 100 ? '🔥 발동가능!' : `${p1Ce}%`;
+    p1UltSlot.classList.toggle('ult-ready', p1Ce >= 100);
+  }
+
+  const p2UltSlot = document.getElementById('p2-slot-R');
+  const p2UltCd = document.getElementById('p2-cd-R');
+  const p2UltSt = document.getElementById('p2-status-R');
+  if (p2UltSlot && p2UltCd && p2UltSt) {
+    p2UltCd.style.transform = `scaleX(${p2Ce / 100})`;
+    p2UltSt.textContent = p2Ce >= 100 ? '🔥 발동가능!' : `${p2Ce}%`;
+    p2UltSlot.classList.toggle('ult-ready', p2Ce >= 100);
+  }
+
+  const p1ComboEl = document.getElementById('hud-p1-combo');
+  if (player1.comboCount >= 2) {
+    p1ComboEl.classList.remove('hidden');
+    p1ComboEl.querySelector('span').textContent = `${player1.comboCount} HITS!`;
+  } else {
+    p1ComboEl.classList.add('hidden');
+  }
+
+  const p2ComboEl = document.getElementById('hud-p2-combo');
+  if (player2.comboCount >= 2) {
+    p2ComboEl.classList.remove('hidden');
+    p2ComboEl.querySelector('span').textContent = `${player2.comboCount} HITS!`;
+  } else {
+    p2ComboEl.classList.add('hidden');
+  }
+
+  const p1Dots = document.getElementById('hud-p1-rounds').children;
+  p1Dots[0].className = `w-3 h-3 rounded-full border border-cyan-300 ${p1Wins >= 1 ? 'bg-cyan-400' : 'bg-slate-800'}`;
+  p1Dots[1].className = `w-3 h-3 rounded-full border border-cyan-300 ${p1Wins >= 2 ? 'bg-cyan-400' : 'bg-slate-800'}`;
+
+  const p2Dots = document.getElementById('hud-p2-rounds').children;
+  p2Dots[0].className = `w-3 h-3 rounded-full border border-rose-400 ${p2Wins >= 1 ? 'bg-rose-500' : 'bg-slate-800'}`;
+  p2Dots[1].className = `w-3 h-3 rounded-full border border-rose-400 ${p2Wins >= 2 ? 'bg-rose-500' : 'bg-slate-800'}`;
+}
+
+function showBanner(sub, main, duration = 1200) {
+  const banner = document.getElementById('center-banner');
+  document.getElementById('banner-sub').textContent = sub;
+  document.getElementById('banner-main').textContent = main;
+  banner.classList.remove('hidden');
+  if (duration > 0) {
+    setTimeout(() => banner.classList.add('hidden'), duration);
+  }
+}
+
+function setupRound() {
+  const groundY = arenaHeight - 44;
+  player1 = new Fighter(p1Choice, 1, arenaWidth * 0.25, groundY);
+  player2 = new Fighter(p2Choice, 2, arenaWidth * 0.75, groundY);
+  projectiles = [];
+  particles = [];
+  floatingTexts = [];
+  afterimages = [];
+  domainOverlay.active = false;
+  cutInEffect.active = false;
+
+  matchTimer = 99;
+  document.getElementById('hud-timer').textContent = matchTimer;
+  updateHUD();
+
+  gameState = 'INTRO';
+  showBanner(`ROUND ${roundNumber}`, 'READY...', 950);
+  setTimeout(() => {
+    if (gameState === 'INTRO') {
+      sfx.heavyHit();
+      showBanner(`ROUND ${roundNumber}`, 'FIGHT!', 750);
+      gameState = 'FIGHT';
+    }
+  }, 1000);
+}
+
+function startMatch() {
+  sfx.init();
+  sfx.domainExpand();
+  isPaused = false;
+
+  document.getElementById('select-screen').classList.add('hidden');
+  document.getElementById('battle-screen').classList.remove('hidden');
+  document.getElementById('match-over-modal').classList.add('hidden');
+  document.getElementById('pause-modal').classList.add('hidden');
+
+  canvas = document.getElementById('game-canvas');
+  ctx = canvas.getContext('2d', { alpha: false });
+  resizeCanvas();
+
+  const diffTag = { EASY: '입문 AI', NORMAL: '보통 AI', GRADE1: '1급 AI' }[aiDifficulty];
+  document.getElementById('hud-p1-name').textContent = p1Choice.name;
+  document.getElementById('hud-p2-name').textContent = gameMode === 'CPU' ? `${p2Choice.name} (${diffTag})` : p2Choice.name;
+  renderPortraitToCanvas('hud-p1-icon', p1Choice.id);
+  renderPortraitToCanvas('hud-p2-icon', p2Choice.id);
+
+  buildBottomSkillBars();
+
+  roundNumber = 1;
+  p1Wins = 0;
+  p2Wins = 0;
+  setupRound();
+
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  lastTime = performance.now();
+  fpsLastTime = lastTime;
+  fpsFrames = 0;
+  gameLoop(lastTime);
+}
+
+function togglePause() {
+  if (gameState === 'SELECT' || gameState === 'MATCH_OVER') return;
+  isPaused = !isPaused;
+  document.getElementById('pause-modal').classList.toggle('hidden', !isPaused);
+  if (!isPaused) lastTime = performance.now();
+}
+
+function rematch() {
+  document.getElementById('match-over-modal').classList.add('hidden');
+  roundNumber = 1;
+  p1Wins = 0;
+  p2Wins = 0;
+  setupRound();
+}
+
+function returnToSelect() {
+  gameState = 'SELECT';
+  isPaused = false;
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  document.getElementById('battle-screen').classList.add('hidden');
+  document.getElementById('match-over-modal').classList.add('hidden');
+  document.getElementById('pause-modal').classList.add('hidden');
+  document.getElementById('select-screen').classList.remove('hidden');
+}
+
+function checkRoundEnd() {
+  if (gameState !== 'FIGHT') return;
+
+  if (player1.hp <= 0 || player2.hp <= 0 || matchTimer <= 0) {
+    gameState = 'ROUND_END';
+    sfx.blackFlash();
+
+    let roundWinner = null;
+    if (player1.hp > player2.hp) {
+      p1Wins++;
+      roundWinner = player1;
+    } else if (player2.hp > player1.hp) {
+      p2Wins++;
+      roundWinner = player2;
+    } else {
+      if (p1Wins < 1) p1Wins++;
+      if (p2Wins < 1) p2Wins++;
+    }
+
+    updateHUD();
+    showBanner(roundWinner ? `${roundWinner.data.name} 라운드 승!` : '무승부!', 'K.O.!', 1600);
+
+    setTimeout(() => {
+      if (p1Wins >= 2 || p2Wins >= 2) {
+        gameState = 'MATCH_OVER';
+        const champion = p1Wins >= 2 ? p1Choice : p2Choice;
+        document.getElementById('winner-title').textContent = `${champion.name} 최종 승리!`;
+        document.getElementById('winner-quote').textContent = champion.quote;
+        document.getElementById('match-over-modal').classList.remove('hidden');
+      } else {
+        roundNumber++;
+        setupRound();
+      }
+    }, 1800);
+  }
+}
+
+// ==================== 10. MAIN 60FPS GAME LOOP ====================
+function gameLoop(timestamp) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+
+  // Real-time FPS Counter
+  fpsFrames++;
+  if (timestamp - fpsLastTime >= 500) {
+    const currentFps = Math.min(60, Math.round((fpsFrames * 1000) / (timestamp - fpsLastTime)));
+    const fpsEl = document.getElementById('fps-counter');
+    if (fpsEl) fpsEl.textContent = `${currentFps} FPS`;
+    fpsFrames = 0;
+    fpsLastTime = timestamp;
+  }
+
+  if (isPaused) {
+    animationFrameId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (hitStopFrames > 0) {
+    hitStopFrames--;
+    animationFrameId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (gameState === 'FIGHT') {
+    timerAccumulator += dt;
+    if (timerAccumulator >= 1000) {
+      timerAccumulator -= 1000;
+      matchTimer = Math.max(0, matchTimer - 1);
+      document.getElementById('hud-timer').textContent = matchTimer;
+    }
+  }
+
+  if (['INTRO', 'FIGHT', 'ROUND_END'].includes(gameState)) {
+    player1.update(player2);
+    player2.update(player1);
+    updateProjectiles();
+    checkRoundEnd();
+    updateHUD();
+  }
+
+  let shakeX = 0, shakeY = 0;
+  if (screenShake.intensity > 0.2) {
+    shakeX = (Math.random() - 0.5) * screenShake.intensity * 2;
+    shakeY = (Math.random() - 0.5) * screenShake.intensity * 2;
+    screenShake.intensity *= 0.85;
+  } else {
+    screenShake.intensity = 0;
+  }
+
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  drawArenaBackground();
+  drawParticlesAndTexts();
+
+  if (player1 && player2) {
+    [player1, player2].forEach(p => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.groundY + 4, 28, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    drawArticulatedCharacter(ctx, player1.data.id, player1.x, player1.y, 1.18, player1.facing, player1.state, player1.animTimer, player1.skillPose, false);
+    drawArticulatedCharacter(ctx, player2.data.id, player2.x, player2.y, 1.18, player2.facing, player2.state, player2.animTimer, player2.skillPose, false);
+
+    [player1, player2].forEach(p => {
+      if (p.state === 'BLOCK') {
+        ctx.strokeStyle = '#60a5fa';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(p.x + p.facing * 22, p.y - 52, 34, -0.8, 0.8);
+        ctx.stroke();
+      } else if (p.state === 'STUNNED') {
+        ctx.fillStyle = '#e879f9';
+        ctx.font = 'bold 13px "Noto Sans KR"';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡ 주언 경직!', p.x, p.y - 115);
+      }
+    });
+  }
+
+  drawSpecialOverlaysAndProjectiles();
+  drawUltimateCutIn();
+
+  ctx.restore();
+  animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+// ==================== 11. INPUT HANDLING ====================
+window.addEventListener('keydown', (e) => {
+  if (['Space', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    if (gameState !== 'SELECT') e.preventDefault();
+  }
+
+  if (e.code === 'Escape' && gameState !== 'SELECT') {
+    togglePause();
+    return;
+  }
+
+  if (e.repeat) return;
+  keys[e.code] = true;
+  keys[e.key] = true;
+
+  if (gameState !== 'FIGHT' || isPaused || !player1 || !player2) return;
+
+  if (e.code === 'KeyQ') player1.useSkill('Q', player2);
+  if (e.code === 'KeyW') player1.useSkill('W', player2);
+  if (e.code === 'KeyE') player1.useSkill('E', player2);
+  if (e.code === 'KeyR') player1.useSkill('R', player2);
+
+  if (gameMode === 'PVP') {
+    if (e.code === 'KeyH') player2.useSkill('Q', player1);
+    if (e.code === 'KeyJ') player2.useSkill('W', player1);
+    if (e.code === 'KeyK') player2.useSkill('E', player1);
+    if (e.code === 'KeyL') player2.useSkill('R', player1);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+  keys[e.key] = false;
+});
+
+window.addEventListener('resize', resizeCanvas);
+
+window.onload = () => {
+  buildRosterGrid();
+  setGameMode('CPU');
+};
+</script>
+</body>
+</html>

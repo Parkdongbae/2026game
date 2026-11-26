@@ -1,0 +1,3837 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>거북목의 전설: 오예준 무술대회 참전기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #09090b;
+            color: #ffffff;
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        .font-arcade {
+            font-family: 'Black Han Sans', sans-serif;
+            letter-spacing: 0.04em;
+        }
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1024px;
+            aspect-ratio: 16 / 9;
+            max-height: 75vh;
+            background: #111827;
+            border: 3px solid #374151;
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(239, 68, 68, 0.25);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .arcade-btn {
+            background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+            border: 2px solid #6b7280;
+            box-shadow: 0 4px 0 #111827, inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: transform 0.05s, box-shadow 0.05s;
+        }
+        .arcade-btn:active, .arcade-btn.active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #111827;
+        }
+        .arcade-btn-red {
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            border-color: #fca5a5;
+            box-shadow: 0 4px 0 #7f1d1d, inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        .arcade-btn-yellow {
+            background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+            border-color: #fde68a;
+            box-shadow: 0 4px 0 #78350f, inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        .arcade-btn-purple {
+            background: linear-gradient(180deg, #a855f7 0%, #6b21a8 100%);
+            border-color: #e9d5ff;
+            box-shadow: 0 4px 0 #4c1d95, inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        .arcade-btn-blue {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border-color: #bfdbfe;
+            box-shadow: 0 4px 0 #1e3a8a, inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px #a855f7, 0 4px 0 #4c1d95; }
+            50% { box-shadow: 0 0 24px #e879f9, 0 4px 0 #4c1d95; }
+        }
+        .special-ready {
+            animation: pulseGlow 1s infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 상단 타이틀 & 사운드 토글 -->
+    <div class="w-full max-w-[1024px] flex items-center justify-between px-3 py-1.5">
+        <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 bg-red-600 text-xs font-black rounded uppercase tracking-wider">ARCADE FIGHTER</span>
+            <h1 class="font-arcade text-lg sm:text-2xl text-amber-400 drop-shadow">거북목의 전설 : 오예준</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-home" class="hidden px-3 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-xs font-bold text-zinc-200 transition">
+                🏠 메인 메뉴
+            </button>
+            <button id="btn-skip-story" class="hidden px-3 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-xs font-bold text-zinc-200 transition">
+                스토리 건너뛰기 ⏭
+            </button>
+            <button id="btn-sound" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-xs font-bold text-amber-300 transition">
+                🔊 효과음 ON
+            </button>
+        </div>
+    </div>
+
+    <!-- 메인 게임 캔버스 영역 -->
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+    </div>
+
+    <!-- 하단 컨트롤러 (키보드 안내 및 터치/마우스 패드) -->
+    <div class="w-full max-w-[1024px] px-3 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <!-- 방향키 패드 -->
+        <div class="flex items-center gap-2">
+            <button data-key="ArrowLeft" class="ctrl-btn arcade-btn w-12 h-11 sm:w-14 sm:h-12 rounded-xl flex items-center justify-center text-lg font-black">◀</button>
+            <div class="flex flex-col gap-1">
+                <button data-key="ArrowUp" class="ctrl-btn arcade-btn w-12 h-8 sm:w-14 sm:h-9 rounded-lg flex items-center justify-center text-sm font-black">▲ 점프</button>
+                <button data-key="ArrowDown" class="ctrl-btn arcade-btn w-12 h-8 sm:w-14 sm:h-9 rounded-lg flex items-center justify-center text-sm font-black">▼ 숙이기</button>
+            </div>
+            <button data-key="ArrowRight" class="ctrl-btn arcade-btn w-12 h-11 sm:w-14 sm:h-12 rounded-xl flex items-center justify-center text-lg font-black">▶</button>
+        </div>
+
+        <!-- 키보드 단축키 안내 (데스크탑) -->
+        <div id="controls-guide" class="hidden md:flex flex-col items-center text-xs text-zinc-400 bg-zinc-900/90 px-4 py-1.5 rounded-xl border border-zinc-800">
+            <div class="font-bold text-zinc-200 mb-0.5">1P 조작법 (키보드 / 하단 버튼)</div>
+            <div>이동: <span class="text-amber-400 font-bold">A/D 또는 ←/→</span> | 점프/앉기: <span class="text-amber-400 font-bold">W/S 또는 ↑/↓</span></div>
+            <div>주먹: <span class="text-red-400 font-bold">J (Z)</span> | 발차기: <span class="text-yellow-400 font-bold">K (X)</span> | 가드(반격 흑섬): <span class="text-blue-400 font-bold">Space</span> | 필살기: <span class="text-purple-400 font-bold">L (C)</span></div>
+        </div>
+
+        <!-- 액션 버튼 패드 -->
+        <div class="flex items-center gap-2">
+            <button data-key="Space" class="ctrl-btn arcade-btn arcade-btn-blue px-3 h-12 rounded-xl flex flex-col items-center justify-center">
+                <span class="text-xs font-black">가드</span>
+                <span class="text-[10px] opacity-80">SPACE</span>
+            </button>
+            <button data-key="KeyJ" class="ctrl-btn arcade-btn arcade-btn-red w-13 h-12 px-3 rounded-xl flex flex-col items-center justify-center">
+                <span class="text-xs font-black">주먹</span>
+                <span class="text-[10px] opacity-80">J / Z</span>
+            </button>
+            <button data-key="KeyK" class="ctrl-btn arcade-btn arcade-btn-yellow w-13 h-12 px-3 rounded-xl flex flex-col items-center justify-center">
+                <span class="text-xs font-black">발차기</span>
+                <span class="text-[10px] opacity-80">K / X</span>
+            </button>
+            <button id="btn-special-pad" data-key="KeyL" class="ctrl-btn arcade-btn arcade-btn-purple px-3.5 h-12 rounded-xl flex flex-col items-center justify-center">
+                <span class="text-xs font-black">🔥필살기</span>
+                <span class="text-[10px] opacity-90">L / C</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * 거북목의 전설: 오예준 무술대회 참전기 (Tekken-Style 2D Arcade Fighter)
+         * ============================================================================
+         */
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = 960;
+        const H = 540;
+        const GROUND_Y = 465;
+
+        // ============================================================================
+        // 1. Web Audio API 기반 오락실 레트로 사운드 엔진
+        // ============================================================================
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, type, duration, vol = 0.15, slideFreq = null) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideFreq) {
+                    osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+                }
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+            playSelect() { this.playTone(520, 'square', 0.08, 0.1, 780); }
+            playPunch() { this.playTone(180, 'triangle', 0.12, 0.2, 60); }
+            playKick() { this.playTone(140, 'sawtooth', 0.16, 0.22, 45); }
+            playBlock() { this.playTone(320, 'square', 0.09, 0.15, 220); }
+            playSpecialCutin() {
+                this.playTone(260, 'sawtooth', 0.45, 0.22, 880);
+                setTimeout(() => this.playTone(520, 'square', 0.4, 0.2, 1040), 120);
+            }
+            playSpecialHit() {
+                this.playTone(110, 'sawtooth', 0.45, 0.3, 30);
+                this.playTone(220, 'square', 0.35, 0.25, 55);
+            }
+            playBlackFlash() {
+                this.playTone(65, 'sawtooth', 0.55, 0.35, 22);
+                this.playTone(980, 'square', 0.18, 0.25, 140);
+                setTimeout(() => this.playTone(1320, 'sawtooth', 0.25, 0.25, 80), 60);
+            }
+            playKO() {
+                this.playTone(300, 'sawtooth', 0.6, 0.25, 55);
+            }
+        }
+        const sfx = new SoundEffects();
+
+        // ============================================================================
+        // 2. 캐릭터 스펙 및 스테이지 데이터
+        // ============================================================================
+        const PLAYER_SPEC = {
+            id: 'yejun',
+            name: '오예준',
+            title: '16세 거북목의 은둔 고수',
+            age: '16세 (고1)',
+            height: '176cm',
+            weight: '89kg',
+            style: '거북목 박치기 & 생활 체육권',
+            maxHp: 1450,
+            speed: 5.0,
+            punchDmg: 68,
+            kickDmg: 88,
+            traitName: '강철 거북목 & 각성 투지',
+            traitDesc: '받는 모든 피해 15% 경감 + HP 40% 이하 시 가드반격 흑섬 38% & 흑섬 적중 시 HP +45 회복!',
+            specialName: '초거북목 헤드벗 러시!',
+            specialDmg: 270,
+            specialDesc: '웅크렸던 거북목이 탄성처럼 튀어나가며 연타 박치기를 꽂아넣는다!',
+            themeColor: '#3b82f6'
+        };
+
+        const STAGES = [
+            {
+                stageNum: 1,
+                arenaName: '야생의 아웃백 링',
+                bgTheme: 'outback',
+                opponent: {
+                    id: 'kangaroo',
+                    name: '루키 (복싱 캥거루)',
+                    title: '호주에서 건너온 야생 킥복서',
+                    age: '4세 (캥거루)',
+                    height: '185cm',
+                    weight: '82kg',
+                    style: '꼬리 지탱 2단 킥 & 복싱',
+                    maxHp: 850,
+                    speed: 5.5,
+                    punchDmg: 55,
+                    kickDmg: 75,
+                    traitName: '탄성 꼬리 & 야생 연타',
+                    traitDesc: '① 기 회복 1.6배 & 점프 회피 ② 주먹 명중 시 25% 확률로 18 추가 연타!',
+                    specialName: '아웃백 연타 캥거루 킥!',
+                    specialDmg: 210,
+                    specialDesc: '강인한 꼬리로 몸을 지탱한 뒤 초고속 2단 발차기를 날린다!',
+                    themeColor: '#f97316',
+                    aiAggression: 0.48,
+                    winQuote: '글러브 낀 캥거루한테도 이겼다! 야생의 본능도 내 거북목 앞에선 무력하지!',
+                    loseQuote: '캥거루의 꼬리 킥 한 방에 척추가 일자로 펴져버렸다... 호주는 너무 강해...'
+                }
+            },
+            {
+                stageNum: 2,
+                arenaName: '24시 네온 편의점 골목',
+                bgTheme: 'street',
+                opponent: {
+                    id: 'vending',
+                    name: '자판기 V-900 (사물)',
+                    title: '500원 삼키면 폭주하는 강철 자동판매기',
+                    age: '12년산 (가전제품)',
+                    height: '192cm',
+                    weight: '240kg',
+                    style: '고압 캔 사출 & 강철 몸통 박치기',
+                    maxHp: 980,
+                    speed: 3.6,
+                    punchDmg: 62,
+                    kickDmg: 78,
+                    traitName: '강철 외장 & 잔돈 반환 반사',
+                    traitDesc: '① 일반 피해 25% 경감 & 넉백 면역 ② 피격 시 25% 확률로 캔 사출(15 반사 피해)!',
+                    specialName: '품절 대란 100캔 폭격!',
+                    specialDmg: 225,
+                    specialDesc: '동전 투입구가 붉게 빛나며 차가운 캔음료를 기관총처럼 발사한다!',
+                    themeColor: '#0284c7',
+                    aiAggression: 0.50,
+                    winQuote: '500원 안 돌려주던 자판기까지 부숴버렸다! 음료수 두 캔 득템!',
+                    loseQuote: '냉장 캔음료 세례에 이마에 혹이 났다... 강철 외장은 너무 단단해...'
+                }
+            },
+            {
+                stageNum: 3,
+                arenaName: '청룡 고교 체육관 특설링',
+                bgTheme: 'dojo',
+                opponent: {
+                    id: 'taepung',
+                    name: '강태풍',
+                    title: '전국체전 태권도부 에이스',
+                    age: '17세',
+                    height: '181cm',
+                    weight: '71kg',
+                    style: '정통 태권도 & 공중 회전각',
+                    maxHp: 1020,
+                    speed: 5.8,
+                    punchDmg: 64,
+                    kickDmg: 88,
+                    traitName: '질풍 연환각 & 선풍 반격',
+                    traitDesc: '① 발차기 리치 +25px & 피해 +20% ② 가드 직후 반격 공격력 +25% 증폭!',
+                    specialName: '청룡 회오리 3연각!',
+                    specialDmg: 240,
+                    specialDesc: '폭풍처럼 회전하며 상단을 강타하는 태권도 오의!',
+                    themeColor: '#ef4444',
+                    aiAggression: 0.54,
+                    winQuote: '전국체전 에이스도 통과! 화려한 발차기보다 묵직한 한 방이 더 센 법이지!',
+                    loseQuote: '태풍 같은 연속 발차기에 정신을 못 차렸다... 역시 운동부는 다르구나...'
+                }
+            },
+            {
+                stageNum: 4,
+                arenaName: '화염의 분식집 철판 링',
+                bgTheme: 'kitchen',
+                opponent: {
+                    id: 'tteokbokki',
+                    name: '불닭왕 떡볶이 (음식)',
+                    title: '스코빌 지수 100만 캡사이신 용암 떡볶이',
+                    age: '방금 조리됨',
+                    height: '162cm',
+                    weight: '35kg',
+                    style: '용암 양념 분사 & 쫄깃 탄성 바운스',
+                    maxHp: 1080,
+                    speed: 5.4,
+                    punchDmg: 68,
+                    kickDmg: 86,
+                    traitName: '캡사이신 화상 & 쫄깃 탄성',
+                    traitDesc: '① 타격 시 3초 화상(매초 -14) ② 피격 시 22% 확률로 쫄깃하게 튕겨내며 기 +15 회복!',
+                    specialName: '지옥불 치즈 용암 대폭발!',
+                    specialDmg: 255,
+                    specialDesc: '펄펄 끓는 매운 양념과 늘어난 모짜렐라 치즈로 상대를 휘감아 폭발시킨다!',
+                    themeColor: '#dc2626',
+                    aiAggression: 0.58,
+                    winQuote: '쿨피스 없이도 매운 떡볶이를 완식했다! 속이 다 시원하네!',
+                    loseQuote: '입술이 퉁퉁 붓고 땀이 비 오듯 쏟아진다... 너무 매워... 물 좀 줘...'
+                }
+            },
+            {
+                stageNum: 5,
+                arenaName: '백두산 설원 비밀 수련장',
+                bgTheme: 'snow',
+                opponent: {
+                    id: 'bear',
+                    name: '반달왕 (반달가슴곰)',
+                    title: '백두산의 고귀한 맹수 수호신',
+                    age: '7세 (반달가슴곰)',
+                    height: '215cm',
+                    weight: '195kg',
+                    style: '자연의 괴력 곰발바닥 타격',
+                    maxHp: 1180,
+                    speed: 4.3,
+                    punchDmg: 86,
+                    kickDmg: 96,
+                    traitName: '강철 가죽 & 맹수의 포효',
+                    traitDesc: '① 일반 피해 20% 경감 & 넉백 저항 ② 체력 50% 이하 시 공격력 +15% 분노!',
+                    specialName: '대자연의 곰발바닥 대지분쇄!',
+                    specialDmg: 270,
+                    specialDesc: '거대한 앞발로 대지를 내려찍어 빙결 충격파를 일으킨다!',
+                    themeColor: '#0ea5e9',
+                    aiAggression: 0.60,
+                    winQuote: '195kg 반달가슴곰까지 쓰러뜨렸다! 이제 내 89kg 몸무게도 깃털처럼 가볍다!',
+                    loseQuote: '곰발바닥 한 대 맞고 백두산 눈밭에 파묻혔다... 자연의 벽은 높았다...'
+                }
+            },
+            {
+                stageNum: 6,
+                arenaName: '브루클린 스트리트 옥상 링',
+                bgTheme: 'rooftop',
+                opponent: {
+                    id: 'zara',
+                    name: '자라 (Zara)',
+                    title: '뉴욕을 제패한 전광석화 흑인 여성 복서',
+                    age: '19세',
+                    height: '178cm',
+                    weight: '66kg',
+                    style: '카포에라 스텝 & 라이트닝 콤비네이션',
+                    maxHp: 1220,
+                    speed: 6.7,
+                    punchDmg: 82,
+                    kickDmg: 98,
+                    traitName: '흑표범 스텝 & 썬더 카운터',
+                    traitDesc: '① 공격 회피율 18% & 기 회복 1.5배 ② 주먹 적중 시 30% 확률로 감전 스턴(0.6초)!',
+                    specialName: '블랙 썬더 허리케인 러시!',
+                    specialDmg: 285,
+                    specialDesc: '보이지 않는 속도로 잔상을 남기며 황금 전격 연타를 퍼붓는다!',
+                    themeColor: '#f59e0b',
+                    aiAggression: 0.66,
+                    winQuote: '엄청난 스피드였지만 타이밍을 읽고 가드 반격으로 받아쳤다! 훌륭한 승부였어!',
+                    loseQuote: '잔상조차 보이지 않는 펀치 연타에 무릎을 꿇었다... 세계의 벽은 높구나...'
+                }
+            },
+            {
+                stageNum: 7,
+                arenaName: '하늘을 찌르는 대나무 숲',
+                bgTheme: 'bamboo',
+                opponent: {
+                    id: 'crane',
+                    name: '백학도사 (천년 단정학)',
+                    title: '외발로 구름을 가르는 선계 무술가',
+                    age: '120세 (영물 학)',
+                    height: '198cm',
+                    weight: '42kg',
+                    style: '학익진 날개 베기 & 비연각',
+                    maxHp: 1140,
+                    speed: 6.5,
+                    punchDmg: 72,
+                    kickDmg: 96,
+                    traitName: '선풍 간파 & 선계 호흡',
+                    traitDesc: '① 피격 시 20% 확률 완전 회피 ② 매 2초마다 선계 내공으로 HP +12 자동 회복!',
+                    specialName: '천년 백학 선풍 날개격!',
+                    specialDmg: 280,
+                    specialDesc: '거대한 순백의 날개를 펼쳐 회오리바람과 함께 급강하한다!',
+                    themeColor: '#14b8a6',
+                    aiAggression: 0.65,
+                    winQuote: '백학도사의 바람마저 뚫어냈다! 거북목의 무게중심은 흔들리지 않아!',
+                    loseQuote: '학의 날개짓에 날아가 대나무에 매달렸다... 120년 내공은 너무 깊어...'
+                }
+            },
+            {
+                stageNum: 8,
+                arenaName: '지하 투기장 철창 아레나',
+                bgTheme: 'cage',
+                opponent: {
+                    id: 'geosan',
+                    name: '박거산',
+                    title: '무제한급 유도 헤비급 챔피언',
+                    age: '19세',
+                    height: '194cm',
+                    weight: '118kg',
+                    style: '유도 메치기 & 괴력 압박',
+                    maxHp: 1320,
+                    speed: 4.1,
+                    punchDmg: 90,
+                    kickDmg: 102,
+                    traitName: '금강불괴 & 철벽 부동심',
+                    traitDesc: '① 상대 가드 45% 관통 피해 ② 일반 피격 시 경직(HURT) 50% 단축!',
+                    specialName: '지옥의 한판 업어치기!',
+                    specialDmg: 295,
+                    specialDesc: '거대한 체구로 상대를 번쩍 들어 바닥에 꽂아버리는 필살 메치기!',
+                    themeColor: '#2563eb',
+                    aiAggression: 0.68,
+                    winQuote: '118kg 거구를 꺾었다! 이제 이 대회에서 나보다 무거운 녀석은 없다!',
+                    loseQuote: '지옥의 업어치기에 매트와 하나가 되었다... 온몸이 삐걱거려...'
+                }
+            },
+            {
+                stageNum: 9,
+                arenaName: '불타는 황금 사원 무투장',
+                bgTheme: 'temple',
+                opponent: {
+                    id: 'viper',
+                    name: '독사권 왕무영',
+                    title: '초장신 관절기의 암흑 권법가',
+                    age: '21세',
+                    height: '204cm',
+                    weight: '79kg',
+                    style: '긴 리치의 사권 연타 & 채찍각',
+                    maxHp: 1240,
+                    speed: 6.4,
+                    punchDmg: 86,
+                    kickDmg: 105,
+                    traitName: '맹독 침투 & 뱀의 비늘',
+                    traitDesc: '① 리치 +35px & 3초 맹독 피해 ② 중독된 상대에게 입히는 피해 +18% 증폭!',
+                    specialName: '쌍두 독사 연환 비수권!',
+                    specialDmg: 305,
+                    specialDesc: '긴 팔다리를 채찍처럼 휘둘러 빈틈없이 급소를 찌른다!',
+                    themeColor: '#10b981',
+                    aiAggression: 0.72,
+                    winQuote: '긴 리치도 파고들면 그만! 드디어 양귀비 코앞까지 왔다!',
+                    loseQuote: '독사 같은 연타에 급소를 찔려 주저앉았다... 양귀비를 만나기 직전인데...'
+                }
+            },
+            {
+                stageNum: 10,
+                arenaName: '붉은 달빛의 비밀 누각',
+                bgTheme: 'palace',
+                opponent: {
+                    id: 'gwibi',
+                    name: '양귀비',
+                    title: '무술대회를 연 매혹의 비밀 무술가',
+                    age: '17세',
+                    height: '166cm',
+                    weight: '48kg',
+                    style: '환혹 부채춤 & 비연 각법',
+                    maxHp: 1350,
+                    speed: 6.6,
+                    punchDmg: 82,
+                    kickDmg: 102,
+                    traitName: '매혹 & 천년화 기운 흡수',
+                    traitDesc: '① [매혹] 적중 시 25% 확률로 상대를 홀려 행동 불능 경직 + 기 12 흡수 & HP +25 회복!',
+                    specialName: '천년화 환혹 꽃잎난무!',
+                    specialDmg: 320,
+                    specialDesc: '휘날리는 붉은 꽃잎과 함께 시선을 빼앗은 뒤 치명적인 연격을 가한다!',
+                    themeColor: '#f43f5e',
+                    aiAggression: 0.76,
+                    winQuote: '해냈어...! 양귀비를 이겼다! 잠깐, 저 거울 속에서 걸어 나오는 건... 나 자신?!',
+                    loseQuote: '아름다움과 매혹의 기술에 완전히 홀려버렸다... 눈을 뗄 수가 없어...'
+                }
+            },
+            {
+                stageNum: 11,
+                arenaName: '심연의 거울 세계 (FINAL)',
+                bgTheme: 'abyss',
+                opponent: {
+                    id: 'dark_yejun',
+                    name: '흑화한 오예준',
+                    title: '억눌린 분노가 폭주한 내면의 그림자',
+                    age: '16세 (폭주)',
+                    height: '176cm',
+                    weight: '89kg',
+                    style: '암흑 거북목 폭주권',
+                    maxHp: 1980,
+                    speed: 7.0,
+                    punchDmg: 126,
+                    kickDmg: 152,
+                    traitName: '심연의 폭주 & 상시 흑섬',
+                    traitDesc: '① 상시 흑섬 25% & 공격력 +25% ② 기 회복 2배 & 2초마다 암흑 재생(HP +15)!',
+                    specialName: '절망의 흑화 거북목 폭주!',
+                    specialDmg: 445,
+                    specialDesc: '검붉은 오라를 휘감고 시공간을 뒤흔드는 궁극의 거북목 연격!',
+                    themeColor: '#a855f7',
+                    aiAggression: 0.89,
+                    winQuote: '어둠 속의 나 자신마저 뛰어넘었다! 거북목도, 열등감도 이제 내 힘이다!',
+                    loseQuote: '내 안의 어둠에게 삼켜지고 말았다... 아직 스스로를 이기지 못했어...'
+                }
+            }
+        ];
+
+        // ============================================================================
+        // 3. 게임 전역 상태 변수
+        // ============================================================================
+        let gameMode = 'STORY'; // 'STORY' | 'FREE' | 'PVP'
+        let gameState = 'TITLE'; // TITLE, CHAR_SELECT, STORY, VERSUS, ROUND_INTRO, FIGHT, CUTIN, STAGE_CLEAR, ENDING, GAME_OVER
+        let currentStageIdx = 0;
+        let storySlideIdx = 0;
+        let endingSlideIdx = 0;
+        let stateTimer = 0;
+        let screenShake = 0;
+        let hitStopFrames = 0;
+
+        // 선택 가능한 전체 12명 캐릭터 풀 (오예준 + 11명의 보스/라이벌)
+        const ALL_FIGHTERS = [PLAYER_SPEC, ...STAGES.map(s => s.opponent)];
+        let p1SelectedIdx = 0;
+        let p2SelectedIdx = 1;
+        let selectTurn = 1; // 1: P1 선택 중, 2: P2/CPU 선택 중
+        let selectedArenaIdx = 0;
+
+        let player = null;
+        let enemy = null;
+        let roundTimer = 99;
+        let roundTick = 0;
+        let particles = [];
+        let blackFlashBolts = [];
+        let floatingTexts = [];
+        let cutinData = {
+            active: false,
+            attacker: null,
+            timer: 0,
+            duration: 95
+        };
+
+        const keys = {};
+
+        // ============================================================================
+        // 4. 파이터(Fighter) 클래스
+        // ============================================================================
+        class Fighter {
+            constructor(spec, x, facing, isPlayer = false) {
+                this.spec = spec;
+                this.isPlayer = isPlayer;
+                this.x = x;
+                this.y = GROUND_Y;
+                this.vx = 0;
+                this.vy = 0;
+                this.facing = facing; // 1: 오른쪽, -1: 왼쪽
+                this.hp = spec.maxHp;
+                this.maxHp = spec.maxHp;
+                this.gauge = isPlayer ? 40 : 25;
+                this.maxGauge = 100;
+
+                this.state = 'IDLE'; // IDLE, WALK, JUMP, CROUCH, PUNCH, KICK, SPECIAL, BLOCK, HURT, KO
+                this.stateTime = 0;
+                this.attackHitApplied = false;
+                this.comboCount = 0;
+                this.comboTimer = 0;
+                this.animFrame = 0;
+                this.guardCounterTimer = 0; // 가드 성공 후 반격 흑섬 발동 가능 타이머
+                this.poisonTimer = 0; // 독사권 왕무영 맹독 지속피해 타이머
+                this.burnTimer = 0; // 불닭왕 떡볶이 캡사이신 화상 지속피해 타이머
+                this.charmTimer = 0; // 양귀비 [매혹] / 자라 [감전] 행동 불능 타이머
+                this.ccType = null; // 'CHARM' | 'SHOCK'
+            }
+
+            get isGrounded() {
+                return this.y >= GROUND_Y;
+            }
+
+            canAct() {
+                if (this.charmTimer > 0) return false;
+                return ['IDLE', 'WALK', 'CROUCH', 'BLOCK'].includes(this.state);
+            }
+
+            startAttack(type) {
+                if (!this.canAct() && !(this.state === 'JUMP' && type !== 'SPECIAL')) return;
+
+                if (type === 'SPECIAL') {
+                    if (this.gauge < this.maxGauge) return;
+                    this.gauge = 0;
+                    this.state = 'SPECIAL';
+                    this.stateTime = 0;
+                    this.attackHitApplied = false;
+                    triggerSpecialCutin(this);
+                    return;
+                }
+
+                this.state = type; // PUNCH or KICK
+                this.stateTime = 0;
+                this.attackHitApplied = false;
+                if (type === 'PUNCH') sfx.playPunch();
+                else sfx.playKick();
+            }
+
+            takeDamage(dmg, knockbackX, isSpecial = false) {
+                if (this.state === 'KO') return false;
+
+                // [단독 특성: 백학도사 20% / 자라 18% 회피]
+                const dodgeRate = this.spec.id === 'crane' ? 0.20 : (this.spec.id === 'zara' ? 0.18 : 0);
+                if (dodgeRate > 0 && !isSpecial && Math.random() < dodgeRate) {
+                    this.vx = -this.facing * 6;
+                    spawnParticles(this.x, this.y - 90, this.spec.id === 'zara' ? '#fbbf24' : '#ffffff', 14);
+                    addFloatingText(this.x, this.y - 150, this.spec.id === 'zara' ? '⚡ 흑표범 스텝 회피!' : '🕊️ 선풍 간파 회피!', '#2dd4bf');
+                    return false;
+                }
+
+                // [특성: 불닭왕 떡볶이 - 쫄깃 탄성] 피격 시 22% 확률로 튕겨내며 기 +15 회복
+                if (this.spec.id === 'tteokbokki' && !isSpecial && Math.random() < 0.22) {
+                    this.gauge = Math.min(this.maxGauge, this.gauge + 15);
+                    this.vx = -this.facing * 7;
+                    spawnParticles(this.x, this.y - 80, '#ef4444', 12);
+                    addFloatingText(this.x, this.y - 145, '🍡 쫄깃 탄성 바운스!', '#f87171');
+                }
+
+                // [특성: 자판기 V-900 - 잔돈 반환 반사] 피격 시 25% 확률로 캔 사출 반격
+                if (this.spec.id === 'vending' && !isSpecial && Math.random() < 0.25) {
+                    const attacker = this.isPlayer ? enemy : player;
+                    if (attacker && attacker.state !== 'KO') {
+                        attacker.hp = Math.max(1, attacker.hp - 15);
+                        spawnParticles(attacker.x, attacker.y - 85, '#38bdf8', 10);
+                        addFloatingText(attacker.x, attacker.y - 145, '🥫 캔 사출 반격 -15!', '#38bdf8');
+                    }
+                }
+
+                // 가드 판정 (필살기 45% 관통, 박거산은 강철 잡기 특성으로 일반 공격도 45% 관통)
+                if (this.state === 'BLOCK' && !isSpecial) {
+                    const isGeosanBreak = (enemy && this.isPlayer && enemy.spec.id === 'geosan') || (!this.isPlayer && player && player.spec.id === 'geosan');
+                    const chipRate = isGeosanBreak ? 0.45 : 0.15;
+                    const chipDmg = Math.round(dmg * chipRate);
+                    this.hp = Math.max(0, this.hp - chipDmg);
+                    this.vx = knockbackX * 0.4;
+                    this.gauge = Math.min(this.maxGauge, this.gauge + 8);
+                    this.guardCounterTimer = 45; // 가드 직후 반격 찬스 활성화
+                    sfx.playBlock();
+                    spawnParticles(this.x + this.facing * 25, this.y - 90, isGeosanBreak ? '#f59e0b' : '#60a5fa', 10);
+                    addFloatingText(this.x, this.y - 140, isGeosanBreak ? '💥 가드 분쇄!' : 'GUARD! (반격 찬스)', isGeosanBreak ? '#fbbf24' : '#60a5fa');
+                    return false;
+                }
+
+                let rawDmg = this.state === 'BLOCK' && isSpecial ? Math.round(dmg * 0.45) : dmg;
+                // [단독 특성: 오예준 - 강철 거북목 맷집] 받는 모든 피해 15% 경감 & 넉백 저항
+                if (this.spec.id === 'yejun') {
+                    rawDmg = Math.round(rawDmg * 0.85);
+                    knockbackX *= 0.75;
+                }
+                // [단독 특성: 반달왕 - 백두의 강철 가죽] 받는 일반 데미지 20% 경감 & 넉백 저항
+                if (this.spec.id === 'bear' && !isSpecial) {
+                    rawDmg = Math.round(rawDmg * 0.80);
+                    knockbackX *= 0.5;
+                }
+                // [단독 특성: 자판기 V-900 - 강철 외장] 받는 일반 데미지 25% 경감 & 넉백 면역
+                if (this.spec.id === 'vending' && !isSpecial) {
+                    rawDmg = Math.round(rawDmg * 0.75);
+                    knockbackX *= 0.2;
+                }
+                const finalDmg = rawDmg;
+
+                this.hp = Math.max(0, this.hp - finalDmg);
+                this.vx = knockbackX;
+                if (isSpecial) this.vy = -7;
+
+                this.gauge = Math.min(this.maxGauge, this.gauge + 14);
+                screenShake = isSpecial ? 18 : 7;
+                hitStopFrames = isSpecial ? 8 : 3;
+
+                if (isSpecial) sfx.playSpecialHit();
+                else sfx.playKick();
+
+                spawnParticles(this.x, this.y - 85, isSpecial ? '#facc15' : '#ef4444', isSpecial ? 28 : 14);
+                addFloatingText(this.x, this.y - 145, `-${finalDmg}`, isSpecial ? '#fde047' : '#f87171');
+
+                if (this.hp <= 0) {
+                    this.state = 'KO';
+                    this.vy = -9;
+                    this.vx = -this.facing * 7;
+                    sfx.playKO();
+                } else {
+                    this.state = 'HURT';
+                    // [추가 특성: 박거산 - 철벽 부동심] 일반 피격 경직 시간 50% 단축
+                    this.stateTime = (this.spec.id === 'geosan' && !isSpecial) ? 8 : 0;
+                }
+                return true;
+            }
+
+            update(opponent) {
+                this.animFrame++;
+                this.stateTime++;
+
+                // 매 프레임 타이머 감소 (스턴/매혹/가드반격 영구 지속 버그 수정)
+                if (this.charmTimer > 0) {
+                    this.charmTimer--;
+                    if (this.charmTimer === 0) this.ccType = null;
+                }
+                if (this.guardCounterTimer > 0) {
+                    this.guardCounterTimer--;
+                }
+
+                // [단독 특성: 독사권 왕무영 맹독 지속 피해]
+                if (this.poisonTimer > 0 && this.state !== 'KO') {
+                    this.poisonTimer--;
+                    if (this.poisonTimer % 30 === 0) {
+                        this.hp = Math.max(1, this.hp - 12);
+                        spawnParticles(this.x, this.y - 80, '#10b981', 6);
+                        addFloatingText(this.x, this.y - 135, '☠️ 맹독 -12', '#34d399');
+                    }
+                }
+
+                // [단독 특성: 불닭왕 떡볶이 캡사이신 화상 전용 불꽃 임팩트 & 지속 피해]
+                if (this.burnTimer > 0 && this.state !== 'KO') {
+                    this.burnTimer--;
+                    // 상시 피어오르는 불꽃 파티클
+                    if (this.animFrame % 4 === 0) {
+                        spawnFireParticles(this.x, this.y - 75, 2);
+                    }
+                    if (this.burnTimer % 30 === 0) {
+                        this.hp = Math.max(1, this.hp - 14);
+                        spawnFireParticles(this.x, this.y - 85, 10);
+                        addFloatingText(this.x, this.y - 140, '🔥 캡사이신 화상 -14', '#fb923c');
+                    }
+                }
+
+                if (this.comboTimer > 0) {
+                    this.comboTimer--;
+                    if (this.comboTimer === 0) this.comboCount = 0;
+                }
+
+                // [추가 특성: 백학도사 선계 호흡 / 흑화 예준 암흑 재생] 매 2초마다 HP 자동 회복
+                if (this.state !== 'KO' && this.animFrame % 120 === 0 && this.hp < this.maxHp) {
+                    if (this.spec.id === 'crane') {
+                        this.hp = Math.min(this.maxHp, this.hp + 12);
+                        addFloatingText(this.x, this.y - 140, '🍃 +12', '#2dd4bf');
+                    } else if (this.spec.id === 'dark_yejun') {
+                        this.hp = Math.min(this.maxHp, this.hp + 15);
+                        addFloatingText(this.x, this.y - 140, '🌑 +15', '#c084fc');
+                    }
+                }
+
+                // 기 게이지 자연 회복 (루키 1.6배, 자라 1.5배, 흑화 오예준 2배)
+                const gaugeInterval = this.spec.id === 'dark_yejun' ? 6 : (this.spec.id === 'kangaroo' || this.spec.id === 'zara' ? 8 : 12);
+                if (this.state !== 'KO' && this.animFrame % gaugeInterval === 0) {
+                    this.gauge = Math.min(this.maxGauge, this.gauge + 1);
+                }
+
+                // 상대를 바라보도록 방향 자동 정렬 (공격/피격 중 제외)
+                if (this.canAct() && opponent && opponent.state !== 'KO') {
+                    this.facing = opponent.x >= this.x ? 1 : -1;
+                }
+
+                // 물리 이동 적용
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (!this.isGrounded) {
+                    this.vy += 0.72; // 중력
+                } else {
+                    this.y = GROUND_Y;
+                    this.vy = 0;
+                    if (this.state === 'JUMP') this.state = 'IDLE';
+                }
+
+                this.vx *= 0.82;
+                // 상태별 프레임 및 타격 판정 (강태풍/왕무영은 리치 특성 반영)
+                const reachBonus = this.spec.id === 'viper' ? 35 : (this.spec.id === 'taepung' ? 25 : 0);
+                if (this.state === 'PUNCH') {
+                    if (this.stateTime === 6 && !this.attackHitApplied) {
+                        this.checkAttackHit(opponent, 108 + reachBonus, this.spec.punchDmg, 6, false);
+                    }
+                    if (this.stateTime >= 16) this.state = 'IDLE';
+                } else if (this.state === 'KICK') {
+                    if (this.stateTime === 8 && !this.attackHitApplied) {
+                        const kickBonusDmg = this.spec.id === 'taepung' ? Math.round(this.spec.kickDmg * 1.2) : this.spec.kickDmg;
+                        this.checkAttackHit(opponent, 128 + reachBonus, kickBonusDmg, 9, false);
+                    }
+                    if (this.stateTime >= 22) this.state = 'IDLE';
+                } else if (this.state === 'SPECIAL') {
+                    if (this.stateTime < 14) {
+                        this.vx = this.facing * 14;
+                    }
+                    if (this.stateTime === 12 && !this.attackHitApplied) {
+                        this.checkAttackHit(opponent, 210, this.spec.specialDmg, 18, true);
+                    }
+                    if (this.stateTime >= 32) this.state = 'IDLE';
+                } else if (this.state === 'HURT') {
+                    if (this.stateTime >= 16) this.state = 'IDLE';
+                }
+            }
+
+            checkAttackHit(opponent, reach, dmg, knockback, isSpecial) {
+                const dist = Math.abs(this.x - opponent.x);
+                const dirMatch = (opponent.x - this.x) * this.facing >= -20;
+                const heightMatch = Math.abs(this.y - opponent.y) < 85;
+
+                if (dist <= reach && dirMatch && heightMatch) {
+                    this.attackHitApplied = true;
+
+                    // [단독 특성 기반 흑섬(黑閃) 발동 확률 계산]
+                    let finalDmg = this.spec.id === 'dark_yejun' ? Math.round(dmg * 1.25) : dmg;
+                    // [추가 특성: 강태풍 선풍 반격] 가드 직후 반격 시 공격력 +25%
+                    if (this.spec.id === 'taepung' && this.guardCounterTimer > 0) {
+                        finalDmg = Math.round(finalDmg * 1.25);
+                    }
+                    // [추가 특성: 반달왕 맹수의 포효] 체력 50% 이하 시 공격력 +15%
+                    if (this.spec.id === 'bear' && (this.hp / this.maxHp) <= 0.50) {
+                        finalDmg = Math.round(finalDmg * 1.15);
+                    }
+                    // [추가 특성: 왕무영 뱀의 비늘] 중독된 상대에게 피해 +18%
+                    if (this.spec.id === 'viper' && opponent.poisonTimer > 0) {
+                        finalDmg = Math.round(finalDmg * 1.18);
+                    }
+
+                    let isBlackFlash = false;
+
+                    // 1) 오예준: 기본 반격 흑섬 18%, 피가 40% 이하가 되면 가드 반격 흑섬 확률 38%로 대폭 상승!
+                    // 2) 흑화한 오예준: 심연의 폭주 특성으로 상시 25% 확률로 흑섬 발동!
+                    // 3) 그 외 캐릭터: 가드 반격 시 10% 확률로 흑섬 발동
+                    let bfChance = 0;
+                    if (!isSpecial) {
+                        if (this.spec.id === 'dark_yejun') {
+                            bfChance = 0.25;
+                        } else if (this.guardCounterTimer > 0) {
+                            if (this.spec.id === 'yejun') {
+                                bfChance = (this.hp / this.maxHp) <= 0.40 ? 0.38 : 0.18;
+                            } else {
+                                bfChance = 0.10;
+                            }
+                        }
+                    }
+
+                    if (bfChance > 0 && Math.random() < bfChance) {
+                        isBlackFlash = true;
+                        finalDmg = Math.round(finalDmg * 2.8); // 기본 100% + 180% 추가 = 280% 데미지
+                        this.guardCounterTimer = 0;
+                    }
+
+                    const hitSuccess = opponent.takeDamage(
+                        finalDmg,
+                        this.facing * (isBlackFlash ? knockback * 1.8 : knockback),
+                        isSpecial
+                    );
+
+                    if (hitSuccess) {
+                        this.comboCount++;
+                        this.comboTimer = 90;
+                        this.gauge = Math.min(this.maxGauge, this.gauge + (isSpecial ? 0 : (isBlackFlash ? 35 : 16)));
+
+                        // [단독 특성: 독사권 왕무영] 명중 시 3초간 맹독 부여
+                        if (this.spec.id === 'viper') {
+                            opponent.poisonTimer = 180;
+                        }
+                        // [단독 특성: 불닭왕 떡볶이] 명중 시 3초간 캡사이신 화상 부여 & 불꽃 임팩트
+                        if (this.spec.id === 'tteokbokki') {
+                            opponent.burnTimer = 180;
+                            spawnFireParticles(opponent.x, opponent.y - 85, 14);
+                        }
+                        // [단독 특성: 여자 흑인 파이터 '자라' - 썬더 카운터] 주먹 적중 시 30% 확률 감전 스턴 (중복 무한 스턴 방지)
+                        if (this.spec.id === 'zara' && this.state === 'PUNCH' && opponent.charmTimer <= 0 && Math.random() < 0.30) {
+                            opponent.charmTimer = 36;
+                            opponent.ccType = 'SHOCK';
+                            spawnParticles(opponent.x, opponent.y - 105, '#fbbf24', 14);
+                            addFloatingText(opponent.x, opponent.y - 165, '⚡ 썬더 감전 스턴!', '#fde047');
+                        }
+                        // [단독 특성: 양귀비 - 매혹 & 천년화 기운 흡수] (중복 무한 매혹 방지)
+                        if (this.spec.id === 'gwibi') {
+                            opponent.gauge = Math.max(0, opponent.gauge - 12);
+                            this.gauge = Math.min(this.maxGauge, this.gauge + 12);
+                            this.hp = Math.min(this.maxHp, this.hp + 25);
+                            if (opponent.charmTimer <= 0 && Math.random() < 0.25) {
+                                opponent.charmTimer = 55;
+                                opponent.ccType = 'CHARM';
+                                spawnParticles(opponent.x, opponent.y - 105, '#f43f5e', 16);
+                                addFloatingText(opponent.x, opponent.y - 170, '💖 양귀비의 매혹! (행동 불능)', '#fb7185');
+                            }
+                        }
+
+                        if (isBlackFlash) {
+                            sfx.playBlackFlash();
+                            screenShake = 24;
+                            hitStopFrames = 12;
+                            triggerBlackFlashEffect(opponent.x, opponent.y - 85);
+                            // [상향 특성: 오예준 흑섬 적중 시 근성 체력 +45 회복]
+                            if (this.spec.id === 'yejun') {
+                                this.hp = Math.min(this.maxHp, this.hp + 45);
+                                addFloatingText(this.x, this.y - 165, '💚 거북목 투지 회복 +45!', '#4ade80');
+                            }
+                            const awakeTag = (this.spec.id === 'yejun' && (this.hp / this.maxHp) <= 0.40) ? ' [각성 38%]' : '';
+                            addFloatingText(opponent.x, opponent.y - 185, `⚡ ${this.spec.name} 흑섬(黑閃)!!${awakeTag} ⚡`, '#ef4444');
+                        }
+                    }
+                }
+            }
+        }
+
+        // ============================================================================
+        // 5. 스테이지 전환 및 전투 유틸리티 함수
+        // ============================================================================
+        function updateTopButtons() {
+            const btnHome = document.getElementById('btn-home');
+            const btnSkip = document.getElementById('btn-skip-story');
+            const guide = document.getElementById('controls-guide');
+            if (gameState === 'TITLE') {
+                btnHome.classList.add('hidden');
+                btnSkip.classList.add('hidden');
+            } else {
+                btnHome.classList.remove('hidden');
+                if (gameState === 'STORY') btnSkip.classList.remove('hidden');
+                else btnSkip.classList.add('hidden');
+            }
+
+            if (guide) {
+                if (gameMode === 'PVP') {
+                    guide.innerHTML = `
+                        <div class="font-bold text-amber-300 mb-0.5">⚔️ 2인용(PVP) 키보드 조작 안내</div>
+                        <div><span class="text-blue-400 font-bold">[1P]</span> 이동: <span class="text-white">WASD</span> | 주먹: <span class="text-red-400">Z</span> | 발차기: <span class="text-yellow-400">X</span> | 가드: <span class="text-blue-300">C</span> | 필살기: <span class="text-purple-400">V</span></div>
+                        <div><span class="text-rose-400 font-bold">[2P]</span> 이동: <span class="text-white">방향키(←↑↓→)</span> | 주먹: <span class="text-red-400">N (Num1)</span> | 발차기: <span class="text-yellow-400">M (Num2)</span> | 가드: <span class="text-blue-300">, (Num3)</span> | 필살기: <span class="text-purple-400">. (Num0)</span></div>
+                    `;
+                } else {
+                    guide.innerHTML = `
+                        <div class="font-bold text-zinc-200 mb-0.5">1P 조작법 (키보드 / 하단 버튼)</div>
+                        <div>이동: <span class="text-amber-400 font-bold">A/D 또는 ←/→</span> | 점프/앉기: <span class="text-amber-400 font-bold">W/S 또는 ↑/↓</span></div>
+                        <div>주먹: <span class="text-red-400 font-bold">J (Z)</span> | 발차기: <span class="text-yellow-400 font-bold">K (X)</span> | 가드(반격 흑섬): <span class="text-blue-400 font-bold">Space</span> | 필살기: <span class="text-purple-400 font-bold">L (C)</span></div>
+                    `;
+                }
+            }
+        }
+
+        function goToTitle() {
+            gameState = 'TITLE';
+            stateTimer = 0;
+            updateTopButtons();
+            sfx.playSelect();
+        }
+
+        function startCharSelect(mode) {
+            gameMode = mode;
+            gameState = 'CHAR_SELECT';
+            selectTurn = 1;
+            p1SelectedIdx = 0;
+            p2SelectedIdx = mode === 'PVP' ? 1 : 9; // 기본값: 예준 vs 자라/양귀비
+            selectedArenaIdx = Math.floor(Math.random() * STAGES.length);
+            stateTimer = 0;
+            updateTopButtons();
+            sfx.playSelect();
+        }
+
+        function startStory() {
+            gameMode = 'STORY';
+            gameState = 'STORY';
+            storySlideIdx = 0;
+            stateTimer = 0;
+            updateTopButtons();
+        }
+
+        function startEnding() {
+            gameState = 'ENDING';
+            endingSlideIdx = 0;
+            stateTimer = 0;
+            updateTopButtons();
+            sfx.playSpecialCutin();
+        }
+
+        function startStageVersus(idx) {
+            currentStageIdx = idx;
+            gameState = 'VERSUS';
+            stateTimer = 0;
+            updateTopButtons();
+            sfx.playSelect();
+        }
+
+        function startRoundIntro() {
+            const p1Spec = gameMode === 'STORY' ? PLAYER_SPEC : ALL_FIGHTERS[p1SelectedIdx];
+            const p2Spec = gameMode === 'STORY' ? STAGES[currentStageIdx].opponent : ALL_FIGHTERS[p2SelectedIdx];
+            player = new Fighter(p1Spec, 230, 1, true);
+            enemy = new Fighter(p2Spec, W - 230, -1, false);
+            roundTimer = 99;
+            roundTick = 0;
+            particles = [];
+            blackFlashBolts = [];
+            floatingTexts = [];
+            cutinData.active = false;
+            gameState = 'ROUND_INTRO';
+            stateTimer = 0;
+            updateTopButtons();
+        }
+
+        function triggerSpecialCutin(attacker) {
+            cutinData.active = true;
+            cutinData.attacker = attacker;
+            cutinData.timer = 0;
+            gameState = 'CUTIN';
+            sfx.playSpecialCutin();
+        }
+
+        function spawnParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 2 + Math.random() * 7;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd - 2,
+                    size: 4 + Math.random() * 5,
+                    color: color,
+                    life: 22 + Math.floor(Math.random() * 12)
+                });
+            }
+        }
+
+        // 불닭왕 떡볶이 전용 위로 타오르는 화상 불꽃 파티클
+        function spawnFireParticles(x, y, count) {
+            const fireColors = ['#ef4444', '#f97316', '#facc15', '#fef08a'];
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 44,
+                    y: y + (Math.random() - 0.5) * 36,
+                    vx: (Math.random() - 0.5) * 2.2,
+                    vy: -(2.5 + Math.random() * 4.5),
+                    size: 5 + Math.random() * 6,
+                    color: fireColors[Math.floor(Math.random() * fireColors.length)],
+                    isFire: true,
+                    life: 20 + Math.floor(Math.random() * 12)
+                });
+            }
+        }
+
+        function addFloatingText(x, y, text, color) {
+            floatingTexts.push({
+                x: x,
+                y: y,
+                text: text,
+                color: color,
+                life: 40
+            });
+        }
+
+        function triggerBlackFlashEffect(x, y) {
+            for (let i = 0; i < 36; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 4 + Math.random() * 11;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    size: 5 + Math.random() * 7,
+                    color: i % 2 === 0 ? '#09090b' : '#dc2626',
+                    life: 24 + Math.floor(Math.random() * 14)
+                });
+            }
+            for (let b = 0; b < 14; b++) {
+                const baseAng = (b / 14) * Math.PI * 2 + Math.random() * 0.3;
+                const pts = [{ x: x, y: y }];
+                let cx = x;
+                let cy = y;
+                for (let seg = 1; seg <= 4; seg++) {
+                    const jitter = (Math.random() - 0.5) * 0.9;
+                    const len = 24 + Math.random() * 26;
+                    cx += Math.cos(baseAng + jitter) * len;
+                    cy += Math.sin(baseAng + jitter) * len;
+                    pts.push({ x: cx, y: cy });
+                }
+                blackFlashBolts.push({
+                    pts: pts,
+                    life: 22,
+                    maxLife: 22
+                });
+            }
+        }
+
+        function handlePlayerControl() {
+            if (!player || player.state === 'KO') return;
+
+            if (gameMode === 'PVP') {
+                // 2인용 모드: 1P는 WASD 이동 + C(가드)
+                const left = keys['KeyA'];
+                const right = keys['KeyD'];
+                const up = keys['KeyW'];
+                const down = keys['KeyS'];
+                const block = keys['KeyC'];
+
+                if (player.canAct()) {
+                    if (block) player.state = 'BLOCK';
+                    else if (down) player.state = 'CROUCH';
+                    else if (left) { player.vx = -player.spec.speed; player.state = 'WALK'; }
+                    else if (right) { player.vx = player.spec.speed; player.state = 'WALK'; }
+                    else player.state = 'IDLE';
+
+                    if (up && player.isGrounded && !block) {
+                        player.vy = -15.5;
+                        player.state = 'JUMP';
+                    }
+                }
+                return;
+            }
+
+            // 1인용 모드 (스토리 / FREE): A/D 또는 좌/우 방향키, Space 가드
+            const left = keys['ArrowLeft'] || keys['KeyA'];
+            const right = keys['ArrowRight'] || keys['KeyD'];
+            const up = keys['ArrowUp'] || keys['KeyW'];
+            const down = keys['ArrowDown'] || keys['KeyS'];
+            const block = keys['Space'];
+
+            if (player.canAct()) {
+                if (block) {
+                    player.state = 'BLOCK';
+                } else if (down) {
+                    player.state = 'CROUCH';
+                } else if (left) {
+                    player.vx = -player.spec.speed;
+                    player.state = 'WALK';
+                } else if (right) {
+                    player.vx = player.spec.speed;
+                    player.state = 'WALK';
+                } else {
+                    player.state = 'IDLE';
+                }
+
+                if (up && player.isGrounded && !block) {
+                    player.vy = -15.5;
+                    player.state = 'JUMP';
+                }
+            }
+        }
+
+        function handlePlayer2Control() {
+            if (!enemy || enemy.state === 'KO') return;
+
+            // 2인용 모드: 2P는 방향키(←↑↓→) 이동 + , 또는 Numpad3(가드)
+            const left = keys['ArrowLeft'];
+            const right = keys['ArrowRight'];
+            const up = keys['ArrowUp'];
+            const down = keys['ArrowDown'];
+            const block = keys['Comma'] || keys['Numpad3'];
+
+            if (enemy.canAct()) {
+                if (block) enemy.state = 'BLOCK';
+                else if (down) enemy.state = 'CROUCH';
+                else if (left) { enemy.vx = -enemy.spec.speed; enemy.state = 'WALK'; }
+                else if (right) { enemy.vx = enemy.spec.speed; enemy.state = 'WALK'; }
+                else enemy.state = 'IDLE';
+
+                if (up && enemy.isGrounded && !block) {
+                    enemy.vy = -15.5;
+                    enemy.state = 'JUMP';
+                }
+            }
+        }
+
+        function handleEnemyAI() {
+            if (gameMode === 'PVP') {
+                handlePlayer2Control();
+                return;
+            }
+            if (!enemy || !player || enemy.state === 'KO' || player.state === 'KO') return;
+            if (!enemy.canAct()) return;
+
+            const dist = Math.abs(enemy.x - player.x);
+            const aggr = enemy.spec.aiAggression || 0.55;
+
+            if (enemy.gauge >= enemy.maxGauge && dist < 240 && Math.random() < 0.08) {
+                enemy.startAttack('SPECIAL');
+                return;
+            }
+
+            // 가드 반격 찬스가 활성화되면 AI도 즉시 반격(흑섬 노림) 시도!
+            if (enemy.guardCounterTimer > 0 && dist <= 130 && Math.random() < 0.35) {
+                enemy.startAttack(Math.random() < 0.5 ? 'PUNCH' : 'KICK');
+                return;
+            }
+
+            if (dist > 115) {
+                if (Math.random() < aggr) {
+                    enemy.vx = enemy.facing * enemy.spec.speed * 0.92;
+                    enemy.state = 'WALK';
+                } else {
+                    enemy.state = 'IDLE';
+                }
+            } else {
+                const r = Math.random();
+                if ((player.state === 'PUNCH' || player.state === 'KICK') && r < 0.32) {
+                    enemy.state = 'BLOCK';
+                } else if (r < 0.055 * (aggr + 0.5)) {
+                    enemy.startAttack(Math.random() < 0.5 ? 'PUNCH' : 'KICK');
+                } else if (r < 0.09) {
+                    enemy.vx = -enemy.facing * enemy.spec.speed;
+                    enemy.state = 'WALK';
+                } else {
+                    enemy.state = 'IDLE';
+                }
+            }
+        }
+
+        // ============================================================================
+        // 6. 고퀄리티 애니메이션 캐릭터 초상화 & 작화 렌더링
+        // ============================================================================
+        function drawAnimePortrait(id, cx, cy, scale = 1, flipX = false) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(flipX ? -scale : scale, scale);
+
+            if (id === 'gwibi') {
+                // ★ 극상 미소녀 '양귀비' 애니메이션 작화 ★
+                const halo = ctx.createRadialGradient(0, -10, 15, 0, -10, 125);
+                halo.addColorStop(0, 'rgba(255, 228, 230, 0.65)');
+                halo.addColorStop(0.6, 'rgba(244, 63, 94, 0.22)');
+                halo.addColorStop(1, 'rgba(244, 63, 94, 0)');
+                ctx.fillStyle = halo;
+                ctx.beginPath();
+                ctx.arc(0, -10, 125, 0, Math.PI * 2);
+                ctx.fill();
+
+                const hairGrad = ctx.createLinearGradient(0, -115, 0, 145);
+                hairGrad.addColorStop(0, '#09090b');
+                hairGrad.addColorStop(0.45, '#1e1b4b');
+                hairGrad.addColorStop(0.85, '#4c0519');
+                hairGrad.addColorStop(1, '#881337');
+                ctx.fillStyle = hairGrad;
+
+                ctx.beginPath();
+                ctx.moveTo(-78, -42);
+                ctx.bezierCurveTo(-122, 18, -112, 112, -90, 148);
+                ctx.lineTo(90, 148);
+                ctx.bezierCurveTo(112, 112, 122, 18, 78, -42);
+                ctx.arc(0, -42, 78, 0, Math.PI, true);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff1e6';
+                ctx.beginPath();
+                ctx.moveTo(-21, 42);
+                ctx.lineTo(21, 42);
+                ctx.lineTo(32, 95);
+                ctx.lineTo(-32, 95);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(225, 29, 72, 0.16)';
+                ctx.beginPath();
+                ctx.ellipse(0, 52, 20, 9, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                const dressGrad = ctx.createLinearGradient(0, 75, 0, 150);
+                dressGrad.addColorStop(0, '#e11d48');
+                dressGrad.addColorStop(0.5, '#be123c');
+                dressGrad.addColorStop(1, '#881337');
+                ctx.fillStyle = dressGrad;
+                ctx.beginPath();
+                ctx.moveTo(-78, 148);
+                ctx.quadraticCurveTo(-56, 82, -24, 78);
+                ctx.lineTo(24, 78);
+                ctx.quadraticCurveTo(56, 82, 78, 148);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(0, 88, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                const faceGrad = ctx.createRadialGradient(-8, -12, 8, 0, 0, 74);
+                faceGrad.addColorStop(0, '#ffffff');
+                faceGrad.addColorStop(0.55, '#fff1e6');
+                faceGrad.addColorStop(0.9, '#ffe4d6');
+                faceGrad.addColorStop(1, '#fecdd3');
+                ctx.fillStyle = faceGrad;
+                ctx.beginPath();
+                ctx.moveTo(-53, -25);
+                ctx.bezierCurveTo(-55, 24, -23, 52, 0, 55);
+                ctx.bezierCurveTo(23, 52, 55, 24, 53, -25);
+                ctx.arc(0, -25, 53, 0, Math.PI, true);
+                ctx.fill();
+
+                [-29, 29].forEach(bx => {
+                    const blush = ctx.createRadialGradient(bx, 13, 2, bx, 13, 19);
+                    blush.addColorStop(0, 'rgba(244, 63, 94, 0.48)');
+                    blush.addColorStop(1, 'rgba(244, 63, 94, 0)');
+                    ctx.fillStyle = blush;
+                    ctx.beginPath();
+                    ctx.arc(bx, 13, 19, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                    ctx.beginPath();
+                    ctx.ellipse(bx + (bx < 0 ? -4 : 4), 10, 3.5, 1.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                [-24, 24].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -2, 16, 12, dir * -0.08, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(76, 5, 25, 0.18)';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -6, 15, 6, dir * -0.08, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const irisGrad = ctx.createLinearGradient(ex, -13, ex, 11);
+                    irisGrad.addColorStop(0, '#4c0519');
+                    irisGrad.addColorStop(0.45, '#e11d48');
+                    irisGrad.addColorStop(0.8, '#f43f5e');
+                    irisGrad.addColorStop(1, '#fda4af');
+                    ctx.fillStyle = irisGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -1, 10, 11.2, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -1, 4.6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 4, -5.5, 3.6, 0, Math.PI * 2);
+                    ctx.arc(ex + 4, 3.5, 2.0, 0, Math.PI * 2);
+                    ctx.arc(ex - 1, 5.5, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#09090b';
+                    ctx.lineWidth = 3.6;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(ex - 16 * dir, -5);
+                    ctx.quadraticCurveTo(ex, -17, ex + 19 * dir, -6);
+                    ctx.stroke();
+
+                    ctx.lineWidth = 1.8;
+                    ctx.beginPath();
+                    ctx.moveTo(ex + 14 * dir, -8);
+                    ctx.lineTo(ex + 20 * dir, -12);
+                    ctx.moveTo(ex + 8 * dir, -11);
+                    ctx.lineTo(ex + 13 * dir, -16);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = '#27272a';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(ex - 12 * dir, -20);
+                    ctx.quadraticCurveTo(ex, -25, ex + 13 * dir, -19);
+                    ctx.stroke();
+                });
+
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.28)';
+                ctx.beginPath();
+                ctx.moveTo(0, 10);
+                ctx.lineTo(-2, 18);
+                ctx.lineTo(2, 18);
+                ctx.fill();
+
+                const lipGrad = ctx.createLinearGradient(0, 29, 0, 41);
+                lipGrad.addColorStop(0, '#fb7185');
+                lipGrad.addColorStop(1, '#e11d48');
+                ctx.fillStyle = lipGrad;
+                ctx.beginPath();
+                ctx.moveTo(-10, 32);
+                ctx.quadraticCurveTo(0, 28, 10, 32);
+                ctx.quadraticCurveTo(0, 42, -10, 32);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.beginPath();
+                ctx.ellipse(-2, 34, 4.2, 1.5, -0.1, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.moveTo(-60, -20);
+                ctx.quadraticCurveTo(-50, -86, 0, -89);
+                ctx.quadraticCurveTo(50, -86, 60, -20);
+                ctx.lineTo(44, -6);
+                ctx.lineTo(31, -35);
+                ctx.lineTo(15, -7);
+                ctx.lineTo(0, -37);
+                ctx.lineTo(-15, -7);
+                ctx.lineTo(-31, -35);
+                ctx.lineTo(-44, -6);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(-54, -22);
+                ctx.quadraticCurveTo(-66, 38, -40, 92);
+                ctx.quadraticCurveTo(-48, 32, -46, -15);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(54, -22);
+                ctx.quadraticCurveTo(66, 38, 40, 92);
+                ctx.quadraticCurveTo(48, 32, 46, -15);
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(251, 113, 133, 0.7)';
+                ctx.lineWidth = 4.5;
+                ctx.beginPath();
+                ctx.arc(0, -46, 45, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(-48, -56);
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-10, 32);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-4, 36);
+                ctx.stroke();
+
+                ctx.fillStyle = '#e11d48';
+                for (let p = 0; p < 5; p++) {
+                    const ang = (p / 5) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.arc(Math.cos(ang) * 11, Math.sin(ang) * 11, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+            } else if (id === 'yejun' || id === 'dark_yejun') {
+                // ★ 주인공 오예준 & 최종보스 흑화 오예준 애니메이션 포트레이트 ★
+                const isDark = id === 'dark_yejun';
+                if (isDark) {
+                    const aura = ctx.createRadialGradient(0, 0, 15, 0, 0, 120);
+                    aura.addColorStop(0, 'rgba(168, 85, 247, 0.75)');
+                    aura.addColorStop(0.6, 'rgba(220, 38, 38, 0.3)');
+                    aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = aura;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 120, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 교복 자켓
+                ctx.fillStyle = isDark ? '#09090b' : '#1e293b';
+                ctx.beginPath();
+                ctx.moveTo(-84, 145);
+                ctx.quadraticCurveTo(-68, 72, -28, 68);
+                ctx.lineTo(28, 68);
+                ctx.quadraticCurveTo(68, 72, 84, 145);
+                ctx.fill();
+
+                // 흰 셔츠 & 넥타이
+                ctx.fillStyle = isDark ? '#27272a' : '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(-24, 68);
+                ctx.lineTo(0, 118);
+                ctx.lineTo(24, 68);
+                ctx.fill();
+
+                ctx.fillStyle = isDark ? '#a855f7' : '#dc2626';
+                ctx.beginPath();
+                ctx.moveTo(-6, 75);
+                ctx.lineTo(6, 75);
+                ctx.lineTo(9, 118);
+                ctx.lineTo(-9, 118);
+                ctx.fill();
+
+                // 목
+                ctx.fillStyle = isDark ? '#d6d3d1' : '#fed7aa';
+                ctx.fillRect(-22, 42, 44, 34);
+
+                // 얼굴 윤곽
+                const faceGrad = ctx.createRadialGradient(-8, -8, 10, 0, 5, 65);
+                faceGrad.addColorStop(0, isDark ? '#e7e5e4' : '#fff7ed');
+                faceGrad.addColorStop(0.8, isDark ? '#a8a29e' : '#fed7aa');
+                faceGrad.addColorStop(1, isDark ? '#78716c' : '#fdba74');
+                ctx.fillStyle = faceGrad;
+                ctx.beginPath();
+                ctx.moveTo(-52, -20);
+                ctx.bezierCurveTo(-52, 26, -22, 52, 0, 54);
+                ctx.bezierCurveTo(22, 52, 52, 26, 52, -20);
+                ctx.arc(0, -20, 52, 0, Math.PI, true);
+                ctx.fill();
+
+                // 눈동자
+                [-22, 22].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = isDark ? '#18181b' : '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, 2, 12.5, 9, dir * 0.08, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = isDark ? '#ef4444' : '#2563eb';
+                    ctx.beginPath();
+                    ctx.arc(ex, 2, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.arc(ex, 2, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2.5, -0.5, 2.4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // 입매
+                ctx.strokeStyle = isDark ? '#ef4444' : '#9a3412';
+                ctx.lineWidth = 2.8;
+                ctx.beginPath();
+                if (isDark) {
+                    ctx.moveTo(-14, 34);
+                    ctx.quadraticCurveTo(0, 26, 14, 36);
+                } else {
+                    ctx.moveTo(-11, 33);
+                    ctx.quadraticCurveTo(0, 39, 12, 32);
+                }
+                ctx.stroke();
+
+                // 덥수룩한 바가지/울프컷 흑발 앞머리
+                ctx.fillStyle = isDark ? '#09090b' : '#18181b';
+                ctx.beginPath();
+                ctx.moveTo(-62, 6);
+                ctx.quadraticCurveTo(-60, -82, 0, -85);
+                ctx.quadraticCurveTo(60, -82, 62, 6);
+                ctx.lineTo(46, -4);
+                ctx.lineTo(35, 10);
+                ctx.lineTo(22, -8);
+                ctx.lineTo(8, 12);
+                ctx.lineTo(-6, -10);
+                ctx.lineTo(-20, 11);
+                ctx.lineTo(-34, -7);
+                ctx.lineTo(-46, 8);
+                ctx.closePath();
+                ctx.fill();
+
+            } else if (id === 'kangaroo') {
+                // ★ Stage 1: 복싱 캥거루 '루키' 애니메이션 포트레이트 ★
+                const furGrad = ctx.createRadialGradient(-10, -10, 10, 0, 10, 62);
+                furGrad.addColorStop(0, '#fb923c');
+                furGrad.addColorStop(0.7, '#ea580c');
+                furGrad.addColorStop(1, '#9a3412');
+
+                ctx.fillStyle = '#991b1b';
+                ctx.beginPath();
+                ctx.moveTo(-78, 145);
+                ctx.quadraticCurveTo(-60, 75, -28, 70);
+                ctx.lineTo(28, 70);
+                ctx.quadraticCurveTo(60, 75, 78, 145);
+                ctx.fill();
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                [-28, 28].forEach((earX, idx) => {
+                    const rot = idx === 0 ? -0.25 : 0.25;
+                    ctx.fillStyle = '#ea580c';
+                    ctx.beginPath();
+                    ctx.ellipse(earX, -58, 13, 36, rot, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fed7aa';
+                    ctx.beginPath();
+                    ctx.ellipse(earX, -58, 6.5, 25, rot, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.fillStyle = furGrad;
+                ctx.beginPath();
+                ctx.ellipse(0, 8, 48, 56, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffedd5';
+                ctx.beginPath();
+                ctx.ellipse(0, 27, 25, 21, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#18181b';
+                ctx.beginPath();
+                ctx.ellipse(0, 18, 8, 5.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#7c2d12';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-10, 34);
+                ctx.quadraticCurveTo(0, 41, 12, 32);
+                ctx.stroke();
+
+                [-20, 20].forEach(ex => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -5, 11, 9, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#d97706';
+                    ctx.beginPath();
+                    ctx.arc(ex, -5, 6.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -5, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2.5, -7.5, 2.4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.roundRect(-45, -27, 90, 12, 4);
+                ctx.fill();
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+            } else if (id === 'bear') {
+                // ★ Stage 3: 백두산 반달가슴곰 '반달왕' 애니메이션 포트레이트 ★
+                const iceGlow = ctx.createRadialGradient(0, 0, 20, 0, 0, 115);
+                iceGlow.addColorStop(0, 'rgba(125, 211, 252, 0.5)');
+                iceGlow.addColorStop(1, 'rgba(125, 211, 252, 0)');
+                ctx.fillStyle = iceGlow;
+                ctx.beginPath();
+                ctx.arc(0, 0, 115, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#18181b';
+                ctx.beginPath();
+                ctx.arc(-46, -42, 20, 0, Math.PI * 2);
+                ctx.arc(46, -42, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#3f3f46';
+                ctx.beginPath();
+                ctx.arc(-46, -42, 10, 0, Math.PI * 2);
+                ctx.arc(46, -42, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.moveTo(-88, 145);
+                ctx.quadraticCurveTo(-72, 65, 0, 62);
+                ctx.quadraticCurveTo(72, 65, 88, 145);
+                ctx.fill();
+
+                ctx.strokeStyle = '#ffffff';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 10;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, 86, 32, 0.25, Math.PI - 0.25);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                const bearGrad = ctx.createRadialGradient(-12, -12, 10, 0, 10, 65);
+                bearGrad.addColorStop(0, '#3f3f46');
+                bearGrad.addColorStop(0.6, '#18181b');
+                bearGrad.addColorStop(1, '#09090b');
+                ctx.fillStyle = bearGrad;
+                ctx.beginPath();
+                ctx.arc(0, 10, 60, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#e7e5e4';
+                ctx.beginPath();
+                ctx.ellipse(0, 26, 26, 20, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.ellipse(0, 16, 9, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#18181b';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 22);
+                ctx.lineTo(0, 32);
+                ctx.moveTo(-12, 35);
+                ctx.quadraticCurveTo(0, 30, 12, 35);
+                ctx.stroke();
+
+                [-23, 23].forEach(ex => {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -6, 11, 8.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0284c7';
+                    ctx.beginPath();
+                    ctx.arc(ex, -6, 6.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2.5, -8.5, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+            } else if (id === 'taepung') {
+                // ★ Stage 2: 태권도부 에이스 '강태풍' 애니메이션 포트레이트 ★
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(-82, 145);
+                ctx.quadraticCurveTo(-65, 72, -26, 68);
+                ctx.lineTo(26, 68);
+                ctx.quadraticCurveTo(65, 72, 82, 145);
+                ctx.fill();
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.moveTo(-24, 68);
+                ctx.lineTo(0, 115);
+                ctx.lineTo(24, 68);
+                ctx.stroke();
+
+                ctx.fillStyle = '#fed7aa';
+                ctx.fillRect(-20, 42, 40, 35);
+
+                const faceGrad = ctx.createRadialGradient(-8, -10, 8, 0, 0, 65);
+                faceGrad.addColorStop(0, '#fff7ed');
+                faceGrad.addColorStop(0.8, '#fed7aa');
+                faceGrad.addColorStop(1, '#fdba74');
+                ctx.fillStyle = faceGrad;
+                ctx.beginPath();
+                ctx.moveTo(-50, -22);
+                ctx.bezierCurveTo(-50, 24, -20, 52, 0, 55);
+                ctx.bezierCurveTo(20, 52, 50, 24, 50, -22);
+                ctx.arc(0, -22, 50, 0, Math.PI, true);
+                ctx.fill();
+
+                [-21, 21].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -2, 13, 9, dir * 0.12, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#dc2626';
+                    ctx.beginPath();
+                    ctx.arc(ex, -2, 7.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#18181b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -2, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2.8, -4.8, 2.6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 3.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ex - 13 * dir, -15);
+                    ctx.lineTo(ex + 13 * dir, -10);
+                    ctx.stroke();
+                });
+
+                ctx.strokeStyle = '#9a3412';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-11, 32);
+                ctx.quadraticCurveTo(2, 38, 14, 29);
+                ctx.stroke();
+
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.moveTo(-56, -15);
+                ctx.lineTo(-42, -74);
+                ctx.lineTo(-16, -54);
+                ctx.lineTo(0, -82);
+                ctx.lineTo(18, -54);
+                ctx.lineTo(44, -72);
+                ctx.lineTo(56, -15);
+                ctx.lineTo(34, -28);
+                ctx.lineTo(0, -14);
+                ctx.lineTo(-34, -28);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-51, -28, 102, 12);
+
+            } else if (id === 'geosan') {
+                // ★ Stage 4: 유도 챔피언 '박거산' 애니메이션 포트레이트 ★
+                ctx.fillStyle = '#1d4ed8';
+                ctx.beginPath();
+                ctx.moveTo(-88, 145);
+                ctx.quadraticCurveTo(-72, 70, -30, 66);
+                ctx.lineTo(30, 66);
+                ctx.quadraticCurveTo(72, 70, 88, 145);
+                ctx.fill();
+                ctx.strokeStyle = '#93c5fd';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(-28, 66);
+                ctx.lineTo(0, 118);
+                ctx.lineTo(28, 66);
+                ctx.stroke();
+
+                ctx.fillStyle = '#fdba74';
+                ctx.fillRect(-26, 40, 52, 38);
+
+                const faceGrad = ctx.createRadialGradient(-10, -10, 10, 0, 0, 68);
+                faceGrad.addColorStop(0, '#ffedd5');
+                faceGrad.addColorStop(0.8, '#fdba74');
+                faceGrad.addColorStop(1, '#fb923c');
+                ctx.fillStyle = faceGrad;
+                ctx.beginPath();
+                ctx.moveTo(-54, -24);
+                ctx.lineTo(-48, 28);
+                ctx.lineTo(-22, 54);
+                ctx.lineTo(22, 54);
+                ctx.lineTo(48, 28);
+                ctx.lineTo(54, -24);
+                ctx.arc(0, -24, 54, 0, Math.PI, true);
+                ctx.fill();
+
+                ctx.fillStyle = '#1c1917';
+                ctx.beginPath();
+                ctx.moveTo(-56, -18);
+                ctx.quadraticCurveTo(-48, -76, 0, -78);
+                ctx.quadraticCurveTo(48, -76, 56, -18);
+                ctx.quadraticCurveTo(25, -42, 0, -36);
+                ctx.quadraticCurveTo(-25, -42, -56, -18);
+                ctx.fill();
+
+                [-23, 23].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -3, 12, 9, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#b45309';
+                    ctx.beginPath();
+                    ctx.arc(ex, -3, 6.8, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -3, 3.2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2.5, -5.5, 2.4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#1c1917';
+                    ctx.lineWidth = 4.5;
+                    ctx.beginPath();
+                    ctx.moveTo(ex - 14 * dir, -16);
+                    ctx.lineTo(ex + 13 * dir, -13);
+                    ctx.stroke();
+                });
+
+                ctx.strokeStyle = '#7c2d12';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-14, 30);
+                ctx.quadraticCurveTo(0, 39, 14, 30);
+                ctx.stroke();
+
+            } else if (id === 'crane') {
+                // ★ Stage 4: 천년 단정학 '백학도사' 애니메이션 포트레이트 ★
+                const windAura = ctx.createRadialGradient(0, 0, 15, 0, 0, 118);
+                windAura.addColorStop(0, 'rgba(45, 212, 191, 0.45)');
+                windAura.addColorStop(1, 'rgba(45, 212, 191, 0)');
+                ctx.fillStyle = windAura;
+                ctx.beginPath();
+                ctx.arc(0, 0, 118, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 도포 & 날개 깃털 숄
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(-88, 145);
+                ctx.quadraticCurveTo(-68, 68, -24, 65);
+                ctx.lineTo(24, 65);
+                ctx.quadraticCurveTo(68, 68, 88, 145);
+                ctx.fill();
+                ctx.strokeStyle = '#0d9488';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // 학의 가늘고 긴 목
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-14, 38, 28, 36);
+
+                // 얼굴 (고고한 백발 선인형 수인)
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, -4, 48, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 정수리 붉은 단정(丹頂) 포인트
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.ellipse(0, -46, 22, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 날카로운 황금 부리
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(-10, 16);
+                ctx.lineTo(10, 16);
+                ctx.lineTo(0, 44);
+                ctx.closePath();
+                ctx.fill();
+
+                // 시크한 적안 눈동자
+                [-20, 20].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -4, 12, 7.5, dir * 0.15, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(ex, -4, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2, -6, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+            } else if (id === 'viper') {
+                // ★ Stage 6: 독사권 '왕무영' 애니메이션 포트레이트 ★
+                ctx.fillStyle = '#064e3b';
+                ctx.beginPath();
+                ctx.moveTo(-78, 145);
+                ctx.quadraticCurveTo(-58, 72, -22, 68);
+                ctx.lineTo(22, 68);
+                ctx.quadraticCurveTo(58, 72, 78, 145);
+                ctx.fill();
+                ctx.strokeStyle = '#34d399';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = '#fde68a';
+                ctx.fillRect(-16, 42, 32, 34);
+
+                // 갸름하고 날카로운 얼굴형
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.moveTo(-46, -24);
+                ctx.bezierCurveTo(-46, 22, -16, 52, 0, 56);
+                ctx.bezierCurveTo(16, 52, 46, 22, 46, -24);
+                ctx.arc(0, -24, 46, 0, Math.PI, true);
+                ctx.fill();
+
+                // 뱀처럼 가늘고 매서운 에메랄드 눈동자
+                [-20, 20].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -2, 13, 8, dir * 0.18, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#10b981';
+                    ctx.beginPath();
+                    ctx.arc(ex, -2, 6.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 세로 동공
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -2, 1.8, 5.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 2, -4.5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // 날카로운 송곳니 미소
+                ctx.strokeStyle = '#064e3b';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-12, 32);
+                ctx.quadraticCurveTo(0, 38, 12, 32);
+                ctx.stroke();
+
+                // 흑발 장발 헤어
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.moveTo(-52, -16);
+                ctx.quadraticCurveTo(-48, -80, 0, -82);
+                ctx.quadraticCurveTo(48, -80, 52, -16);
+                ctx.lineTo(36, -28);
+                ctx.lineTo(18, -12);
+                ctx.lineTo(0, -30);
+                ctx.lineTo(-18, -12);
+                ctx.lineTo(-36, -28);
+                ctx.closePath();
+                ctx.fill();
+
+            } else if (id === 'zara') {
+                // ★ 신규 캐릭터: 여자 흑인 파이터 '자라(Zara)' 애니메이션 포트레이트 ★
+                const thunderAura = ctx.createRadialGradient(0, -5, 15, 0, -5, 120);
+                thunderAura.addColorStop(0, 'rgba(251, 191, 36, 0.55)');
+                thunderAura.addColorStop(1, 'rgba(245, 158, 11, 0)');
+                ctx.fillStyle = thunderAura;
+                ctx.beginPath();
+                ctx.arc(0, -5, 120, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 풍성한 볼륨감의 다크 코일/트윈 번 헤어스타일
+                ctx.fillStyle = '#18181b';
+                ctx.beginPath();
+                ctx.arc(-44, -52, 26, 0, Math.PI * 2);
+                ctx.arc(44, -52, 26, 0, Math.PI * 2);
+                ctx.arc(0, -36, 56, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 황금 헤어밴드 & 링 귀걸이
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(-50, 22, 12, 0, Math.PI * 2);
+                ctx.arc(50, 22, 12, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 복서 탱크탑 어깨선
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.moveTo(-74, 145);
+                ctx.quadraticCurveTo(-55, 76, -24, 72);
+                ctx.lineTo(24, 72);
+                ctx.quadraticCurveTo(55, 76, 74, 145);
+                ctx.fill();
+
+                // 목 & 따뜻한 에스프레소 브라운 피부 톤 얼굴
+                ctx.fillStyle = '#6f3e24';
+                ctx.fillRect(-17, 40, 34, 36);
+
+                const skinGrad = ctx.createRadialGradient(-10, -10, 8, 0, 5, 62);
+                skinGrad.addColorStop(0, '#9c5a36');
+                skinGrad.addColorStop(0.65, '#7c4324');
+                skinGrad.addColorStop(1, '#542b14');
+                ctx.fillStyle = skinGrad;
+                ctx.beginPath();
+                ctx.moveTo(-48, -22);
+                ctx.bezierCurveTo(-48, 24, -20, 50, 0, 53);
+                ctx.bezierCurveTo(20, 50, 48, 24, 48, -22);
+                ctx.arc(0, -22, 48, 0, Math.PI, true);
+                ctx.fill();
+
+                // 골드 앰버 빛나는 눈동자 & 속눈썹
+                [-21, 21].forEach((ex, idx) => {
+                    const dir = idx === 0 ? -1 : 1;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, -2, 13.5, 9.5, dir * -0.06, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -2, 7.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#09090b';
+                    ctx.beginPath();
+                    ctx.arc(ex, -2, 3.6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(ex - 3, -5, 2.8, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // 자신감 넘치는 미소
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-14, 28);
+                ctx.quadraticCurveTo(0, 40, 14, 28);
+                ctx.quadraticCurveTo(0, 32, -14, 28);
+                ctx.fill();
+
+                // 이마 위 황금 스웨트밴드
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(-47, -34, 94, 10);
+
+            } else if (id === 'vending') {
+                // ★ 신규 사물 캐릭터: '자판기 V-900' 애니메이션 포트레이트 ★
+                const bodyGrad = ctx.createLinearGradient(-56, -75, 56, 95);
+                bodyGrad.addColorStop(0, '#0284c7');
+                bodyGrad.addColorStop(0.5, '#0369a1');
+                bodyGrad.addColorStop(1, '#1e3a8a');
+                ctx.fillStyle = bodyGrad;
+                ctx.beginPath();
+                ctx.roundRect(-56, -75, 112, 165, 14);
+                ctx.fill();
+                ctx.strokeStyle = '#7dd3fc';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // 유리 진열창 (캔 음료 진열)
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.roundRect(-42, -60, 84, 76, 8);
+                ctx.fill();
+
+                const canColors = ['#ef4444', '#22c55e', '#f59e0b', '#a855f7'];
+                for (let r = 0; r < 2; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        ctx.fillStyle = canColors[(r + c) % 4];
+                        ctx.beginPath();
+                        ctx.roundRect(-34 + c * 18, -50 + r * 32, 12, 20, 3);
+                        ctx.fill();
+                    }
+                }
+
+                // 디지털 LED 눈 표정 디스플레이
+                ctx.fillStyle = '#09090b';
+                ctx.fillRect(-40, 24, 80, 24);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = '900 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('▶ 500₩ ◀', 0, 41);
+
+                // 음료 출구 플랩
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.roundRect(-36, 56, 72, 22, 5);
+                ctx.fill();
+
+            } else if (id === 'tteokbokki') {
+                // ★ 신규 음식 캐릭터: '불닭왕 떡볶이' 애니메이션 포트레이트 ★
+                const steamAura = ctx.createRadialGradient(0, 0, 15, 0, 0, 118);
+                steamAura.addColorStop(0, 'rgba(239, 68, 68, 0.65)');
+                steamAura.addColorStop(1, 'rgba(220, 38, 38, 0)');
+                ctx.fillStyle = steamAura;
+                ctx.beginPath();
+                ctx.arc(0, 0, 118, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 펄펄 끓는 매운 붉은 국물 & 떡/어묵 토핑 그릇
+                ctx.fillStyle = '#18181b';
+                ctx.beginPath();
+                ctx.arc(0, 24, 62, 0, Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // 빨간 고추장 양념 돔
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.ellipse(0, 22, 60, 24, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 쫄깃한 떡볶이 떡 & 대파 & 삶은 계란
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.roundRect(-42, -16, 24, 44, 10);
+                ctx.roundRect(18, -14, 24, 42, 10);
+                ctx.fill();
+                ctx.strokeStyle = '#b91c1c';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 중앙 메인 캐릭터 떡(얼굴)
+                ctx.fillStyle = '#fffbeb';
+                ctx.beginPath();
+                ctx.roundRect(-24, -42, 48, 68, 20);
+                ctx.fill();
+                ctx.strokeStyle = '#dc2626';
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+
+                // 불타는 눈동자 & 땀방울
+                [-11, 11].forEach(ex => {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(ex, -14, 5.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fde047';
+                    ctx.beginPath();
+                    ctx.arc(ex, -14, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // 매워서 불 뿜는 입
+                ctx.fillStyle = '#991b1b';
+                ctx.beginPath();
+                ctx.ellipse(0, 4, 9, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // 스테이지 배경 렌더링
+        function drawArenaBackground(theme) {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            if (theme === 'outback') {
+                skyGrad.addColorStop(0, '#7c2d12');
+                skyGrad.addColorStop(1, '#f59e0b');
+            } else if (theme === 'dojo') {
+                skyGrad.addColorStop(0, '#1e293b');
+                skyGrad.addColorStop(1, '#334155');
+            } else if (theme === 'snow') {
+                skyGrad.addColorStop(0, '#0c4a6e');
+                skyGrad.addColorStop(1, '#bae6fd');
+            } else if (theme === 'bamboo') {
+                skyGrad.addColorStop(0, '#064e3b');
+                skyGrad.addColorStop(1, '#10b981');
+            } else if (theme === 'cage') {
+                skyGrad.addColorStop(0, '#09090b');
+                skyGrad.addColorStop(1, '#27272a');
+            } else if (theme === 'temple') {
+                skyGrad.addColorStop(0, '#78350f');
+                skyGrad.addColorStop(1, '#d97706');
+            } else if (theme === 'palace') {
+                skyGrad.addColorStop(0, '#4c0519');
+                skyGrad.addColorStop(1, '#9f1239');
+            } else if (theme === 'street') {
+                skyGrad.addColorStop(0, '#0f172a');
+                skyGrad.addColorStop(1, '#0369a1');
+            } else if (theme === 'kitchen') {
+                skyGrad.addColorStop(0, '#450a0a');
+                skyGrad.addColorStop(1, '#dc2626');
+            } else if (theme === 'rooftop') {
+                skyGrad.addColorStop(0, '#1e1b4b');
+                skyGrad.addColorStop(1, '#d97706');
+            } else {
+                skyGrad.addColorStop(0, '#1e1b4b');
+                skyGrad.addColorStop(1, '#581c87');
+            }
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, GROUND_Y);
+
+            // 배경 장식 요소
+            if (theme === 'palace') {
+                ctx.fillStyle = '#fecdd3';
+                ctx.beginPath();
+                ctx.arc(W / 2, 160, 75, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (theme === 'bamboo') {
+                ctx.fillStyle = 'rgba(6, 78, 59, 0.45)';
+                for (let x = 70; x < W; x += 110) {
+                    ctx.fillRect(x, 0, 18, GROUND_Y);
+                }
+            } else if (theme === 'cage') {
+                ctx.strokeStyle = 'rgba(161, 161, 170, 0.25)';
+                ctx.lineWidth = 2;
+                for (let x = 40; x < W; x += 60) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 80);
+                    ctx.lineTo(x, GROUND_Y);
+                    ctx.stroke();
+                }
+            }
+
+            // 바닥 매트
+            ctx.fillStyle = theme === 'snow' ? '#e0f2fe' : '#18181b';
+            ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(W, GROUND_Y);
+            ctx.stroke();
+        }
+
+        // 상단 HUD (체력바, 기 게이지, 타이머) 렌더링
+        function drawHUD() {
+            const barW = 360;
+            const barH = 26;
+
+            // P1 체력바
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(35, 24, barW, barH);
+            const p1Ratio = Math.max(0, player.hp / player.maxHp);
+            ctx.fillStyle = p1Ratio > 0.3 ? '#3b82f6' : '#ef4444';
+            ctx.fillRect(35 + barW * (1 - p1Ratio), 24, barW * p1Ratio, barH);
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(35, 24, barW, barH);
+
+            // P2 체력바
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(W - 35 - barW, 24, barW, barH);
+            const p2Ratio = Math.max(0, enemy.hp / enemy.maxHp);
+            ctx.fillStyle = p2Ratio > 0.3 ? enemy.spec.themeColor : '#ef4444';
+            ctx.fillRect(W - 35 - barW, 24, barW * p2Ratio, barH);
+            ctx.strokeStyle = '#fde047';
+            ctx.strokeRect(W - 35 - barW, 24, barW, barH);
+
+            // 타이머
+            ctx.fillStyle = '#09090b';
+            ctx.beginPath();
+            ctx.roundRect(W / 2 - 36, 16, 72, 46, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 30px "Black Han Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(String(roundTimer).padStart(2, '0'), W / 2, 50);
+
+            // 이름 및 스테이지 표시
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 16px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`P1 ${player.spec.name} (${player.hp}/${player.maxHp})`, 38, 70);
+
+            ctx.textAlign = 'right';
+            const rightLabel = gameMode === 'STORY'
+                ? `STAGE ${STAGES[currentStageIdx].stageNum} : ${enemy.spec.name} (${enemy.hp})`
+                : `${gameMode === 'PVP' ? 'P2' : 'CPU'} ${enemy.spec.name} (${enemy.hp}/${enemy.maxHp})`;
+            ctx.fillText(rightLabel, W - 38, 70);
+
+            // 하단 기 게이지바 (P1)
+            const gW = 240;
+            const gH = 12;
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(35, H - 24, gW, gH);
+            ctx.fillStyle = player.gauge >= 100 ? '#e879f9' : '#a855f7';
+            ctx.fillRect(35, H - 24, gW * (player.gauge / 100), gH);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(35, H - 24, gW, gH);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 11px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'left';
+            const isYejunAwake = player && player.spec.id === 'yejun' && (player.hp / player.maxHp) <= 0.40;
+            const traitStatus = isYejunAwake ? '🔥 [각성: 흑섬 38% & 피해 15% 경감!]' : `[특성: ${player.spec.traitName}]`;
+            const p1SpecialKey = gameMode === 'PVP' ? 'V' : 'L / C';
+            ctx.fillText(`${player.gauge >= 100 ? `🔥 필살기 READY! (${p1SpecialKey})` : `P1 기 ${Math.floor(player.gauge)}%`}  ${traitStatus}`, 35, H - 29);
+
+            // P2 기 게이지바 (우측 하단)
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(W - 35 - gW, H - 24, gW, gH);
+            ctx.fillStyle = enemy.gauge >= 100 ? '#e879f9' : '#f43f5e';
+            ctx.fillRect(W - 35 - gW + gW * (1 - enemy.gauge / 100), H - 24, gW * (enemy.gauge / 100), gH);
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeRect(W - 35 - gW, H - 24, gW, gH);
+
+            ctx.textAlign = 'right';
+            const p2Prefix = gameMode === 'PVP' ? 'P2' : 'CPU';
+            const p2ReadyText = gameMode === 'PVP' ? '🔥 필살기 READY! (. / Num0)' : '🔥 필살기 FULL!';
+            ctx.fillText(`${enemy.gauge >= 100 ? p2ReadyText : `${p2Prefix} 기 ${Math.floor(enemy.gauge)}%`} [${enemy.spec.traitName}]`, W - 35, H - 29);
+
+            const specialBtn = document.getElementById('btn-special-pad');
+            if (specialBtn) {
+                if (player.gauge >= 100) specialBtn.classList.add('special-ready');
+                else specialBtn.classList.remove('special-ready');
+            }
+        }
+
+        // 타이틀 화면 (3가지 모드 선택 버튼)
+        const TITLE_MODE_BUTTONS = [
+            { mode: 'STORY', label: '📖 스토리 모드', sub: '오예준의 11스테이지 무술대회 정복기', y: 315, color1: '#ef4444', color2: '#991b1b', border: '#fde047' },
+            { mode: 'FREE', label: '⚔️ FREE 모드 (1P vs CPU)', sub: '원하는 캐릭터 12종 자유 선택 & AI 대전', y: 388, color1: '#3b82f6', color2: '#1d4ed8', border: '#93c5fd' },
+            { mode: 'PVP', label: '👥 2인용 모드 (1P vs 2P)', sub: '친구와 한 키보드로 펼치는 진검승부!', y: 461, color1: '#a855f7', color2: '#6b21a8', border: '#e9d5ff' }
+        ];
+
+        function drawTitleScreen() {
+            const grad = ctx.createLinearGradient(0, 0, W, H);
+            grad.addColorStop(0, '#09090b');
+            grad.addColorStop(0.5, '#1e1b4b');
+            grad.addColorStop(1, '#4c0519');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // 양귀비 & 오예준 타이틀 일러스트
+            drawAnimePortrait('yejun', 175, 290, 1.25, false);
+            drawAnimePortrait('gwibi', 785, 290, 1.25, true);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fb7185';
+            ctx.font = '900 16px "Noto Sans KR", sans-serif';
+            ctx.fillText('16세 거북목 소년의 강제 무술대회 참전기', W / 2, 92);
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 50px "Black Han Sans", sans-serif';
+            ctx.fillText('거북목의 전설', W / 2, 152);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 28px "Black Han Sans", sans-serif';
+            ctx.fillText('오예준 무술대회 참전기', W / 2, 192);
+
+            ctx.fillStyle = '#d4d4d8';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            ctx.fillText('▼ 원하시는 게임 모드를 클릭하거나 숫자키(1 / 2 / 3)를 누르세요 ▼', W / 2, 248);
+
+            // 3개 모드 버튼 렌더링
+            TITLE_MODE_BUTTONS.forEach((btn, idx) => {
+                const bx = W / 2 - 190;
+                const by = btn.y - 28;
+                const bw = 380;
+                const bh = 58;
+
+                const btnGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
+                btnGrad.addColorStop(0, btn.color1);
+                btnGrad.addColorStop(1, btn.color2);
+                ctx.fillStyle = btnGrad;
+                ctx.beginPath();
+                ctx.roundRect(bx, by, bw, bh, 14);
+                ctx.fill();
+                ctx.strokeStyle = btn.border;
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 20px "Noto Sans KR", sans-serif';
+                ctx.fillText(`[${idx + 1}] ${btn.label}`, W / 2, btn.y - 3);
+
+                ctx.fillStyle = '#fef08a';
+                ctx.font = '700 11px "Noto Sans KR", sans-serif';
+                ctx.fillText(btn.sub, W / 2, btn.y + 17);
+            });
+        }
+
+        // FREE 모드 & 2인용 모드 캐릭터 선택 화면 (전체 12명 선택 가능)
+        function drawCharSelectScreen() {
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, H);
+
+            const isPvp = gameMode === 'PVP';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = isPvp ? '#e879f9' : '#60a5fa';
+            ctx.font = '900 26px "Black Han Sans", sans-serif';
+            ctx.fillText(
+                isPvp ? '👥 2인용 모드 - 캐릭터 선택 (1P & 2P)' : '⚔️ FREE 모드 - 캐릭터 및 상대 선택',
+                W / 2, 36
+            );
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            const turnMsg = selectTurn === 1
+                ? '👉 [1단계] 1P 캐릭터를 클릭하세요!'
+                : (isPvp ? '👉 [2단계] 2P 캐릭터를 클릭하세요!' : '👉 [2단계] 대결할 CPU 상대 캐릭터를 클릭하세요!');
+            ctx.fillText(turnMsg, W / 2, 58);
+
+            // 좌측: 1P 프리뷰 카드
+            const p1 = ALL_FIGHTERS[p1SelectedIdx];
+            ctx.fillStyle = 'rgba(30, 58, 138, 0.35)';
+            ctx.beginPath();
+            ctx.roundRect(20, 72, 230, 355, 14);
+            ctx.fill();
+            ctx.strokeStyle = selectTurn === 1 ? '#fde047' : '#3b82f6';
+            ctx.lineWidth = selectTurn === 1 ? 3.5 : 2;
+            ctx.stroke();
+
+            drawAnimePortrait(p1.id, 135, 175, 0.78, false);
+            ctx.fillStyle = '#60a5fa';
+            ctx.font = '900 18px "Noto Sans KR", sans-serif';
+            ctx.fillText(`1P : ${p1.name}`, 135, 285);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '700 12px "Noto Sans KR", sans-serif';
+            ctx.fillText(`HP ${p1.maxHp} | 주먹 ${p1.punchDmg} | 발 ${p1.kickDmg}`, 135, 307);
+            ctx.fillStyle = '#93c5fd';
+            ctx.font = '700 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(`★ ${p1.traitName}`, 135, 329);
+            ctx.fillStyle = '#d4d4d8';
+            ctx.font = '400 10px "Noto Sans KR", sans-serif';
+            ctx.fillText(p1.traitDesc.slice(0, 26), 135, 347);
+            ctx.fillText(p1.traitDesc.slice(26, 52), 135, 362);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(`필살: ${p1.specialName}`, 135, 388);
+            if (isPvp) {
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = '700 10px "Noto Sans KR", sans-serif';
+                ctx.fillText('조작: WASD | Z·X·C·V', 135, 412);
+            }
+
+            // 우측: 2P / CPU 프리뷰 카드
+            const p2 = ALL_FIGHTERS[p2SelectedIdx];
+            ctx.fillStyle = 'rgba(136, 19, 55, 0.35)';
+            ctx.beginPath();
+            ctx.roundRect(W - 250, 72, 230, 355, 14);
+            ctx.fill();
+            ctx.strokeStyle = selectTurn === 2 ? '#fde047' : '#f43f5e';
+            ctx.lineWidth = selectTurn === 2 ? 3.5 : 2;
+            ctx.stroke();
+
+            drawAnimePortrait(p2.id, W - 135, 175, 0.78, true);
+            ctx.fillStyle = '#fb7185';
+            ctx.font = '900 18px "Noto Sans KR", sans-serif';
+            ctx.fillText(`${isPvp ? '2P' : 'CPU'} : ${p2.name}`, W - 135, 285);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '700 12px "Noto Sans KR", sans-serif';
+            ctx.fillText(`HP ${p2.maxHp} | 주먹 ${p2.punchDmg} | 발 ${p2.kickDmg}`, W - 135, 307);
+            ctx.fillStyle = '#fda4af';
+            ctx.font = '700 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(`★ ${p2.traitName}`, W - 135, 329);
+            ctx.fillStyle = '#d4d4d8';
+            ctx.font = '400 10px "Noto Sans KR", sans-serif';
+            ctx.fillText(p2.traitDesc.slice(0, 26), W - 135, 347);
+            ctx.fillText(p2.traitDesc.slice(26, 52), W - 135, 362);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(`필살: ${p2.specialName}`, W - 135, 388);
+            if (isPvp) {
+                ctx.fillStyle = '#fda4af';
+                ctx.font = '700 10px "Noto Sans KR", sans-serif';
+                ctx.fillText('조작: 방향키 | N·M·,·.', W - 135, 412);
+            }
+
+            // 중앙: 12명 캐릭터 로스터 그리드 (4열 x 3행)
+            const gridStartX = 268;
+            const gridStartY = 74;
+            const cellW = 102;
+            const cellH = 112;
+            const gap = 6;
+
+            ALL_FIGHTERS.forEach((f, idx) => {
+                const col = idx % 4;
+                const row = Math.floor(idx / 4);
+                const cx = gridStartX + col * (cellW + gap);
+                const cy = gridStartY + row * (cellH + gap);
+
+                const isP1 = idx === p1SelectedIdx;
+                const isP2 = idx === p2SelectedIdx;
+
+                ctx.fillStyle = isP1 ? 'rgba(37, 99, 235, 0.45)' : (isP2 ? 'rgba(225, 29, 72, 0.45)' : '#18181b');
+                ctx.beginPath();
+                ctx.roundRect(cx, cy, cellW, cellH, 10);
+                ctx.fill();
+
+                ctx.strokeStyle = isP1 && isP2 ? '#fde047' : (isP1 ? '#60a5fa' : (isP2 ? '#fb7185' : '#3f3f46'));
+                ctx.lineWidth = (isP1 || isP2) ? 3 : 1.5;
+                ctx.stroke();
+
+                drawAnimePortrait(f.id, cx + cellW / 2, cy + 44, 0.34, false);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '700 10px "Noto Sans KR", sans-serif';
+                ctx.textAlign = 'center';
+                const shortName = f.name.split(' (')[0];
+                ctx.fillText(shortName, cx + cellW / 2, cy + 96);
+
+                if (isP1 || isP2) {
+                    ctx.fillStyle = isP1 ? '#3b82f6' : '#e11d48';
+                    ctx.fillRect(cx + 6, cy + 6, 26, 15);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 9px "Noto Sans KR", sans-serif';
+                    ctx.fillText(isP1 && isP2 ? '1P/2P' : (isP1 ? '1P' : (isPvp ? '2P' : 'CPU')), cx + 19, cy + 17);
+                }
+            });
+
+            // 하단 스테이지 배경 선택 바 & 대전 시작 버튼
+            const arenaName = STAGES[selectedArenaIdx].arenaName;
+            ctx.fillStyle = '#27272a';
+            ctx.beginPath();
+            ctx.roundRect(120, 448, 360, 48, 12);
+            ctx.fill();
+            ctx.strokeStyle = '#71717a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '700 14px "Noto Sans KR", sans-serif';
+            ctx.fillText(`🏟️ 배경: ${arenaName} (클릭해 변경)`, 300, 477);
+
+            // 대전 시작 버튼
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.roundRect(510, 444, 330, 56, 14);
+            ctx.fill();
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 22px "Black Han Sans", sans-serif';
+            ctx.fillText('🔥 대결 시작! (FIGHT)', 675, 480);
+        }
+
+        // 고퀄리티 오프닝 스토리 애니메이션 (총 4장면 시네마틱 연출)
+        function drawStoryScreen() {
+            const slides = [
+                {
+                    sceneType: 'SUNSET_ENCOUNTER',
+                    bg: ['#1e1b4b', '#881337', '#fb7185'],
+                    chapter: 'ACT 1. 노을빛 가로수길의 기적',
+                    speaker: '오예준 (16세 / 176cm / 89kg)',
+                    lines: [
+                        '수업이 끝난 오후 5시, 묵직한 가방을 메고 거북목으로 터벅터벅 걷던 평범한 고등학생 오예준.',
+                        '그때, 황금빛 노을과 흩날리는 홍매화 꽃잎 사이로 한 소녀가 천천히 뒤를 돌아보았다.'
+                    ]
+                },
+                {
+                    sceneType: 'GWIBI_CLOSEUP',
+                    bg: ['#4c0519', '#be123c', '#fda4af'],
+                    chapter: 'ACT 2. 숨이 멎을 듯한 눈맞춤',
+                    speaker: '양귀비',
+                    lines: [
+                        '"어머... 방금 내 이름을 부른 건가요? 후훗, 재미있는 눈을 가졌네요."',
+                        '보석처럼 빛나는 루비빛 눈동자와 우아한 미소. 예준의 심장이 쿵쾅거리며 시간마저 멈춰버렸다!'
+                    ]
+                },
+                {
+                    sceneType: 'MYSTERIOUS_TEMPLE',
+                    bg: ['#09090b', '#312e81', '#4c1d95'],
+                    chapter: 'ACT 3. 붉은 초롱불이 이끄는 비밀 계단',
+                    speaker: '내레이션',
+                    lines: [
+                        '꽃향기에 홀린 듯 양귀비의 발걸음을 따라간 곳은 도심 한복판에 숨겨진 고대 지하 무술 투기장!',
+                        '거대한 철창 문이 굉음과 함께 닫히고, 사방에서 함성과 스포트라이트가 예준을 비춘다.'
+                    ]
+                },
+                {
+                    sceneType: 'ARENA_DECLARATION',
+                    bg: ['#18181b', '#7f1d1d', '#b91c1c'],
+                    chapter: 'ACT 4. 강제 참전! 우승만이 살 길이다',
+                    speaker: '오예준',
+                    lines: [
+                        '"여기까지 따라온 대가는 링 위에서 치러야 해요. 최후의 승자가 되면... 소원을 들어줄게요."',
+                        '양귀비의 도발에 16년간 굽어있던 예준의 거북목이 전율하며 각성하기 시작했다!'
+                    ]
+                }
+            ];
+
+            const slide = slides[storySlideIdx] || slides[0];
+            const t = stateTimer;
+
+            // 시네마틱 다층 그라데이션 배경
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, slide.bg[0]);
+            bgGrad.addColorStop(0.55, slide.bg[1]);
+            bgGrad.addColorStop(1, slide.bg[2]);
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // 장면별 맞춤형 애니메이션 아트워크
+            if (slide.sceneType === 'SUNSET_ENCOUNTER') {
+                // 노을 태양 & 빛줄기
+                const sunGrad = ctx.createRadialGradient(W * 0.68, 170, 15, W * 0.68, 170, 190);
+                sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+                sunGrad.addColorStop(0.4, 'rgba(251, 113, 133, 0.45)');
+                sunGrad.addColorStop(1, 'rgba(251, 113, 133, 0)');
+                ctx.fillStyle = sunGrad;
+                ctx.beginPath();
+                ctx.arc(W * 0.68, 170, 190, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 좌측 예준 & 우측 뒤돌아보는 양귀비 투샷 연출
+                const yejunSlide = Math.min(230, 140 + t * 1.5);
+                const gwibiFloat = Math.sin(t * 0.05) * 6;
+                drawAnimePortrait('yejun', yejunSlide, 245, 1.05, false);
+                drawAnimePortrait('gwibi', W - 260, 215 + gwibiFloat, 1.32, true);
+            } else if (slide.sceneType === 'GWIBI_CLOSEUP') {
+                // 극상 클로즈업 + 회전하는 후광 링 + 반짝임
+                ctx.save();
+                ctx.translate(W / 2, 195);
+                ctx.rotate(t * 0.01);
+                ctx.strokeStyle = 'rgba(253, 224, 71, 0.35)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([12, 10]);
+                ctx.beginPath();
+                ctx.arc(0, 0, 165, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                const zoomScale = Math.min(1.62, 1.38 + t * 0.002);
+                drawAnimePortrait('gwibi', W / 2, 205, zoomScale, false);
+            } else if (slide.sceneType === 'MYSTERIOUS_TEMPLE') {
+                // 지하 계단 원근감 & 붉은 초롱불 + 철창 내려오는 애니메이션
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                for (let s = 0; s < 6; s++) {
+                    const stepW = 320 + s * 95;
+                    ctx.fillRect(W / 2 - stepW / 2, 120 + s * 42, stepW, 38);
+                }
+                // 철창 셔터 하강 애니메이션
+                const cageDrop = Math.min(340, t * 8);
+                ctx.strokeStyle = '#71717a';
+                ctx.lineWidth = 6;
+                for (let bx = 140; bx <= W - 140; bx += 68) {
+                    ctx.beginPath();
+                    ctx.moveTo(bx, 0);
+                    ctx.lineTo(bx, cageDrop);
+                    ctx.stroke();
+                }
+                drawAnimePortrait('yejun', W / 2, 230, 1.25, false);
+            } else {
+                // 대결 선포 투샷 + 불꽃 오라
+                const shakeX = t < 25 ? (Math.random() - 0.5) * 6 : 0;
+                drawAnimePortrait('yejun', 250 + shakeX, 225, 1.25, false);
+                drawAnimePortrait('gwibi', W - 250, 225, 1.25, true);
+
+                ctx.fillStyle = '#fde047';
+                ctx.font = '900 34px "Black Han Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡ TOURNAMENT START ⚡', W / 2, 165);
+            }
+
+            // 꽃잎 & 빛입자 파티클
+            for (let i = 0; i < 24; i++) {
+                const px = ((t * 2.2 + i * 73) % (W + 40)) - 20;
+                const py = ((t * 1.4 + i * 47) % (H - 150));
+                ctx.fillStyle = i % 3 === 0 ? 'rgba(253, 224, 71, 0.7)' : 'rgba(253, 164, 175, 0.75)';
+                ctx.beginPath();
+                ctx.ellipse(px, py, 7, 3.8, (t + i) * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 영화 레터박스 상단 바
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, 36);
+            ctx.fillStyle = '#fda4af';
+            ctx.font = '900 14px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`🌸 OPENING STORY  |  ${slide.chapter}`, 28, 23);
+
+            // 하단 시네마틱 자막 박스
+            ctx.fillStyle = 'rgba(9, 9, 11, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(50, 358, W - 100, 156, 16);
+            ctx.fill();
+            ctx.strokeStyle = '#fb7185';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // 화자 이름 배지
+            ctx.fillStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.roundRect(75, 343, 240, 30, 8);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 14px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(slide.speaker, 195, 363);
+
+            // 타자기(Typewriter) 대사 애니메이션 효과
+            const visibleChars = Math.floor(t * 1.8);
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#f4f4f5';
+            ctx.font = '700 17px "Noto Sans KR", sans-serif';
+            let charBudget = visibleChars;
+            slide.lines.forEach((line, i) => {
+                const shown = line.slice(0, Math.max(0, charBudget));
+                charBudget -= line.length;
+                ctx.fillText(shown, 78, 405 + i * 32);
+            });
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 14px "Noto Sans KR", sans-serif';
+            ctx.fillText(`클릭 / ENTER 다음 장면 (${storySlideIdx + 1}/${slides.length}) ▶`, W - 75, 496);
+        }
+
+        // 최종 우승 엔딩 애니메이션 (총 3장면 시네마틱 피날레)
+        function drawEndingAnimation() {
+            const endingSlides = [
+                {
+                    bg: ['#1e1b4b', '#581c87', '#09090b'],
+                    chapter: 'ENDING 1. 내면의 그림자 소멸',
+                    speaker: '오예준',
+                    lines: [
+                        '거울 세계의 "흑화한 오예준"이 빛의 입자가 되어 흩어지며 심연의 문이 닫혔다.',
+                        '"누군가를 부러워하며 움츠러들던 어제의 나는 끝났어. 이제 난 내 모습 그대로 당당해!"'
+                    ]
+                },
+                {
+                    bg: ['#4c0519', '#9f1239', '#fb7185'],
+                    chapter: 'ENDING 2. 양귀비의 진심 어린 미소',
+                    speaker: '양귀비',
+                    lines: [
+                        '"축하해요, 오예준 군. 이 대회의 모든 강자와 자기 자신까지 이긴 진정한 챔피언이에요."',
+                        '양귀비가 건넨 우승의 증표와 함께, 굽어있던 예준의 거북목마저 늠름하게 펴졌다!'
+                    ]
+                },
+                {
+                    bg: ['#78350f', '#b45309', '#fde047'],
+                    chapter: 'FINALE. 거북목의 전설, 새로운 시작',
+                    speaker: 'GRAND CHAMPION - 오예준',
+                    lines: [
+                        '16세 평범한 소년에서 무술대회 최강의 전설로 거듭난 오예준(176cm, 89kg)!',
+                        '꽃잎이 흩날리는 석양 아래, 두 사람의 새로운 이야기가 지금 시작된다! - THE END -'
+                    ]
+                }
+            ];
+
+            const slide = endingSlides[endingSlideIdx] || endingSlides[0];
+            const t = stateTimer;
+
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, slide.bg[0]);
+            bgGrad.addColorStop(0.6, slide.bg[1]);
+            bgGrad.addColorStop(1, slide.bg[2]);
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            if (endingSlideIdx === 0) {
+                // 흑화 예준이 정화되며 사라지는 연출
+                const fadeOut = Math.max(0.15, 1 - t * 0.008);
+                ctx.save();
+                ctx.globalAlpha = fadeOut;
+                drawAnimePortrait('dark_yejun', W - 260 + t * 0.5, 225, 1.15, true);
+                ctx.restore();
+                drawAnimePortrait('yejun', 280, 220, 1.3, false);
+            } else if (endingSlideIdx === 1) {
+                // 양귀비의 축복 클로즈업
+                drawAnimePortrait('gwibi', W / 2, 205, 1.52 + Math.sin(t * 0.04) * 0.03, false);
+            } else {
+                // 피날레 투샷 & 챔피언 배너
+                drawAnimePortrait('yejun', 270, 230, 1.25, false);
+                drawAnimePortrait('gwibi', W - 270, 230, 1.25, true);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#fde047';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 12;
+                ctx.font = '900 42px "Black Han Sans", sans-serif';
+                ctx.fillText('👑 GRAND CHAMPION 👑', W / 2, 110);
+                ctx.shadowBlur = 0;
+            }
+
+            // 황금 꽃잎 파티클
+            for (let i = 0; i < 28; i++) {
+                const px = ((t * 2.5 + i * 61) % (W + 40)) - 20;
+                const py = ((t * 1.6 + i * 39) % (H - 140));
+                ctx.fillStyle = i % 2 === 0 ? 'rgba(253, 224, 71, 0.85)' : 'rgba(251, 113, 133, 0.8)';
+                ctx.beginPath();
+                ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 상단 바
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, 36);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 14px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`🏆 ENDING CINEMATIC  |  ${slide.chapter}`, 28, 23);
+
+            // 하단 대사창
+            ctx.fillStyle = 'rgba(9, 9, 11, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(50, 358, W - 100, 156, 16);
+            ctx.fill();
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.roundRect(75, 343, 260, 30, 8);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 14px "Noto Sans KR", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(slide.speaker, 205, 363);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 17px "Noto Sans KR", sans-serif';
+            slide.lines.forEach((line, i) => {
+                ctx.fillText(line, 78, 405 + i * 32);
+            });
+
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 14px "Noto Sans KR", sans-serif';
+            const nextLabel = endingSlideIdx < endingSlides.length - 1
+                ? `클릭 / ENTER 다음 엔딩 (${endingSlideIdx + 1}/${endingSlides.length}) ▶`
+                : '↻ 클릭 / ENTER 타이틀 화면으로 돌아가기';
+            ctx.fillText(nextLabel, W - 75, 496);
+        }
+
+        // 스테이지 VS 대진표 & 스펙 비교 화면
+        function drawVersusScreen() {
+            const isStory = gameMode === 'STORY';
+            const p1Spec = isStory ? PLAYER_SPEC : ALL_FIGHTERS[p1SelectedIdx];
+            const opp = isStory ? STAGES[currentStageIdx].opponent : ALL_FIGHTERS[p2SelectedIdx];
+            const stageTitle = isStory
+                ? `STAGE ${STAGES[currentStageIdx].stageNum} - ${STAGES[currentStageIdx].arenaName}`
+                : `${gameMode === 'PVP' ? '👥 2인용 진검승부' : '⚔️ FREE 매치'} - ${STAGES[selectedArenaIdx].arenaName}`;
+
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, H);
+
+            // 좌/우 배경 분할
+            ctx.fillStyle = 'rgba(37, 99, 235, 0.25)';
+            ctx.fillRect(0, 0, W / 2, H);
+            ctx.fillStyle = 'rgba(225, 29, 72, 0.25)';
+            ctx.fillRect(W / 2, 0, W / 2, H);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 28px "Black Han Sans", sans-serif';
+            ctx.fillText(stageTitle, W / 2, 46);
+
+            // P1 포트레이트 & 스펙
+            drawAnimePortrait(p1Spec.id, 220, 200, 1.1, false);
+            ctx.fillStyle = '#60a5fa';
+            ctx.font = '900 23px "Noto Sans KR", sans-serif';
+            ctx.fillText(`1P ${p1Spec.name}`, 220, 332);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            ctx.fillText(`${p1Spec.age} | ${p1Spec.height} / ${p1Spec.weight}`, 220, 356);
+            ctx.fillText(`유파: ${p1Spec.style}`, 220, 377);
+            ctx.fillStyle = '#93c5fd';
+            ctx.fillText(`★ 특성 [${p1Spec.traitName}]`, 220, 400);
+            ctx.fillStyle = '#d4d4d8';
+            ctx.font = '400 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(p1Spec.traitDesc, 220, 418);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            ctx.fillText(`필살기: ${p1Spec.specialName}`, 220, 442);
+            if (gameMode === 'PVP') {
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = '700 12px "Noto Sans KR", sans-serif';
+                ctx.fillText('[1P 키] 이동: WASD | 주먹: Z | 발: X | 가드: C | 필살: V', 220, 464);
+            }
+
+            // P2 포트레이트 & 스펙
+            drawAnimePortrait(opp.id, W - 220, 200, 1.1, true);
+            ctx.fillStyle = '#fb7185';
+            ctx.font = '900 23px "Noto Sans KR", sans-serif';
+            ctx.fillText(`${gameMode === 'PVP' ? '2P' : 'CPU'} ${opp.name}`, W - 220, 332);
+            ctx.fillStyle = '#e4e4e7';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            ctx.fillText(`${opp.age} | ${opp.height} / ${opp.weight}`, W - 220, 356);
+            ctx.fillText(`유파: ${opp.style}`, W - 220, 377);
+            ctx.fillStyle = '#fda4af';
+            ctx.fillText(`★ 특성 [${opp.traitName}]`, W - 220, 400);
+            ctx.fillStyle = '#d4d4d8';
+            ctx.font = '400 11px "Noto Sans KR", sans-serif';
+            ctx.fillText(opp.traitDesc, W - 220, 418);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 13px "Noto Sans KR", sans-serif';
+            ctx.fillText(`필살기: ${opp.specialName}`, W - 220, 442);
+            if (gameMode === 'PVP') {
+                ctx.fillStyle = '#fda4af';
+                ctx.font = '700 12px "Noto Sans KR", sans-serif';
+                ctx.fillText('[2P 키] 이동: 방향키 | 주먹: N | 발: M | 가드: , | 필살: .', W - 220, 464);
+            }
+
+            // 중앙 VS 로고
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '900 68px "Black Han Sans", sans-serif';
+            ctx.fillText('VS', W / 2, 240);
+
+            const pulse = 1 + Math.sin(stateTimer * 0.12) * 0.05;
+            ctx.save();
+            ctx.translate(W / 2, 495);
+            ctx.scale(pulse, pulse);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 20px "Noto Sans KR", sans-serif';
+            ctx.fillText('▶ 클릭 또는 ENTER를 눌러 대결 시작!', 0, 0);
+            ctx.restore();
+        }
+
+        // 필살기 발동 시 짤막한 컷신 애니메이션 렌더링
+        function drawCutinScreen() {
+            const atk = cutinData.attacker;
+            if (!atk) return;
+
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(0, 0, W, H);
+
+            // 집중선 이펙트
+            ctx.save();
+            ctx.translate(W / 2, H / 2);
+            for (let i = 0; i < 36; i++) {
+                const ang = (i / 36) * Math.PI * 2 + cutinData.timer * 0.04;
+                ctx.strokeStyle = i % 2 === 0 ? atk.spec.themeColor : '#fde047';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(ang) * 90, Math.sin(ang) * 90);
+                ctx.lineTo(Math.cos(ang) * 600, Math.sin(ang) * 600);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 클로즈업 캐릭터 포트레이트 슬라이드 인
+            const slideX = Math.min(280, cutinData.timer * 18);
+            drawAnimePortrait(atk.spec.id, slideX, 250, 1.55, false);
+
+            // 필살기 이름 & 설명 배너
+            ctx.fillStyle = 'rgba(9, 9, 11, 0.88)';
+            ctx.beginPath();
+            ctx.roundRect(430, 150, 490, 210, 18);
+            ctx.fill();
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = atk.spec.themeColor;
+            ctx.font = '900 20px "Noto Sans KR", sans-serif';
+            ctx.fillText(`${atk.spec.name} 필살 오의!`, 460, 195);
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 32px "Black Han Sans", sans-serif';
+            ctx.fillText(atk.spec.specialName, 460, 242);
+
+            ctx.fillStyle = '#f4f4f5';
+            ctx.font = '700 15px "Noto Sans KR", sans-serif';
+            const desc = atk.spec.specialDesc;
+            ctx.fillText(desc.slice(0, 26), 460, 285);
+            if (desc.length > 26) {
+                ctx.fillText(desc.slice(26), 460, 312);
+            }
+        }
+
+        // 전투 필드 캐릭터 스프라이트 렌더링 (사실적인 해부학적 인체/동물 체형 & 관절·근육 비율 작화!)
+        function drawFighter(f) {
+            ctx.save();
+            ctx.translate(f.x, f.y);
+            if (f.state === 'KO') {
+                ctx.rotate(-f.facing * Math.PI / 2.2);
+            }
+            ctx.scale(f.facing, 1);
+
+            const id = f.spec.id;
+            const isCrouch = f.state === 'CROUCH';
+            const bob = Math.sin(f.animFrame * 0.15) * 2.5;
+            const bodyScaleY = isCrouch ? 0.74 : 1.0;
+
+            // 캐릭터별 실제 키/몸무게 기반 정밀 인체 비례 파라미터
+            let shoulderW = 22, waistW = 16, hipW = 18, torsoH = 62;
+            let thighLen = 30, calfLen = 28, thighThick = 12, calfThick = 9;
+            let upperArmLen = 28, foreArmLen = 26, armThick = 10;
+            let headOffsetY = -142, headOffsetX = 0;
+            let skinColor = '#fed7aa', topColor = f.spec.themeColor, pantsColor = '#1e293b';
+
+            if (id === 'yejun' || id === 'dark_yejun') {
+                // 176cm 89kg: 묵직한 체형 + 두툼한 복부·허벅지 + 앞으로 22px 굽은 거북목
+                shoulderW = 24; waistW = 23; hipW = 22; torsoH = 60;
+                thighLen = 28; calfLen = 26; thighThick = 14; calfThick = 11;
+                upperArmLen = 26; foreArmLen = 25; armThick = 11;
+                headOffsetX = 22; headOffsetY = -132;
+                skinColor = id === 'dark_yejun' ? '#a8a29e' : '#fed7aa';
+                topColor = id === 'dark_yejun' ? '#18181b' : '#1e293b'; // 교복 자켓
+                pantsColor = id === 'dark_yejun' ? '#09090b' : '#334155'; // 교복 슬랙스
+            } else if (id === 'kangaroo') {
+                // 185cm 82kg: 넓은 하체·역관절 뒷다리·근육질 상체·긴 꼬리
+                shoulderW = 20; waistW = 15; hipW = 22; torsoH = 64;
+                thighLen = 32; calfLen = 32; thighThick = 15; calfThick = 9;
+                upperArmLen = 24; foreArmLen = 24; armThick = 10;
+                headOffsetX = 8; headOffsetY = -146;
+                skinColor = '#ea580c'; topColor = '#ea580c'; pantsColor = '#991b1b';
+            } else if (id === 'taepung') {
+                // 181cm 71kg: 역삼각형 슬림 근육질 체형 + 길고 탄탄한 다리 + 도복
+                shoulderW = 23; waistW = 15; hipW = 17; torsoH = 64;
+                thighLen = 34; calfLen = 32; thighThick = 12; calfThick = 9;
+                upperArmLen = 28; foreArmLen = 26; armThick = 10;
+                headOffsetY = -150;
+                topColor = '#f8fafc'; pantsColor = '#f1f5f9';
+            } else if (id === 'bear') {
+                // 215cm 195kg: 압도적 근육 거구 + 두꺼운 사지
+                shoulderW = 36; waistW = 32; hipW = 30; torsoH = 78;
+                thighLen = 32; calfLen = 28; thighThick = 21; calfThick = 16;
+                upperArmLen = 34; foreArmLen = 32; armThick = 18;
+                headOffsetX = 6; headOffsetY = -168;
+                skinColor = '#18181b'; topColor = '#18181b'; pantsColor = '#09090b';
+            } else if (id === 'crane') {
+                // 198cm 42kg: 가늘고 긴 선인 체형 + 긴 목·다리
+                shoulderW = 18; waistW = 12; hipW = 14; torsoH = 64;
+                thighLen = 38; calfLen = 38; thighThick = 8; calfThick = 6;
+                upperArmLen = 32; foreArmLen = 32; armThick = 7;
+                headOffsetX = 6; headOffsetY = -168;
+                skinColor = '#f8fafc'; topColor = '#f8fafc'; pantsColor = '#0f766e';
+            } else if (id === 'geosan') {
+                // 194cm 118kg: 헤비급 보디빌더급 떡대 & 두꺼운 팔다리
+                shoulderW = 32; waistW = 25; hipW = 24; torsoH = 72;
+                thighLen = 32; calfLen = 30; thighThick = 18; calfThick = 14;
+                upperArmLen = 32; foreArmLen = 30; armThick = 15;
+                headOffsetY = -156;
+                topColor = '#1d4ed8'; pantsColor = '#1e40af';
+            } else if (id === 'viper') {
+                // 204cm 79kg: 초장신 마른 근육질 + 채찍 같은 긴 팔다리
+                shoulderW = 21; waistW = 14; hipW = 16; torsoH = 70;
+                thighLen = 38; calfLen = 36; thighThick = 11; calfThick = 8;
+                upperArmLen = 36; foreArmLen = 34; armThick = 9;
+                headOffsetY = -168;
+                topColor = '#064e3b'; pantsColor = '#022c22';
+            } else if (id === 'gwibi') {
+                // 166cm 48kg: 날씬한 허리라인과 유려한 골반 비율의 여성 실루엣
+                shoulderW = 15; waistW = 10; hipW = 16; torsoH = 54;
+                thighLen = 28; calfLen = 26; thighThick = 9.5; calfThick = 7;
+                upperArmLen = 23; foreArmLen = 22; armThick = 7;
+                headOffsetY = -128;
+                skinColor = '#fff1e6'; topColor = '#e11d48'; pantsColor = '#be123c';
+            } else if (id === 'zara') {
+                // 178cm 66kg: 탄탄하고 균형 잡힌 여성 운동선수 실루엣
+                shoulderW = 19; waistW = 12; hipW = 18; torsoH = 60;
+                thighLen = 32; calfLen = 30; thighThick = 11.5; calfThick = 8.5;
+                upperArmLen = 26; foreArmLen = 25; armThick = 9;
+                headOffsetY = -142;
+                skinColor = '#7c4324'; topColor = '#f59e0b'; pantsColor = '#18181b';
+            } else if (id === 'vending') {
+                // 192cm 240kg: 육중한 직사각 강철 사물 바디 + 기계 유압 다리
+                shoulderW = 34; waistW = 34; hipW = 34; torsoH = 88;
+                thighLen = 22; calfLen = 20; thighThick = 14; calfThick = 14;
+                upperArmLen = 26; foreArmLen = 24; armThick = 12;
+                headOffsetY = -148;
+                skinColor = '#94a3b8'; topColor = '#0284c7'; pantsColor = '#334155';
+            } else if (id === 'tteokbokki') {
+                // 162cm 35kg: 통통하고 쫄깃한 그릇형 바디
+                shoulderW = 24; waistW = 26; hipW = 20; torsoH = 52;
+                thighLen = 22; calfLen = 20; thighThick = 10; calfThick = 8;
+                upperArmLen = 22; foreArmLen = 20; armThick = 8;
+                headOffsetY = -118;
+                skinColor = '#fffbeb'; topColor = '#dc2626'; pantsColor = '#18181b';
+            }
+
+            const hipY = -(thighLen + calfLen);
+            const shoulderY = hipY - torsoH + bob;
+
+            // 흑화 예준 상시 검붉은 투기 오라
+            if (id === 'dark_yejun') {
+                const aura = ctx.createRadialGradient(0, -85, 10, 0, -85, 95);
+                aura.addColorStop(0, 'rgba(168, 85, 247, 0.45)');
+                aura.addColorStop(0.6, 'rgba(220, 38, 38, 0.25)');
+                aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = aura;
+                ctx.beginPath();
+                ctx.arc(0, -85, 95, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 바닥 그림자
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, shoulderW * 1.5, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.scale(1, bodyScaleY);
+
+            // 관절 기반 팔/다리(허벅지-무릎-종아리-발) 그리기 헬퍼
+            function drawLimb(x1, y1, mx, my, x2, y2, t1, t2, color, shoeColor) {
+                ctx.strokeStyle = color;
+                ctx.lineCap = 'round';
+                ctx.lineWidth = t1;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(mx, my);
+                ctx.stroke();
+
+                ctx.lineWidth = t2;
+                ctx.beginPath();
+                ctx.moveTo(mx, my);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                if (shoeColor) {
+                    ctx.fillStyle = shoeColor;
+                    ctx.beginPath();
+                    ctx.ellipse(x2 + 5, y2, t2 * 0.9, t2 * 0.48, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // [특징] 캥거루 굵고 탄력 있는 꼬리
+            if (id === 'kangaroo') {
+                ctx.strokeStyle = '#c2410c';
+                ctx.lineWidth = 15;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(-10, hipY + 4);
+                ctx.quadraticCurveTo(-50, hipY + 28, -58, -5);
+                ctx.stroke();
+            }
+
+            // [특징] 양귀비 휘날리는 긴 흑발 뒷머리
+            if (id === 'gwibi') {
+                ctx.fillStyle = '#09090b';
+                ctx.beginPath();
+                ctx.moveTo(-10, headOffsetY + 8);
+                ctx.quadraticCurveTo(-42, -70, -28 + Math.sin(f.animFrame * 0.18) * 7, -28);
+                ctx.lineTo(-6, -42);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            const walkCycle = f.state === 'WALK' ? Math.sin(f.animFrame * 0.28) : 0;
+            const shoeCol = (id === 'kangaroo' || id === 'bear' || id === 'crane') ? null : (id === 'gwibi' ? '#881337' : '#0f172a');
+
+            // 1) 뒷다리 (무릎 관절 굴곡 포함)
+            const backKneeX = -6 - walkCycle * 12;
+            const backKneeY = hipY + thighLen * 0.95;
+            const backFootX = -12 - walkCycle * 18;
+            drawLimb(-5, hipY, backKneeX, backKneeY, backFootX, -5, thighThick, calfThick, pantsColor, shoeCol);
+
+            // 2) 앞다리 (발차기 시 무릎 펴지며 하이킥/미들킥 동작)
+            if (f.state === 'KICK' || f.state === 'SPECIAL') {
+                const kickFootX = thighLen + calfLen + 22;
+                const kickFootY = hipY - 24;
+                drawLimb(6, hipY, (6 + kickFootX) * 0.5, (hipY + kickFootY) * 0.5 - 4, kickFootX, kickFootY, thighThick, calfThick, pantsColor, shoeCol);
+            } else {
+                const frontKneeX = 12 + walkCycle * 14;
+                const frontKneeY = hipY + thighLen * 0.92;
+                const frontFootX = 14 + walkCycle * 18;
+                drawLimb(6, hipY, frontKneeX, frontKneeY, frontFootX, -5, thighThick, calfThick, pantsColor, shoeCol);
+            }
+
+            // 3) 해부학적 상체 토르소 (어깨-허리-골반 실루엣)
+            ctx.fillStyle = topColor;
+            ctx.beginPath();
+            ctx.moveTo(-shoulderW, shoulderY);
+            ctx.lineTo(shoulderW, shoulderY);
+            ctx.quadraticCurveTo(waistW, shoulderY + torsoH * 0.55, hipW, hipY + 4);
+            ctx.lineTo(-hipW, hipY + 4);
+            ctx.quadraticCurveTo(-waistW, shoulderY + torsoH * 0.55, -shoulderW, shoulderY);
+            ctx.closePath();
+            ctx.fill();
+
+            // 복장/체형 디테일
+            if (id === 'yejun' || id === 'dark_yejun') {
+                // 교복 셔츠 V넥 & 넥타이 & 단추
+                ctx.fillStyle = id === 'dark_yejun' ? '#27272a' : '#f8fafc';
+                ctx.beginPath();
+                ctx.moveTo(-6, shoulderY);
+                ctx.lineTo(14, shoulderY);
+                ctx.lineTo(6, shoulderY + 24);
+                ctx.fill();
+                ctx.fillStyle = id === 'dark_yejun' ? '#a855f7' : '#dc2626';
+                ctx.fillRect(3, shoulderY + 6, 4, 22);
+            } else if (id === 'taepung' || id === 'geosan') {
+                // 도복 띠 (검은띠)
+                ctx.fillStyle = '#09090b';
+                ctx.fillRect(-waistW, shoulderY + torsoH * 0.54, waistW * 2, 6);
+            } else if (id === 'bear') {
+                // 반달가슴곰 가슴 반달무늬
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.arc(10, shoulderY + 28, 16, 0.3, Math.PI - 0.3);
+                ctx.stroke();
+            } else if (id === 'gwibi') {
+                // 치파오/드레스 슬릿 스커트 자락
+                ctx.fillStyle = '#be123c';
+                ctx.beginPath();
+                ctx.moveTo(-hipW, hipY);
+                ctx.lineTo(hipW, hipY);
+                ctx.lineTo(hipW + 8, hipY + 34);
+                ctx.lineTo(-hipW - 6, hipY + 34);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // 4) 목 연결 (오예준 거북목 각도 강조)
+            ctx.strokeStyle = skinColor;
+            ctx.lineWidth = id === 'bear' ? 20 : (id === 'gwibi' ? 8 : 11);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(4, shoulderY + 4);
+            ctx.lineTo(headOffsetX, headOffsetY + 14 + bob);
+            ctx.stroke();
+
+            // 5) 애니메이션 얼굴 포트레이트
+            ctx.save();
+            ctx.translate(headOffsetX, headOffsetY + bob);
+            const headScale = id === 'bear' ? 0.46 : (id === 'gwibi' ? 0.38 : 0.42);
+            ctx.scale(headScale, headScale);
+            drawAnimePortrait(id, 0, 0, 1, false);
+            ctx.restore();
+
+            // 6) 상완-팔꿈치-전완-주먹 관절 팔 렌더링
+            if (id === 'crane') {
+                // 백학도사 날개 팔
+                ctx.fillStyle = '#f8fafc';
+                ctx.strokeStyle = '#0d9488';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(0, shoulderY + 10);
+                if (f.state === 'PUNCH' || f.state === 'KICK' || f.state === 'SPECIAL') {
+                    ctx.quadraticCurveTo(45, shoulderY - 25, upperArmLen + foreArmLen + 20, shoulderY + 8);
+                    ctx.lineTo(22, shoulderY + 26);
+                } else {
+                    ctx.quadraticCurveTo(-36, shoulderY - 6, -44, shoulderY + 36);
+                    ctx.lineTo(8, shoulderY + 26);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                const armCol = (id === 'yejun' || id === 'dark_yejun' || id === 'taepung' || id === 'geosan' || id === 'viper') ? topColor : skinColor;
+                let elbowX = 4, elbowY = shoulderY + upperArmLen;
+                let handX = 24, handY = shoulderY + upperArmLen - 4;
+
+                if (f.state === 'PUNCH' || f.state === 'SPECIAL') {
+                    elbowX = shoulderW + upperArmLen * 0.7;
+                    elbowY = shoulderY + 6;
+                    handX = shoulderW + upperArmLen + foreArmLen + 8;
+                    handY = shoulderY + 4;
+                } else if (f.state === 'BLOCK') {
+                    elbowX = 22;
+                    elbowY = shoulderY + 14;
+                    handX = 28;
+                    handY = shoulderY - 14;
+                }
+
+                drawLimb(8, shoulderY + 8, elbowX, elbowY, handX, handY, armThick, armThick * 0.85, armCol, null);
+
+                // 주먹 / 복싱 글러브
+                ctx.fillStyle = id === 'kangaroo' ? '#dc2626' : skinColor;
+                ctx.beginPath();
+                ctx.arc(handX, handY, id === 'kangaroo' ? 11 : armThick * 0.72, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 가드 실드 표시
+            if (f.state === 'BLOCK') {
+                ctx.strokeStyle = '#60a5fa';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(32, -95, 42, -Math.PI * 0.4, Math.PI * 0.4);
+                ctx.stroke();
+            }
+
+            // 반격 찬스 오라 표시 (예준 HP 30% 이하 각성 시 황금-적색 이중 오라)
+            if (f.guardCounterTimer > 0) {
+                const isAwake = id === 'yejun' && (f.hp / f.maxHp) <= 0.30;
+                ctx.strokeStyle = isAwake ? '#fde047' : 'rgba(239, 68, 68, 0.85)';
+                ctx.lineWidth = isAwake ? 4.5 : 3;
+                ctx.beginPath();
+                ctx.arc(0, -85, 58 + Math.sin(f.animFrame * 0.5) * 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 화상(BURN) 상태 시각적 불꽃 오라
+            if (f.burnTimer > 0) {
+                const fireGlow = ctx.createRadialGradient(0, -80, 10, 0, -80, 68);
+                fireGlow.addColorStop(0, 'rgba(251, 146, 60, 0.45)');
+                fireGlow.addColorStop(0.6, 'rgba(239, 68, 68, 0.3)');
+                fireGlow.addColorStop(1, 'rgba(239, 68, 68, 0)');
+                ctx.fillStyle = fireGlow;
+                ctx.beginPath();
+                ctx.arc(0, -80, 68, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 감전 / 매혹 CC기 상태 아이콘 표시
+            if (f.charmTimer > 0) {
+                ctx.save();
+                ctx.scale(f.facing, 1);
+                ctx.font = '900 16px "Noto Sans KR", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = f.ccType === 'SHOCK' ? '#fde047' : '#fb7185';
+                ctx.fillText(f.ccType === 'SHOCK' ? '⚡ 감전됨!' : '💖 매혹됨!', 0, -172);
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        // 스테이지 클리어 / 패배 결과 오버레이
+        function drawResultOverlay(isWin) {
+            ctx.fillStyle = 'rgba(9, 9, 11, 0.84)';
+            ctx.fillRect(0, 0, W, H);
+
+            if (gameMode !== 'STORY') {
+                // FREE 모드 / 2인용 모드 전용 승패 결과창
+                const winner = isWin ? player : enemy;
+                const winnerTag = gameMode === 'PVP' ? (isWin ? '1P 승리!' : '2P 승리!') : (isWin ? 'PLAYER WIN!' : 'CPU WIN!');
+                drawAnimePortrait(winner.spec.id, 220, 265, 1.15, false);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#fde047';
+                ctx.font = '900 52px "Black Han Sans", sans-serif';
+                ctx.fillText(winnerTag, W / 2 + 80, 155);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 24px "Noto Sans KR", sans-serif';
+                ctx.fillText(`승자: ${winner.spec.name}`, W / 2 + 80, 215);
+
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = '700 18px "Noto Sans KR", sans-serif';
+                ctx.fillText('▶ 클릭 / ENTER : 캐릭터 다시 선택하기', W / 2 + 80, 305);
+
+                ctx.fillStyle = '#fca5a5';
+                ctx.font = '700 15px "Noto Sans KR", sans-serif';
+                ctx.fillText('(상단 [🏠 메인 메뉴] 버튼으로 다른 모드 선택 가능)', W / 2 + 80, 355);
+                return;
+            }
+
+            const stage = STAGES[currentStageIdx];
+            drawAnimePortrait('yejun', 210, 270, 1.15, false);
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = isWin ? '#fde047' : '#ef4444';
+            ctx.font = '900 54px "Black Han Sans", sans-serif';
+            ctx.fillText(isWin ? 'STAGE CLEAR!' : 'YOU LOSE...', W / 2 + 70, 145);
+
+            // 오예준 대사 말풍선
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            ctx.roundRect(350, 185, 540, 140, 16);
+            ctx.fill();
+            ctx.strokeStyle = isWin ? '#60a5fa' : '#f87171';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.fillStyle = '#93c5fd';
+            ctx.font = '900 16px "Noto Sans KR", sans-serif';
+            ctx.fillText(`오예준의 한마디`, W / 2 + 140, 218);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 16px "Noto Sans KR", sans-serif';
+            const quote = isWin ? stage.opponent.winQuote : stage.opponent.loseQuote;
+            ctx.fillText(quote.slice(0, 32), W / 2 + 140, 255);
+            if (quote.length > 32) {
+                ctx.fillText(quote.slice(32), W / 2 + 140, 285);
+            }
+
+            ctx.fillStyle = '#fde047';
+            ctx.font = '900 22px "Noto Sans KR", sans-serif';
+            ctx.fillText(isWin ? '▶ 클릭 / ENTER로 다음 스테이지 진행' : '↻ 클릭 / ENTER로 다시 도전하기', W / 2 + 140, 385);
+        }
+
+        // ============================================================================
+        // 7. 메인 업데이트 & 렌더링 루프
+        // ============================================================================
+        function update() {
+            stateTimer++;
+            if (screenShake > 0) screenShake--;
+
+            if (hitStopFrames > 0) {
+                hitStopFrames--;
+                return;
+            }
+
+            if (gameState === 'ROUND_INTRO') {
+                if (stateTimer >= 65) {
+                    gameState = 'FIGHT';
+                    stateTimer = 0;
+                }
+            } else if (gameState === 'CUTIN') {
+                cutinData.timer++;
+                if (cutinData.timer >= cutinData.duration) {
+                    cutinData.active = false;
+                    gameState = 'FIGHT';
+                }
+            } else if (gameState === 'FIGHT') {
+                roundTick++;
+                if (roundTick >= 60) {
+                    roundTick = 0;
+                    if (roundTimer > 0) roundTimer--;
+                }
+
+                handlePlayerControl();
+                handleEnemyAI();
+
+                player.update(enemy);
+                enemy.update(player);
+
+                // 화면 경계 제한
+                player.x = Math.max(60, Math.min(W - 60, player.x));
+                enemy.x = Math.max(60, Math.min(W - 60, enemy.x));
+
+                // 파티클 업데이트
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.isFire) {
+                        p.vy -= 0.08; // 불꽃은 위로 타오름
+                        p.size *= 0.96;
+                    } else {
+                        p.vy += 0.25;
+                    }
+                    p.life--;
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+
+                // 흑섬 전격 스파크 업데이트
+                for (let i = blackFlashBolts.length - 1; i >= 0; i--) {
+                    blackFlashBolts[i].life--;
+                    if (blackFlashBolts[i].life <= 0) blackFlashBolts.splice(i, 1);
+                }
+
+                // 플로팅 텍스트 업데이트
+                for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                    const ft = floatingTexts[i];
+                    ft.y -= 1.1;
+                    ft.life--;
+                    if (ft.life <= 0) floatingTexts.splice(i, 1);
+                }
+
+                // 승패 판정
+                if (enemy.state === 'KO' && stateTimer > 45) {
+                    if (gameMode === 'STORY' && currentStageIdx >= STAGES.length - 1) {
+                        startEnding();
+                    } else {
+                        gameState = 'STAGE_CLEAR';
+                        stateTimer = 0;
+                    }
+                } else if ((player.state === 'KO' || roundTimer <= 0) && stateTimer > 45) {
+                    gameState = 'GAME_OVER';
+                    stateTimer = 0;
+                }
+            }
+        }
+
+        function render() {
+            ctx.save();
+            if (screenShake > 0) {
+                const sx = (Math.random() - 0.5) * screenShake;
+                const sy = (Math.random() - 0.5) * screenShake;
+                ctx.translate(sx, sy);
+            }
+
+            if (gameState === 'TITLE') {
+                drawTitleScreen();
+            } else if (gameState === 'CHAR_SELECT') {
+                drawCharSelectScreen();
+            } else if (gameState === 'STORY') {
+                drawStoryScreen();
+            } else if (gameState === 'VERSUS') {
+                drawVersusScreen();
+            } else if (gameState === 'ENDING') {
+                drawEndingAnimation();
+            } else if (gameState === 'CUTIN') {
+                drawCutinScreen();
+            } else {
+                // ROUND_INTRO, FIGHT, STAGE_CLEAR, GAME_OVER
+                const activeStage = gameMode === 'STORY' ? STAGES[currentStageIdx] : STAGES[selectedArenaIdx];
+                drawArenaBackground(activeStage.bgTheme);
+                drawFighter(player);
+                drawFighter(enemy);
+
+                // 일반 파티클 렌더링
+                particles.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // 흑섬(黑閃) 붉고 검은 전격 스파크 렌더링
+                blackFlashBolts.forEach(bolt => {
+                    const alpha = bolt.life / bolt.maxLife;
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+
+                    // 붉은 외곽 광채
+                    ctx.strokeStyle = '#dc2626';
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 16;
+                    ctx.lineWidth = 7;
+                    ctx.beginPath();
+                    bolt.pts.forEach((pt, idx) => {
+                        if (idx === 0) ctx.moveTo(pt.x, pt.y);
+                        else ctx.lineTo(pt.x, pt.y);
+                    });
+                    ctx.stroke();
+
+                    // 칠흑 같은 검은 중심 번개
+                    ctx.strokeStyle = '#09090b';
+                    ctx.shadowBlur = 0;
+                    ctx.lineWidth = 3.2;
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // 데미지 및 특성 플로팅 텍스트
+                floatingTexts.forEach(ft => {
+                    ctx.fillStyle = ft.color;
+                    ctx.font = '900 18px "Noto Sans KR", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(ft.text, ft.x, ft.y);
+                });
+
+                drawHUD();
+
+                if (gameState === 'ROUND_INTRO') {
+                    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                    ctx.fillRect(0, 0, W, H);
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#fde047';
+                    ctx.font = '900 64px "Black Han Sans", sans-serif';
+                    const introTitle = gameMode === 'STORY'
+                        ? `STAGE ${activeStage.stageNum}`
+                        : (gameMode === 'PVP' ? '1P VS 2P' : 'FREE MATCH');
+                    ctx.fillText(stateTimer < 40 ? introTitle : 'FIGHT!!', W / 2, H / 2 + 15);
+                } else if (gameState === 'STAGE_CLEAR') {
+                    drawResultOverlay(true);
+                } else if (gameState === 'GAME_OVER') {
+                    drawResultOverlay(false);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ============================================================================
+        // 8. 입력 및 이벤트 바인딩
+        // ============================================================================
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (W / rect.width),
+                y: (clientY - rect.top) * (H / rect.height)
+            };
+        }
+
+        function handleCanvasClick(e) {
+            sfx.init();
+            const pt = getCanvasCoords(e);
+
+            if (gameState === 'TITLE') {
+                for (const btn of TITLE_MODE_BUTTONS) {
+                    if (pt.x >= W / 2 - 190 && pt.x <= W / 2 + 190 && pt.y >= btn.y - 28 && pt.y <= btn.y + 30) {
+                        if (btn.mode === 'STORY') startStory();
+                        else startCharSelect(btn.mode);
+                        return;
+                    }
+                }
+                return;
+            }
+
+            if (gameState === 'CHAR_SELECT') {
+                // 1) 좌측 1P 카드 클릭 시 1P 선택 턴으로 전환
+                if (pt.x >= 20 && pt.x <= 250 && pt.y >= 72 && pt.y <= 427) {
+                    selectTurn = 1;
+                    sfx.playSelect();
+                    return;
+                }
+                // 2) 우측 2P/CPU 카드 클릭 시 2P 선택 턴으로 전환
+                if (pt.x >= W - 250 && pt.x <= W - 20 && pt.y >= 72 && pt.y <= 427) {
+                    selectTurn = 2;
+                    sfx.playSelect();
+                    return;
+                }
+                // 3) 중앙 12명 캐릭터 그리드 클릭
+                const gridStartX = 268, gridStartY = 74, cellW = 102, cellH = 112, gap = 6;
+                for (let idx = 0; idx < ALL_FIGHTERS.length; idx++) {
+                    const col = idx % 4;
+                    const row = Math.floor(idx / 4);
+                    const cx = gridStartX + col * (cellW + gap);
+                    const cy = gridStartY + row * (cellH + gap);
+                    if (pt.x >= cx && pt.x <= cx + cellW && pt.y >= cy && pt.y <= cy + cellH) {
+                        sfx.playSelect();
+                        if (selectTurn === 1) {
+                            p1SelectedIdx = idx;
+                            selectTurn = 2;
+                        } else {
+                            p2SelectedIdx = idx;
+                            selectTurn = 1;
+                        }
+                        return;
+                    }
+                }
+                // 4) 배경 스테이지 변경 바 클릭
+                if (pt.x >= 120 && pt.x <= 480 && pt.y >= 448 && pt.y <= 496) {
+                    selectedArenaIdx = (selectedArenaIdx + 1) % STAGES.length;
+                    sfx.playSelect();
+                    return;
+                }
+                // 5) 대결 시작 버튼 클릭
+                if (pt.x >= 510 && pt.x <= 840 && pt.y >= 444 && pt.y <= 500) {
+                    startStageVersus(selectedArenaIdx);
+                    return;
+                }
+                return;
+            }
+
+            advanceScreenAction();
+        }
+
+        function advanceScreenAction() {
+            sfx.init();
+            if (gameState === 'STORY') {
+                sfx.playSelect();
+                storySlideIdx++;
+                stateTimer = 0;
+                if (storySlideIdx >= 4) {
+                    startStageVersus(0);
+                }
+            } else if (gameState === 'VERSUS') {
+                startRoundIntro();
+            } else if (gameState === 'STAGE_CLEAR') {
+                if (gameMode === 'STORY') startStageVersus(currentStageIdx + 1);
+                else startCharSelect(gameMode);
+            } else if (gameState === 'GAME_OVER') {
+                if (gameMode === 'STORY') startStageVersus(currentStageIdx);
+                else startCharSelect(gameMode);
+            } else if (gameState === 'ENDING') {
+                sfx.playSelect();
+                endingSlideIdx++;
+                stateTimer = 0;
+                if (endingSlideIdx >= 3) {
+                    goToTitle();
+                }
+            }
+        }
+
+        canvas.addEventListener('click', handleCanvasClick);
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (gameState === 'TITLE') {
+                if (e.code === 'Digit1' || e.code === 'Enter') { sfx.init(); startStory(); }
+                else if (e.code === 'Digit2') { sfx.init(); startCharSelect('FREE'); }
+                else if (e.code === 'Digit3') { sfx.init(); startCharSelect('PVP'); }
+                return;
+            }
+            if (gameState === 'CHAR_SELECT') {
+                if (e.code === 'Enter') { sfx.init(); startStageVersus(selectedArenaIdx); }
+                return;
+            }
+            if (e.code === 'Enter' && gameState !== 'FIGHT') {
+                advanceScreenAction();
+                return;
+            }
+            if (gameState === 'FIGHT') {
+                if (gameMode === 'PVP') {
+                    // 1P 스킬키 (Z, X, V)
+                    if (player) {
+                        if (e.code === 'KeyZ') player.startAttack('PUNCH');
+                        if (e.code === 'KeyX') player.startAttack('KICK');
+                        if (e.code === 'KeyV') player.startAttack('SPECIAL');
+                    }
+                    // 2P 스킬키 (N/Num1, M/Num2, ./Num0)
+                    if (enemy) {
+                        if (e.code === 'KeyN' || e.code === 'Numpad1') enemy.startAttack('PUNCH');
+                        if (e.code === 'KeyM' || e.code === 'Numpad2') enemy.startAttack('KICK');
+                        if (e.code === 'Period' || e.code === 'Numpad0') enemy.startAttack('SPECIAL');
+                    }
+                } else if (player) {
+                    if (e.code === 'KeyJ' || e.code === 'KeyZ') player.startAttack('PUNCH');
+                    if (e.code === 'KeyK' || e.code === 'KeyX') player.startAttack('KICK');
+                    if (e.code === 'KeyL' || e.code === 'KeyC') player.startAttack('SPECIAL');
+                }
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+        });
+
+        // 하단 터치/마우스 버튼 바인딩
+        document.querySelectorAll('.ctrl-btn').forEach(btn => {
+            const code = btn.getAttribute('data-key');
+            const press = (e) => {
+                e.preventDefault();
+                sfx.init();
+                keys[code] = true;
+                btn.classList.add('active');
+                if (gameState === 'FIGHT' && player) {
+                    if (code === 'KeyJ') player.startAttack('PUNCH');
+                    if (code === 'KeyK') player.startAttack('KICK');
+                    if (code === 'KeyL') player.startAttack('SPECIAL');
+                }
+            };
+            const release = (e) => {
+                e.preventDefault();
+                keys[code] = false;
+                btn.classList.remove('active');
+            };
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+            btn.addEventListener('touchstart', press, { passive: false });
+            btn.addEventListener('touchend', release, { passive: false });
+        });
+
+        document.getElementById('btn-home').addEventListener('click', () => {
+            goToTitle();
+        });
+
+        document.getElementById('btn-skip-story').addEventListener('click', () => {
+            sfx.playSelect();
+            startStageVersus(0);
+        });
+
+        const btnSound = document.getElementById('btn-sound');
+        btnSound.addEventListener('click', () => {
+            sfx.enabled = !sfx.enabled;
+            btnSound.textContent = sfx.enabled ? '🔊 효과음 ON' : '🔇 효과음 OFF';
+            if (sfx.enabled) sfx.playSelect();
+        });
+
+        // 게임 시작
+        window.onload = function () {
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
