@@ -1,8 +1,9 @@
 rules_version = '2';
 
 // 규칙의 근거: docs/01_핵심로직_규칙명세서.md 3.4
-// 이 파일 하나가 Firebase 프로젝트 dongshin-game-2026 전체 규칙입니다 (게임 갤러리 likes + 웹앱 스토어 appLikes).
-// 웹앱 스토어 저장소(2026app)에서는 배포하지 말고 여기서 firebase deploy --only firestore:rules
+// 이 파일 하나가 Firebase 프로젝트 dongshin-game-2026 전체 규칙입니다
+//   게임 갤러리 likes / 웹앱 스토어(2026app) appLikes / 사회과 웹앱(2026social) socialLikes·socialRequests·socialAdmin
+// 올리는 방법: 이 파일 전체를 Firebase 콘솔 → Firestore → 규칙 에 붙여넣고 게시 (운영가이드 참고)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -10,6 +11,14 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email.lower().matches('^[^@]+@dongshin[.]ms[.]kr$');
+    }
+
+    // 사회과 웹앱 관리자: 명단은 비공개 문서 socialConfig/admins 의 emails 배열 (콘솔에서만 수정)
+    function isSocialAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/socialConfig/admins)
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/socialConfig/admins).data.emails;
     }
 
     match /likes/{likeId} {
@@ -47,6 +56,69 @@ service cloud.firestore {
 
       allow delete: if request.auth != null
         && resource.data.uid == request.auth.uid;
+    }
+
+    // ----- 사회과 웹앱 탐험관 (저장소 2026social) -----
+    match /socialLikes/{likeId} {
+      allow read: if true;
+
+      allow create: if isSchoolAccount()
+        && request.resource.data.keys().hasOnly(['appId', 'uid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['appId', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.appId is string
+        && request.resource.data.appId.matches('^[0-9]{4}(-[0-9]{1,2})?$')
+        && likeId == request.resource.data.appId + '_' + request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // 업그레이드 요청: 학교 계정이 남기고, 본인 또는 관리자가 지움
+    match /socialRequests/{reqId} {
+      allow read: if true;
+
+      allow create: if isSchoolAccount()
+        && request.resource.data.keys().hasOnly(['appId', 'uid', 'author', 'text', 'createdAt'])
+        && request.resource.data.keys().hasAll(['appId', 'uid', 'author', 'text', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.appId is string
+        && request.resource.data.appId.matches('^[0-9]{4}(-[0-9]{1,2})?$')
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 2
+        && request.resource.data.text.size() <= 300
+        && request.resource.data.author is string
+        && request.resource.data.author.size() <= 20
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && (resource.data.uid == request.auth.uid || isSocialAdmin());
+    }
+
+    // 관리자 수정값(숨기기·이름 바꾸기 등): 누구나 읽고, 관리자만 씀
+    match /socialAdmin/{docId} {
+      allow read: if true;
+      allow write: if isSocialAdmin()
+        && docId == 'overrides'
+        && request.resource.data.keys().hasOnly(['json', 'updatedAt', 'updatedBy'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 200000;
+    }
+
+    // 관리자인지 확인하는 용도 (읽기 허락 여부만 봄. 문서는 없어도 됨)
+    match /socialAdminCheck/{docId} {
+      allow read: if isSocialAdmin();
+      allow write: if false;
+    }
+
+    // 관리자 명단: 앱에서는 읽고 쓸 수 없음 (콘솔에서만)
+    match /socialConfig/{docId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {
