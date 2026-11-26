@@ -28,7 +28,8 @@ jobs:
         run: node scripts/sync.mjs
       - name: 바뀐 것이 있으면 커밋
         run: |
-          git add -A play site/games.json sync-report.json
+          git add -A play site/games.json
+          if [ -f sync-report.json ]; then git add sync-report.json; fi
           if git diff --cached --quiet; then
             echo "변경 없음"
             exit 0
