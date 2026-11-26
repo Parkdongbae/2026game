@@ -660,6 +660,7 @@ try {
   const res = await fetch("./games.json", { cache: "no-store" });
   if (!res.ok) throw new Error(String(res.status));
   const data = await res.json();
+  window.__dataUpdatedAt = String(data.updatedAt || "");
   state.games = (Array.isArray(data.games) ? data.games : [])
     .filter((g) => g && typeof g.id === "string" && typeof g.file === "string" && FILE_RE.test(g.file))
     .map((g) => ({ ...g, title: String(g.title || ""), name: String(g.name || ""), studentNo: String(g.studentNo || "") }));
@@ -695,6 +696,21 @@ try {
 }
 state.loaded = true;
 render();
+// 방문할 때 자동 반영: 제출 폴더에 새 파일이 있으면 서버가 동기화를 시작하고, 새 목록이 올라오면 화면을 새로 고친다
+fetch("./api/refresh", { cache: "no-store" })
+  .then((r) => (r.ok ? r.json() : {}))
+  .then(async (r) => {
+    if (!r.started && !r.running) return;
+    toast(r.started ? `새로 올라온 파일 ${r.newFiles}개를 가져오는 중이에요. 1~2분 뒤 저절로 나타나요` : "새 파일을 가져오는 중이에요. 잠시 뒤 저절로 나타나요");
+    for (let i = 0; i < 24; i++) { // 최대 약 3분
+      await new Promise((ok) => setTimeout(ok, 7500));
+      try {
+        const d = await (await fetch(`./games.json?t=${Date.now()}`, { cache: "no-store" })).json();
+        if (String(d.updatedAt || "") !== window.__dataUpdatedAt) { location.reload(); return; }
+      } catch {}
+    }
+  })
+  .catch(() => {});
 await fbReady;
 loadCounts();
 </script>
