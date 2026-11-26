@@ -1,6 +1,8 @@
 rules_version = '2';
 
 // 규칙의 근거: docs/01_핵심로직_규칙명세서.md 3.4
+// 이 파일 하나가 Firebase 프로젝트 dongshin-game-2026 전체 규칙입니다 (게임 갤러리 likes + 웹앱 스토어 appLikes).
+// 웹앱 스토어 저장소(2026app)에서는 배포하지 말고 여기서 firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -20,6 +22,25 @@ service cloud.firestore {
         && request.resource.data.gameId is string
         && request.resource.data.gameId.matches('^[0-9]{4}(-[0-9]{1,2})?$')
         && likeId == request.resource.data.gameId + '_' + request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if false;
+
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // 웹앱 스토어(저장소 2026app)의 도움돼요. 규칙은 likes 와 같고 필드 이름만 appId
+    match /appLikes/{likeId} {
+      allow read: if true;
+
+      allow create: if isSchoolAccount()
+        && request.resource.data.keys().hasOnly(['appId', 'uid', 'createdAt'])
+        && request.resource.data.keys().hasAll(['appId', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.appId is string
+        && request.resource.data.appId.matches('^[0-9]{4}(-[0-9]{1,2})?$')
+        && likeId == request.resource.data.appId + '_' + request.auth.uid
         && request.resource.data.createdAt == request.time;
 
       allow update: if false;
