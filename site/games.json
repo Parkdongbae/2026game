@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-27T03:53:42.025Z",
+  "updatedAt": "2026-11-27T04:08:29.042Z",
   "games": [
     {
       "id": "2105",
@@ -542,16 +542,21 @@
       "updatedAt": "2026-11-24T05:13:29.653Z"
     }
   ],
+  "hidden": [],
   "rejected": [
     {
       "who": "fc_27_web_edition (1) - 학생서민영.html",
       "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
+      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
+      "driveId": "10uAxjLOypnd-KudtkdKfHPe-drOSlSO0",
+      "sourceName": "fc_27_web_edition (1) - 학생서민영.html"
     },
     {
       "who": "fc_27_web_edition (2) - 학생서민영.html",
       "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html"
+      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
+      "driveId": "1T0-kG48AzSM2JRhbNkf-JpUqOoUtXyyr",
+      "sourceName": "fc_27_web_edition (2) - 학생서민영.html"
     }
   ]
 }
