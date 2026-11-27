@@ -110,6 +110,24 @@ service cloud.firestore {
         && request.resource.data.json.size() < 200000;
     }
 
+    // 게임 갤러리·웹앱 스토어 F9 관리자 창 수정값 (관리자 명단은 사회과와 같음)
+    match /gameAdmin/{docId} {
+      allow read: if true;
+      allow write: if isSocialAdmin()
+        && docId == 'overrides'
+        && request.resource.data.keys().hasOnly(['json', 'updatedAt', 'updatedBy'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 200000;
+    }
+    match /appAdmin/{docId} {
+      allow read: if true;
+      allow write: if isSocialAdmin()
+        && docId == 'overrides'
+        && request.resource.data.keys().hasOnly(['json', 'updatedAt', 'updatedBy'])
+        && request.resource.data.json is string
+        && request.resource.data.json.size() < 200000;
+    }
+
     // 관리자인지 확인하는 용도 (읽기 허락 여부만 봄. 문서는 없어도 됨)
     match /socialAdminCheck/{docId} {
       allow read: if isSocialAdmin();

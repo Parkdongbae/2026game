@@ -85,6 +85,20 @@ function sameGameScore(a, b) {
 }
 const copyNo = (name) => Number(/\((\d+)\)/.exec(name)?.[1] ?? 0);
 
+// ---------- 관리자 수정값 (F9 관리자 창 → Firestore gameAdmin/overrides) + overrides.json ----------
+// 형식: { "3105": { hide, title, name, studentNo, category, desc }, "drive:<드라이브ID>": { studentNo, name, ignore } }
+const FIRESTORE_DOC = "https://firestore.googleapis.com/v1/projects/dongshin-game-2026/databases/(default)/documents/gameAdmin/overrides";
+async function loadOverrides(local) {
+  if (process.env.OVERRIDES_JSON) return { ...local, ...JSON.parse(process.env.OVERRIDES_JSON) }; // 로컬 시험용
+  const res = await fetch(FIRESTORE_DOC);
+  if (res.status === 404) return local; // 아직 관리자가 아무것도 고치지 않음
+  if (res.status === 403) { console.error("! 관리자 수정값 읽기 권한 없음 (보안 규칙 게시 전) — overrides.json만 사용"); return local; }
+  if (!res.ok) throw new Error(`관리자 수정값을 읽지 못함 (${res.status}) — 숨긴 항목이 다시 나타나지 않도록 중단합니다`);
+  const text = (await res.json()).fields?.json?.stringValue;
+  if (!text) return local;
+  try { return { ...local, ...JSON.parse(text) }; } catch { throw new Error("관리자 수정값 형식이 잘못됨"); }
+}
+
 // ---------- 1단계: 목록 ----------
 async function listFolder(folderId) {
   const res = await fetch(`https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}`, { headers: HEADERS });
@@ -131,11 +145,13 @@ async function mapLimit(items, limit, fn) {
 }
 
 // ---------- 3단계: 해석 ----------
-function analyze(sourceName, buf) {
+function analyze(sourceName, buf, forced) {
+  // 관리자가 학번·이름을 직접 정해 준 파일은 파일명 규칙·AI 저장본 검사를 건너뛴다
   const m = NAME_RE.exec(sourceName);
-  if (!m) return { skip: "파일명에서 학번·이름을 찾지 못함" };
-  const studentNo = m[1];
-  const name = m[2].replace(/\s+/g, "");
+  const fStudent = forced && /^\d{4}$/.test(String(forced.studentNo ?? "")) && String(forced.name ?? "").trim();
+  if (!m && !fStudent) return { skip: "파일명에서 학번·이름을 찾지 못함" };
+  const studentNo = fStudent ? String(forced.studentNo) : m[1];
+  const name = fStudent ? String(forced.name).replace(/\s+/g, "") : m[2].replace(/\s+/g, "");
 
   const text = buf.toString("utf8");
   const head = text.slice(0, 2000);
@@ -146,8 +162,8 @@ function analyze(sourceName, buf) {
   if (buf.length === 0 || !["<html", "<!doctype", "<script", "<canvas", "<body"].some((t) => lower.includes(t))) {
     return { skip: "HTML 파일이 아님", studentNo, name };
   }
-  if (head.includes("saved from url=") && AI_CHAT_HOSTS.some((h) => head.includes(h))) return { skip: REASON_AI, studentNo, name };
-  if (title.endsWith(" - Google Gemini")) return { skip: REASON_AI, studentNo, name };
+  if (head.includes("saved from url=") && AI_CHAT_HOSTS.some((h) => head.includes(h)) && !fStudent) return { skip: REASON_AI, studentNo, name };
+  if (title.endsWith(" - Google Gemini") && !fStudent) return { skip: REASON_AI, studentNo, name };
 
   if (!title) {
     title = sourceName
@@ -173,10 +189,10 @@ function analyze(sourceName, buf) {
 // ---------- 본문 ----------
 async function main() {
   const config = await readJson(path.join(ROOT, "sync.config.json"), { folderIds: [] });
-  const overrides = await readJson(path.join(ROOT, "overrides.json"), {});
+  const overrides = await loadOverrides(await readJson(path.join(ROOT, "overrides.json"), {}));
   const prevData = await readJson(GAMES_JSON, { games: [] });
   const prevReport = await readJson(REPORT_JSON, { skipped: [] });
-  const prev = Array.isArray(prevData.games) ? prevData.games : [];
+  const prev = [...(Array.isArray(prevData.games) ? prevData.games : []), ...(Array.isArray(prevData.hidden) ? prevData.hidden : [])];
   const prevByDrive = new Map(prev.map((g) => [g.driveId, g]));
   const now = new Date().toISOString();
 
@@ -215,7 +231,7 @@ async function main() {
       console.error(`! 내려받기 실패: ${s.sourceName} (${e.message})`);
       return;
     }
-    const a = analyze(s.sourceName, buf);
+    const a = analyze(s.sourceName, buf, overrides[`drive:${s.driveId}`]);
     if (a.skip) skipped.push({ sourceName: s.sourceName, driveId: s.driveId, reason: a.skip, studentNo: a.studentNo, name: a.name });
     else cur.push({ ...s, ...a, buf });
   });
@@ -308,18 +324,26 @@ async function main() {
     finish(c, id, now, null);
   }
 
-  // overrides
+  // 관리자 수정값 적용: 제목·이름·학번·분류·설명 바꾸기, 숨기기(=삭제)
   const games = [];
-  for (const g of results) {
+  const hidden = [];
+  const applyOverride = (g) => {
     const o = overrides[g.id];
-    if (o && typeof o.title === "string" && o.title.trim()) g.title = o.title.trim();
-    if (o && o.hide === true) skipped.push({ sourceName: g.sourceName, driveId: g.driveId, reason: "교사가 숨김" });
-    else games.push(g);
+    if (!o) return g;
+    if (typeof o.title === "string" && o.title.trim()) g.title = o.title.trim().slice(0, 60);
+    if (typeof o.desc === "string") g.desc = o.desc.trim().slice(0, 80);
+    if (typeof o.name === "string" && o.name.trim()) g.name = o.name.replace(/\s+/g, "").slice(0, 10);
+    if (/^\d{4}$/.test(String(o.studentNo ?? ""))) g.studentNo = String(o.studentNo);
+    return g;
+  };
+  for (const g of [...results, ...kept.map((k) => ({ ...k, buf: null }))]) {
+    applyOverride(g);
+    if (overrides[g.id]?.hide === true) {
+      skipped.push({ sourceName: g.sourceName, driveId: g.driveId, reason: "교사가 숨김" });
+      hidden.push(g);
+    } else games.push(g);
   }
-  for (const g of kept) {
-    if (overrides[g.id]?.hide === true) skipped.push({ sourceName: g.sourceName, driveId: g.driveId, reason: "교사가 숨김" });
-    else games.push({ ...g, buf: null });
-  }
+  hidden.sort((a, b) => a.studentNo.localeCompare(b.studentNo) || a.id.localeCompare(b.id));
 
   games.sort((a, b) => a.studentNo.localeCompare(b.studentNo) || a.id.localeCompare(b.id));
   skipped.sort((a, b) => a.sourceName.localeCompare(b.sourceName));
@@ -347,17 +371,24 @@ async function main() {
     }
   }
 
-  const clean = games.map(({ buf, isNew, isChanged, replaced, ...g }) => (replaced?.length ? { ...g, replaced } : g));
-  // 갤러리에 보여 줄 "다시 제출이 필요해요" 목록 (교사가 숨긴 게임은 제외)
+  const strip = ({ buf, isNew, isChanged, replaced, ...g }) => (replaced?.length ? { ...g, replaced } : g);
+  const clean = games.map(strip);
+  const cleanHidden = hidden.map(({ file, ...g }) => strip(g)); // 숨긴 항목: 관리자 창에서 되살리기용 (파일은 내림)
+  // 갤러리에 보여 줄 "다시 제출이 필요해요" 목록 (교사가 숨긴 것, 관리자가 '목록에서 지우기'한 파일은 제외)
   const rejected = skipped
     .filter((s) => ![ "교사가 숨김", REASON_DUP, REASON_OLD ].includes(s.reason))
+    .filter((s) => overrides[`drive:${s.driveId}`]?.ignore !== true)
     .map((s) => ({
       who: s.studentNo ? `${s.studentNo} ${s.name}` : s.sourceName,
       reason: s.reason,
       fix: FIXES[s.reason] ?? "선생님께 문의해 주세요.",
+      driveId: s.driveId,
+      sourceName: s.sourceName,
     }));
-  if (JSON.stringify(clean) !== JSON.stringify(prev) || JSON.stringify(rejected) !== JSON.stringify(prevData.rejected ?? [])) {
-    await writeFile(GAMES_JSON, JSON.stringify({ updatedAt: now, games: clean, rejected }, null, 2) + "\n");
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b ?? []);
+  const firstRun = !prevData.updatedAt; // 목록 파일이 아직 없음 → 비어 있어도 한 번은 만든다
+  if (firstRun || !same(clean, prevData.games) || !same(cleanHidden, prevData.hidden) || !same(rejected, prevData.rejected)) {
+    await writeFile(GAMES_JSON, JSON.stringify({ updatedAt: now, games: clean, hidden: cleanHidden, rejected }, null, 2) + "\n");
   }
   if (JSON.stringify(skipped) !== JSON.stringify(prevReport.skipped ?? [])) {
     await writeFile(REPORT_JSON, JSON.stringify({ updatedAt: now, skipped }, null, 2) + "\n");
