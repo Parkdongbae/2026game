@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-27T04:08:29.042Z",
+  "updatedAt": "2026-11-27T06:48:14.690Z",
   "games": [
     {
       "id": "2105",
@@ -176,12 +176,15 @@
       "name": "서민영",
       "title": "FC 27 3D Web Edition",
       "file": "3116.html",
-      "driveId": "15hrNcTAJYzkOr5OpuNNn-KIuYgwew3mv",
-      "sourceName": "fc_27_web_edition - 3116서민영.html",
-      "hash": "d651005dc64a23b3",
-      "size": 130982,
+      "driveId": "1T0-kG48AzSM2JRhbNkf-JpUqOoUtXyyr",
+      "sourceName": "fc_27_web_edition (2) - 학생서민영.html",
+      "hash": "00fcfe729c336852",
+      "size": 144803,
       "addedAt": "2026-11-24T01:28:53.407Z",
-      "updatedAt": "2026-11-24T01:28:53.407Z"
+      "updatedAt": "2026-11-27T06:48:14.690Z",
+      "replaced": [
+        "15hrNcTAJYzkOr5OpuNNn-KIuYgwew3mv"
+      ]
     },
     {
       "id": "3203",
@@ -543,20 +546,5 @@
     }
   ],
   "hidden": [],
-  "rejected": [
-    {
-      "who": "fc_27_web_edition (1) - 학생서민영.html",
-      "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
-      "driveId": "10uAxjLOypnd-KudtkdKfHPe-drOSlSO0",
-      "sourceName": "fc_27_web_edition (1) - 학생서민영.html"
-    },
-    {
-      "who": "fc_27_web_edition (2) - 학생서민영.html",
-      "reason": "파일명에서 학번·이름을 찾지 못함",
-      "fix": "파일 이름 끝을 '학번이름.html'로 바꿔 주세요. 예) 내게임 - 3115홍길동.html",
-      "driveId": "1T0-kG48AzSM2JRhbNkf-JpUqOoUtXyyr",
-      "sourceName": "fc_27_web_edition (2) - 학생서민영.html"
-    }
-  ]
+  "rejected": []
 }

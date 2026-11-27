@@ -184,7 +184,7 @@
                 <!-- Home Team Selector -->
                 <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">HOME (내 팀)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">HOME (홈 팀)</span>
                         <span id="homeOvr" class="font-broadcast text-lg font-bold text-white">OVR 90</span>
                     </div>
                     <select id="selectHomeTeam" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-emerald-500"></select>
@@ -194,7 +194,7 @@
                 <!-- Away Team Selector -->
                 <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400">AWAY (상대 AI)</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-400">AWAY (어웨이 팀)</span>
                         <span id="awayOvr" class="font-broadcast text-lg font-bold text-white">OVR 91</span>
                     </div>
                     <select id="selectAwayTeam" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:border-amber-500"></select>
@@ -208,7 +208,8 @@
                     <label class="block text-[11px] font-bold text-emerald-400 uppercase mb-1">게임 모드</label>
                     <select id="selectGameMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-sm font-bold text-white">
                         <option value="1p" selected>1인용 (VS AI)</option>
-                        <option value="2p">2인용 (1P vs 2P)</option>
+                        <option value="2p">로컬 2인용 (한 키보드)</option>
+                        <option value="online">온라인 대전 (참여코드)</option>
                     </select>
                 </div>
                 <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-3">
@@ -237,35 +238,57 @@
                 </div>
             </div>
 
+            <!-- Online Room Panel (Visible when Online Mode selected) -->
+            <div id="onlineRoomPanel" class="hidden mx-5 sm:mx-6 mb-4 p-4 rounded-xl bg-slate-950/95 border border-sky-500/50 shadow-lg">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                    <div>
+                        <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">🌐 온라인 참여코드 멀티플레이어</span>
+                        <div id="onlineStatusText" class="text-xs text-slate-300 mt-0.5">방을 만들거나 친구의 6자리 참여코드를 입력하세요.</div>
+                    </div>
+                    <span id="onlineRoleBadge" class="hidden px-2.5 py-1 rounded-full bg-sky-500/20 border border-sky-400/50 text-xs font-bold text-sky-300">대기 중</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Create Room (Host) -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 flex flex-col justify-between gap-2">
+                        <div class="text-[11px] font-bold text-emerald-400">1. 방 만들기 (홈 팀 호스트)</div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnCreateRoom" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer">
+                                참여코드 생성
+                            </button>
+                            <div id="hostRoomCodeBox" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 font-broadcast text-lg tracking-widest text-center text-emerald-300">
+                                ------
+                            </div>
+                            <button id="btnCopyRoomCode" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 transition cursor-pointer">
+                                복사
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Join Room (Guest) -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 flex flex-col justify-between gap-2">
+                        <div class="text-[11px] font-bold text-amber-400">2. 친구 방 입장 (어웨이 팀 게스트)</div>
+                        <div class="flex items-center gap-2">
+                            <input id="inputJoinCode" type="text" maxlength="6" placeholder="참여코드 6자리" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 font-broadcast text-base tracking-widest uppercase text-center text-white focus:outline-none focus:border-amber-400" />
+                            <button id="btnJoinRoom" type="button" class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer">
+                                방 입장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Controls Summary Card -->
             <div class="mx-5 sm:mx-6 mb-5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <div class="font-bold text-emerald-400 mb-1">🎮 1P (HOME) 조작법</div>
+                    <div class="font-bold text-emerald-400 mb-1">🎮 기본 조작법 (1P & 온라인 대전 공통)</div>
                     <div>• <b>방향키</b>: 이동 / <b>E</b>: 질주 / <b>Q</b>: 아군 침투</div>
                     <div>• <b>S</b>: 패스·수비전환 / <b>W</b>: 스루 / <b>A</b>: 로빙·태클</div>
                     <div>• <b>D</b>: 슛·슬라이딩 / <b class="text-purple-400">Z + D</b>: 감아차기</div>
                 </div>
                 <div>
-                    <div class="font-bold text-amber-400 mb-1">🕹️ 2P (AWAY 친구 대전) 조작법</div>
+                    <div class="font-bold text-amber-400 mb-1">🕹️ 로컬 2인용 (한 키보드 2P) 조작법</div>
                     <div>• <b>I K J L</b>: 이동 / <b>U</b>: 질주 / <b>O</b>: 아군 침투</div>
                     <div>• <b>N</b>: 패스·수비전환 / <b>Y</b>: 스루 / <b>H</b>: 로빙·태클</div>
                     <div>• <b>M</b>: 슛·슬라이딩 / <b class="text-purple-400">B + M</b>: 감아차기</div>
-                </div>
-            </div>
-
-            <!-- Controls Summary Card -->
-            <div class="mx-5 sm:mx-6 mb-5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                    <div class="font-bold text-emerald-400 mb-1">⚽ 공격 조작 (공 소유 시)</div>
-                    <div>• <b>방향키</b>: 드리블 이동 / <b>E</b>: 전력 질주</div>
-                    <div>• <b>S</b>: 정밀 락온 패스 / <b>W</b>: 공간 스루패스 / <b>A</b>: 로빙 크로스</div>
-                    <div>• <b>D</b>: 일반 슛 / <b class="text-purple-400">Z + D</b>: 감아차기 / <b class="text-pink-400">Q</b>: 아군 침투 지시</div>
-                </div>
-                <div>
-                    <div class="font-bold text-amber-400 mb-1">🛡️ 수비 조작 (공 미소유 시)</div>
-                    <div>• <b>S</b> 또는 <b>Shift</b>: 가까운 수비수로 커서 전환</div>
-                    <div>• <b>A</b> 또는 <b>Space</b>: 스탠딩 태클 / <b>D</b>: 슬라이딩 태클</div>
-                    <div>• <b>E</b>: 수비 전력 질주 / <b>W</b>: 골키퍼 전진 압박</div>
                 </div>
             </div>
 
@@ -512,7 +535,6 @@
                 const length = Math.floor(this.ctx.sampleRate * durationSec);
                 const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
                 const data = buffer.getChannelData(0);
-                // Pink-ish warm noise
                 let b0 = 0, b1 = 0, b2 = 0;
                 for (let i = 0; i < length; i++) {
                     const white = Math.random() * 2 - 1;
@@ -554,7 +576,6 @@
                 if (!this.enabled || !this.ctx) return;
                 const now = this.ctx.currentTime;
 
-                // 1. Deep leather ball body thump
                 const osc = this.ctx.createOscillator();
                 const oscGain = this.ctx.createGain();
                 osc.type = 'sine';
@@ -567,7 +588,6 @@
                 osc.start(now);
                 osc.stop(now + 0.16);
 
-                // 2. Crisp boot-to-leather impact transient
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = this.createNoiseBuffer(0.09);
                 const filter = this.ctx.createBiquadFilter();
@@ -587,7 +607,6 @@
                 const now = this.ctx.currentTime;
                 const dur = long ? 0.68 : 0.34;
 
-                // Dual-tone stadium referee whistle with pea trill modulation
                 const carrier = this.ctx.createOscillator();
                 const carrier2 = this.ctx.createOscillator();
                 const trill = this.ctx.createOscillator();
@@ -599,7 +618,6 @@
                 carrier2.type = 'sine';
                 carrier2.frequency.setValueAtTime(2890, now);
 
-                // 36Hz pea trill modulation
                 trill.type = 'sine';
                 trill.frequency.setValueAtTime(36, now);
                 trillGain.gain.setValueAtTime(85, now);
@@ -626,7 +644,6 @@
             playTrap() {
                 if (!this.enabled || !this.ctx) return;
                 const now = this.ctx.currentTime;
-                // Realistic soft boot sole ball-trap thud ("탁!")
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
                 osc.type = 'sine';
@@ -655,7 +672,6 @@
             playNetSwish() {
                 if (!this.enabled || !this.ctx) return;
                 const now = this.ctx.currentTime;
-                // Realistic nylon net rustle & rattle
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = this.createNoiseBuffer(0.36);
 
@@ -678,7 +694,6 @@
                 if (!this.enabled || !this.ctx) return;
                 const now = this.ctx.currentTime;
 
-                // 1. Massive Stadium Crowd Roar Surge (No cheesy synth beep!)
                 const roar = this.ctx.createBufferSource();
                 roar.buffer = this.createNoiseBuffer(2.4);
                 const roarFilter = this.ctx.createBiquadFilter();
@@ -699,16 +714,15 @@
                 roarGain.connect(this.ctx.destination);
                 roar.start(now);
 
-                // 2. Deep Stadium Goal Horn
                 const horn = this.ctx.createOscillator();
                 const horn2 = this.ctx.createOscillator();
                 const hornFilter = this.ctx.createBiquadFilter();
                 const hornGain = this.ctx.createGain();
 
                 horn.type = 'sawtooth';
-                horn.frequency.setValueAtTime(130.81, now + 0.1); // C3
+                horn.frequency.setValueAtTime(130.81, now + 0.1);
                 horn2.type = 'sawtooth';
-                horn2.frequency.setValueAtTime(164.81, now + 0.1); // E3
+                horn2.frequency.setValueAtTime(164.81, now + 0.1);
 
                 hornFilter.type = 'lowpass';
                 hornFilter.frequency.value = 480;
@@ -737,7 +751,6 @@
         const radarCanvas = document.getElementById('radarCanvas');
         const radarCtx = radarCanvas.getContext('2d');
 
-        // Three.js Renderer, Scene & Broadcast Camera
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.shadowMap.enabled = true;
@@ -749,7 +762,6 @@
 
         const camera3D = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 10, 6500);
 
-        // Stadium Lighting
         const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.72);
         scene.add(ambientLight);
 
@@ -771,15 +783,12 @@
         fillLight.position.set(-400, 600, -500);
         scene.add(fillLight);
 
-        // Helper: Convert World 2D (0..1600, 0..1000) to 3D Pitch Coordinates (-800..800, y, -500..500)
         function to3DX(wx) { return wx - PITCH.w / 2; }
         function to3DZ(wy) { return wy - PITCH.h / 2; }
 
-        // Build 3D Stadium Pitch, Lines, Goals & Nets
         const netMeshes = { left: null, right: null };
 
         function build3DPitch() {
-            // Outer Stadium Floor
             const outerGeo = new THREE.PlaneGeometry(3400, 2600);
             const outerMat = new THREE.MeshStandardMaterial({ color: 0x0b1324, roughness: 0.9 });
             const outerMesh = new THREE.Mesh(outerGeo, outerMat);
@@ -787,7 +796,6 @@
             outerMesh.position.y = -2;
             scene.add(outerMesh);
 
-            // Pitch Grass Texture with Procedural Stripes
             const pitchTexCanvas = document.createElement('canvas');
             pitchTexCanvas.width = 1600;
             pitchTexCanvas.height = 1000;
@@ -800,12 +808,10 @@
                 pctx.fillRect(i * stripeW, 0, stripeW + 1, 1000);
             }
 
-            // Crisp Pitch Lines drawn onto Grass Texture
             pctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
             pctx.lineWidth = 4;
             pctx.strokeRect(4, 4, 1592, 992);
 
-            // Halfway line & Center circle
             pctx.beginPath();
             pctx.moveTo(800, 0);
             pctx.lineTo(800, 1000);
@@ -820,13 +826,11 @@
             pctx.arc(800, 500, 7, 0, Math.PI * 2);
             pctx.fill();
 
-            // Penalty Boxes & Six-Yard Boxes
             pctx.strokeRect(4, (1000 - PITCH.penaltyH) / 2, PITCH.penaltyW, PITCH.penaltyH);
             pctx.strokeRect(1596 - PITCH.penaltyW, (1000 - PITCH.penaltyH) / 2, PITCH.penaltyW, PITCH.penaltyH);
             pctx.strokeRect(4, (1000 - PITCH.sixYardH) / 2, PITCH.sixYardW, PITCH.sixYardH);
             pctx.strokeRect(1596 - PITCH.sixYardW, (1000 - PITCH.sixYardH) / 2, PITCH.sixYardW, PITCH.sixYardH);
 
-            // Penalty Arcs
             pctx.beginPath();
             pctx.arc(165, 500, 95, -0.78, 0.78);
             pctx.stroke();
@@ -844,14 +848,12 @@
             pitchMesh.receiveShadow = true;
             scene.add(pitchMesh);
 
-            // Stadium Perimeter Advertising Boards
             const adGeoLong = new THREE.BoxGeometry(PITCH.w + 160, 26, 12);
             const adMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, emissive: 0x064e3b, emissiveIntensity: 0.45 });
             const northAd = new THREE.Mesh(adGeoLong, adMat);
             northAd.position.set(0, 13, -PITCH.h / 2 - 75);
             scene.add(northAd);
 
-            // Build Left & Right 3D Goal Frames + Nets
             create3DGoal('left', -PITCH.w / 2);
             create3DGoal('right', PITCH.w / 2);
         }
@@ -868,7 +870,6 @@
 
             const goalGroup = new THREE.Group();
 
-            // Left & Right Goalposts
             const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalHeight, 12);
             const post1 = new THREE.Mesh(postGeo, postMat);
             post1.position.set(goalX, goalHeight / 2, -goalWidth / 2);
@@ -880,7 +881,6 @@
             post2.castShadow = true;
             goalGroup.add(post2);
 
-            // Crossbar
             const barGeo = new THREE.CylinderGeometry(postRadius, postRadius, goalWidth + postRadius * 2, 12);
             const crossbar = new THREE.Mesh(barGeo, postMat);
             crossbar.rotation.x = Math.PI / 2;
@@ -888,7 +888,6 @@
             crossbar.castShadow = true;
             goalGroup.add(crossbar);
 
-            // Back Net Mesh
             const netGeo = new THREE.BoxGeometry(goalDepth, goalHeight - 2, goalWidth - 4);
             const netMat = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
@@ -906,7 +905,6 @@
 
         build3DPitch();
 
-        // 3D Ball & Ground Shadow Ring
         const ball3DGroup = new THREE.Group();
         const ballGeo = new THREE.SphereGeometry(8.5, 20, 20);
         const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
@@ -914,7 +912,6 @@
         ballMesh.castShadow = true;
         ball3DGroup.add(ballMesh);
 
-        // Dark stripe band on ball so spin is visible in 3D
         const bandGeo = new THREE.TorusGeometry(8.4, 1.3, 8, 20);
         const bandMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
         const bandMesh = new THREE.Mesh(bandGeo, bandMat);
@@ -928,7 +925,6 @@
         ballShadowMesh.position.y = 0.6;
         scene.add(ballShadowMesh);
 
-        // 3D Tactical Pass & Finesse Curve Guide Lines
         const passGuideLine = new THREE.Line(
             new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
             new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
@@ -953,7 +949,6 @@
         finesseGuideLine.visible = false;
         scene.add(finesseGuideLine);
 
-        // Player 3D Meshes Pool
         const playerMeshes = new Map();
 
         function clearPlayer3DMeshes() {
@@ -983,7 +978,6 @@
 
             const group = new THREE.Group();
 
-            // Ground Shadow
             const sh = new THREE.Mesh(
                 new THREE.CircleGeometry(13, 16),
                 new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
@@ -992,7 +986,6 @@
             sh.position.y = 0.5;
             group.add(sh);
 
-            // Controlled Player Emerald Cursor Ring + Floating 3D Arrow
             const cursorColor = p.team === 'home' ? 0x10b981 : 0xf59e0b;
             const cursorRing = new THREE.Mesh(
                 new THREE.RingGeometry(16, 21, 28),
@@ -1012,7 +1005,6 @@
             cursorArrow.visible = false;
             group.add(cursorArrow);
 
-            // Q-Run Pink Ring
             const runRing = new THREE.Mesh(
                 new THREE.RingGeometry(18, 22, 24),
                 new THREE.MeshBasicMaterial({ color: 0xf472b6, side: THREE.DoubleSide })
@@ -1022,10 +1014,8 @@
             runRing.visible = false;
             group.add(runRing);
 
-            // Body Pivot (rotates to facing direction & tilts on slide tackle)
             const bodyPivot = new THREE.Group();
 
-            // Legs
             const legGeo = new THREE.CylinderGeometry(2.6, 2.3, 14, 8);
             const legMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d });
             const leftLeg = new THREE.Mesh(legGeo, legMat);
@@ -1038,7 +1028,6 @@
             rightLeg.castShadow = true;
             bodyPivot.add(rightLeg);
 
-            // Shorts
             const shortsGeo = new THREE.CylinderGeometry(6.2, 6.8, 8, 12);
             const shortsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shortHex) });
             const shorts = new THREE.Mesh(shortsGeo, shortsMat);
@@ -1046,7 +1035,6 @@
             shorts.castShadow = true;
             bodyPivot.add(shorts);
 
-            // Jersey Torso with Number Badge
             const numTex = createPlayerNumberTexture(p.number, bodyHex);
             const torsoGeo = new THREE.CylinderGeometry(7.2, 6.2, 16, 14);
             const torsoMat = new THREE.MeshStandardMaterial({ map: numTex, roughness: 0.6 });
@@ -1055,7 +1043,6 @@
             torso.castShadow = true;
             bodyPivot.add(torso);
 
-            // Head
             const headGeo = new THREE.SphereGeometry(5.2, 14, 14);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xf1c27d });
             const head = new THREE.Mesh(headGeo, headMat);
@@ -1070,8 +1057,8 @@
         }
 
         const state = {
-            screen: 'menu', // 'menu' | 'playing' | 'goal' | 'halftime' | 'fulltime'
-            gameMode: '1p', // '1p' | '2p'
+            screen: 'menu',
+            gameMode: '1p',
             homeTeam: TEAMS[0],
             awayTeam: TEAMS[1],
             formation: '4-3-3',
@@ -1082,7 +1069,7 @@
             addedTimeMin: 2,
             homeScore: 0,
             awayScore: 0,
-            setPiece: null, // null | { type: 'kickoff'|'throwin'|'goalkick'|'corner', team: 'home'|'away', x, y, timer }
+            setPiece: null,
             goalTimer: 0,
             netRipple: { side: null, timer: 0, y: 500 },
             camera: { x: 800, y: 500, yawOffset: 0, pitchOffset: 0 },
@@ -1094,6 +1081,23 @@
             shotChargeP2: { active: false, power: 0, isFinesse: false },
             gkRush: false,
             gkRushP2: false,
+            online: {
+                peer: null,
+                conn: null,
+                role: null,
+                roomCode: '',
+                connected: false,
+                syncTimer: 0,
+                remoteKeys: {
+                    ArrowUp: false,
+                    ArrowDown: false,
+                    ArrowLeft: false,
+                    ArrowRight: false,
+                    KeyE: false,
+                    KeyZ: false,
+                    KeyW: false
+                }
+            },
             stats: {
                 homePossTime: 1,
                 awayPossTime: 1,
@@ -1123,7 +1127,6 @@
             }
         };
 
-        // Mouse Drag Camera Orbit & 'R' Key Reset
         let isDraggingCam = false;
         let lastMouseX = 0;
         let lastMouseY = 0;
@@ -1152,7 +1155,6 @@
             KeyE: false,
             KeyZ: false,
             KeyW: false,
-            // 2P Movement & Modifiers (IKJL + U + B + Y)
             KeyI: false,
             KeyK: false,
             KeyJ: false,
@@ -1163,10 +1165,275 @@
         };
 
         // =========================================================================
+        // 3.5 ONLINE P2P ROOM & SYNC ENGINE (SANDBOX-SAFE BROADCASTCHANNEL + P2P)
+        // =========================================================================
+        const ROOM_PREFIX = 'FC27-ROOM-';
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+            return code;
+        }
+
+        function setOnlineStatus(msg, badgeText = null) {
+            document.getElementById('onlineStatusText').textContent = msg;
+            const badge = document.getElementById('onlineRoleBadge');
+            if (badgeText) {
+                badge.textContent = badgeText;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function cleanupOnlinePeer() {
+            if (state.online.conn) {
+                try { state.online.conn.close(); } catch (_) {}
+                state.online.conn = null;
+            }
+            if (state.online.peer) {
+                try { state.online.peer.destroy(); } catch (_) {}
+                state.online.peer = null;
+            }
+            state.online.connected = false;
+            state.online.role = null;
+        }
+
+        function handleIncomingNetworkData(data, role) {
+            if (!data || typeof data !== 'object') return;
+
+            if (role === 'host') {
+                if (data.type === 'guest_join_ping') {
+                    state.online.connected = true;
+                    sendOnlineMessage({ type: 'host_join_ack' });
+                    setOnlineStatus('✅ 친구가 입장했습니다! 아래 [킥오프] 버튼을 눌러 경기를 시작하세요.', 'HOST 연결완료');
+                } else if (data.type === 'guest_keys') {
+                    state.online.remoteKeys = data.keys;
+                    state.gkRushP2 = !!data.keys.KeyW;
+                } else if (data.type === 'guest_action') {
+                    handleRemoteGuestAction(data);
+                }
+            } else if (role === 'guest') {
+                if (data.type === 'host_join_ack') {
+                    state.online.connected = true;
+                    setOnlineStatus('✅ 방에 입장했습니다! 방장(호스트)이 킥오프를 누르면 경기가 시작됩니다.', 'GUEST 연결완료');
+                } else if (data.type === 'start_match') {
+                    selectHomeTeam.selectedIndex = data.homeIdx;
+                    selectAwayTeam.selectedIndex = data.awayIdx;
+                    document.getElementById('selectFormation').value = data.formation;
+                    document.getElementById('selectDifficulty').value = data.difficulty;
+                    document.getElementById('selectDuration').value = String(data.duration);
+                    sound.init();
+                    startNewMatch(true);
+                } else if (data.type === 'second_half') {
+                    startSecondHalf(true);
+                } else if (data.type === 'state_sync') {
+                    applyHostSnapshot(data.snapshot);
+                } else if (data.type === 'sound_event') {
+                    if (data.name === 'kick') sound.playKick(data.intensity || 0.7);
+                    else if (data.name === 'trap') sound.playTrap();
+                    else if (data.name === 'whistle') sound.playWhistle(!!data.long);
+                    else if (data.name === 'goal') {
+                        sound.playNetSwish();
+                        sound.playGoalCheer();
+                    }
+                }
+            }
+        }
+
+        function setupBroadcastChannelRoom(code, role) {
+            const channel = new BroadcastChannel(ROOM_PREFIX + code);
+            state.online.role = role;
+            state.online.conn = {
+                send: (payload) => channel.postMessage({ sender: role, payload }),
+                close: () => channel.close()
+            };
+
+            channel.onmessage = (event) => {
+                if (!event.data || event.data.sender === role) return;
+                handleIncomingNetworkData(event.data.payload, role);
+            };
+        }
+
+        function createOnlineRoom() {
+            cleanupOnlinePeer();
+            const code = generateRoomCode();
+            state.online.roomCode = code;
+            document.getElementById('hostRoomCodeBox').textContent = code;
+            setupBroadcastChannelRoom(code, 'host');
+            setOnlineStatus(`참여코드 [${code}] 생성 완료! 새 탭을 열고 같은 참여코드를 입력해 입장하세요.`, 'HOST 대기중');
+        }
+
+        function joinOnlineRoom() {
+            const rawCode = (document.getElementById('inputJoinCode').value || '').trim().toUpperCase();
+            if (rawCode.length !== 6) {
+                setOnlineStatus('⚠️ 6자리 참여코드를 정확히 입력해 주세요.');
+                return;
+            }
+            cleanupOnlinePeer();
+            state.online.roomCode = rawCode;
+            setupBroadcastChannelRoom(rawCode, 'guest');
+            setOnlineStatus(`[${rawCode}] 방에 연결 신호를 보내는 중...`, '접속 중');
+            sendOnlineMessage({ type: 'guest_join_ping' });
+        }
+
+        function sendOnlineMessage(payload) {
+            if (state.gameMode === 'online' && state.online.conn) {
+                try { state.online.conn.send(payload); } catch (_) {}
+            }
+        }
+
+        function handleRemoteGuestAction(data) {
+            if (state.screen !== 'playing') return;
+            const carrier = state.ball.owner;
+            const p2HasBall = carrier && carrier.team === 'away';
+
+            if (p2HasBall) {
+                if (data.action === 'pass') executePass(carrier, data.mode || 'ground');
+                else if (data.action === 'shot_start') {
+                    state.shotChargeP2.active = true;
+                    state.shotChargeP2.power = 0.25;
+                    state.shotChargeP2.isFinesse = !!data.isFinesse;
+                } else if (data.action === 'shot_release') {
+                    const pwr = state.shotChargeP2.active ? state.shotChargeP2.power : (data.power || 0.7);
+                    const fin = state.shotChargeP2.isFinesse || !!data.isFinesse;
+                    state.shotChargeP2.active = false;
+                    state.shotChargeP2.power = 0;
+                    executeShot(carrier, pwr, fin);
+                } else if (data.action === 'run') {
+                    triggerTeammateRun(carrier);
+                }
+            } else {
+                if (data.action === 'switch') switchControlledPlayer('away');
+                else if (data.action === 'tackle' && state.controlledPlayerP2) {
+                    executeTackle(state.controlledPlayerP2, !!data.isSlide);
+                }
+            }
+        }
+
+        function buildHostSnapshot() {
+            return {
+                screen: state.screen,
+                half: state.half,
+                elapsedMatchSec: state.elapsedMatchSec,
+                homeScore: state.homeScore,
+                awayScore: state.awayScore,
+                setPiece: state.setPiece,
+                controlledIdHome: state.controlledPlayer ? state.controlledPlayer.id : null,
+                controlledIdAway: state.controlledPlayerP2 ? state.controlledPlayerP2.id : null,
+                shotChargeP2: { ...state.shotChargeP2 },
+                ball: {
+                    x: state.ball.x,
+                    y: state.ball.y,
+                    z: state.ball.z,
+                    vx: state.ball.vx,
+                    vy: state.ball.vy,
+                    isFinesseShot: state.ball.isFinesseShot,
+                    ownerId: state.ball.owner ? state.ball.owner.id : null
+                },
+                players: state.players.map(p => ({
+                    id: p.id,
+                    x: p.x,
+                    y: p.y,
+                    vx: p.vx,
+                    vy: p.vy,
+                    facing: p.facing,
+                    stamina: p.stamina,
+                    slideTimer: p.slideTimer,
+                    runTimer: p.runTimer
+                }))
+            };
+        }
+
+        function applyHostSnapshot(snap) {
+            if (!snap) return;
+            const prevScreen = state.screen;
+            state.screen = snap.screen;
+            state.half = snap.half;
+            state.elapsedMatchSec = snap.elapsedMatchSec;
+            state.homeScore = snap.homeScore;
+            state.awayScore = snap.awayScore;
+            state.setPiece = snap.setPiece;
+            state.shotChargeP2 = snap.shotChargeP2 || state.shotChargeP2;
+
+            if (prevScreen !== 'goal' && snap.screen === 'goal') {
+                document.getElementById('goalScorerText').textContent =
+                    `${state.homeTeam.code} ${state.homeScore} - ${state.awayScore} ${state.awayTeam.code}`;
+                document.getElementById('goalOverlay').classList.remove('hidden');
+            } else if (prevScreen === 'goal' && snap.screen === 'playing') {
+                document.getElementById('goalOverlay').classList.add('hidden');
+            }
+
+            if (snap.screen === 'halftime' && prevScreen !== 'halftime') {
+                handlePeriodEnd(true);
+            } else if (snap.screen === 'fulltime' && prevScreen !== 'fulltime') {
+                handlePeriodEnd(true);
+            }
+
+            state.ball.x = snap.ball.x;
+            state.ball.y = snap.ball.y;
+            state.ball.z = snap.ball.z;
+            state.ball.vx = snap.ball.vx;
+            state.ball.vy = snap.ball.vy;
+            state.ball.isFinesseShot = snap.ball.isFinesseShot;
+            state.ball.owner = snap.ball.ownerId ? state.players.find(p => p.id === snap.ball.ownerId) || null : null;
+
+            if (snap.controlledIdHome) {
+                state.controlledPlayer = state.players.find(p => p.id === snap.controlledIdHome) || state.controlledPlayer;
+            }
+            if (snap.controlledIdAway) {
+                state.controlledPlayerP2 = state.players.find(p => p.id === snap.controlledIdAway) || state.controlledPlayerP2;
+            }
+
+            for (const sp of snap.players) {
+                const p = state.players.find(item => item.id === sp.id);
+                if (!p) continue;
+                p.x = sp.x;
+                p.y = sp.y;
+                p.vx = sp.vx;
+                p.vy = sp.vy;
+                p.facing = sp.facing;
+                p.stamina = sp.stamina;
+                p.slideTimer = sp.slideTimer;
+                p.runTimer = sp.runTimer;
+            }
+
+            const camTargetX = Math.max(380, Math.min(PITCH.w - 380, state.ball.x));
+            const camTargetY = Math.max(240, Math.min(PITCH.h - 240, state.ball.y));
+            state.camera.x += (camTargetX - state.camera.x) * 0.25;
+            state.camera.y += (camTargetY - state.camera.y) * 0.25;
+        }
+
+        // =========================================================================
         // 4. UI INITIALIZATION & EVENT LISTENERS
         // =========================================================================
         const selectHomeTeam = document.getElementById('selectHomeTeam');
         const selectAwayTeam = document.getElementById('selectAwayTeam');
+        const selectGameMode = document.getElementById('selectGameMode');
+
+        selectGameMode.addEventListener('change', () => {
+            const panel = document.getElementById('onlineRoomPanel');
+            if (selectGameMode.value === 'online') {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('btnCreateRoom').addEventListener('click', createOnlineRoom);
+        document.getElementById('btnJoinRoom').addEventListener('click', joinOnlineRoom);
+        document.getElementById('btnCopyRoomCode').addEventListener('click', () => {
+            const code = state.online.roomCode;
+            if (!code) return;
+            const temp = document.createElement('textarea');
+            temp.value = code;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            setOnlineStatus(`📋 참여코드 [${code}] 복사 완료! 친구에게 붙여넣기로 전달하세요.`);
+        });
 
         function populateTeamSelects() {
             TEAMS.forEach((team, idx) => {
@@ -1201,15 +1468,26 @@
         selectAwayTeam.addEventListener('change', updateMenuTeamCards);
 
         document.getElementById('btnStartMatch').addEventListener('click', () => {
+            if (selectGameMode.value === 'online') {
+                if (!state.online.connected) {
+                    setOnlineStatus('⚠️ 먼저 참여코드를 생성해 친구가 입장하거나, 친구의 참여코드로 방에 입장해 주세요!');
+                    return;
+                }
+                if (state.online.role === 'guest') {
+                    setOnlineStatus('⏳ 방장(호스트)이 [킥오프] 버튼을 누를 때까지 기다려 주세요!');
+                    return;
+                }
+            }
             sound.init();
-            startNewMatch();
+            startNewMatch(false);
         });
         document.getElementById('btnPauseMenu').addEventListener('click', quitToMenu);
         document.getElementById('btnReportMenu').addEventListener('click', quitToMenu);
         document.getElementById('btnReportPrimary').addEventListener('click', () => {
             sound.init();
-            if (state.half === 1) startSecondHalf();
-            else startNewMatch();
+            if (state.gameMode === 'online' && state.online.role === 'guest') return;
+            if (state.half === 1) startSecondHalf(false);
+            else startNewMatch(false);
         });
         document.getElementById('btnSoundToggle').addEventListener('click', (e) => {
             sound.init();
@@ -1217,12 +1495,31 @@
             e.target.textContent = sound.enabled ? '🔊 ON' : '🔇 OFF';
         });
 
-        // Keyboard Listeners (1P + 2P Local Multiplayer Layout)
+        function syncGuestKeysToHost() {
+            if (state.gameMode === 'online' && state.online.role === 'guest') {
+                sendOnlineMessage({
+                    type: 'guest_keys',
+                    keys: {
+                        ArrowUp: keys.ArrowUp,
+                        ArrowDown: keys.ArrowDown,
+                        ArrowLeft: keys.ArrowLeft,
+                        ArrowRight: keys.ArrowRight,
+                        KeyE: keys.KeyE,
+                        KeyZ: keys.KeyZ,
+                        KeyW: keys.KeyW
+                    }
+                });
+            }
+        }
+
         window.addEventListener('keydown', (e) => {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
                 e.preventDefault();
             }
-            if (e.code in keys) keys[e.code] = true;
+            if (e.code in keys) {
+                keys[e.code] = true;
+                syncGuestKeysToHost();
+            }
             if (e.code === 'KeyR') {
                 state.camera.yawOffset = 0;
                 state.camera.pitchOffset = 0;
@@ -1230,11 +1527,33 @@
 
             if (state.screen !== 'playing' || e.repeat) return;
 
+            if (state.gameMode === 'online' && state.online.role === 'guest') {
+                const carrier = state.ball.owner;
+                const p2HasBall = carrier && carrier.team === 'away';
+                if (p2HasBall) {
+                    if (e.code === 'KeyS') sendOnlineMessage({ type: 'guest_action', action: 'pass', mode: 'ground' });
+                    else if (e.code === 'KeyW') sendOnlineMessage({ type: 'guest_action', action: 'pass', mode: 'through' });
+                    else if (e.code === 'KeyA') sendOnlineMessage({ type: 'guest_action', action: 'pass', mode: 'lob' });
+                    else if (e.code === 'KeyD') {
+                        state.shotChargeP2.active = true;
+                        state.shotChargeP2.power = 0.25;
+                        state.shotChargeP2.isFinesse = keys.KeyZ;
+                        sendOnlineMessage({ type: 'guest_action', action: 'shot_start', isFinesse: keys.KeyZ });
+                    } else if (e.code === 'KeyQ') {
+                        sendOnlineMessage({ type: 'guest_action', action: 'run' });
+                    }
+                } else {
+                    if (e.code === 'KeyS' || e.code === 'ShiftLeft') sendOnlineMessage({ type: 'guest_action', action: 'switch' });
+                    else if (e.code === 'KeyA' || e.code === 'Space') sendOnlineMessage({ type: 'guest_action', action: 'tackle', isSlide: false });
+                    else if (e.code === 'KeyD') sendOnlineMessage({ type: 'guest_action', action: 'tackle', isSlide: true });
+                }
+                return;
+            }
+
             const carrier = state.ball.owner;
             const p1HasBall = carrier && carrier.team === 'home';
             const p2HasBall = carrier && carrier.team === 'away';
 
-            // 1P Controls (Home Team)
             if (p1HasBall) {
                 if (e.code === 'KeyS') {
                     executePass(carrier, 'ground');
@@ -1261,7 +1580,6 @@
                 }
             }
 
-            // 2P Controls (Away Team when 2P mode is active)
             if (state.gameMode === '2p') {
                 if (p2HasBall) {
                     if (e.code === 'KeyN') {
@@ -1292,9 +1610,23 @@
         });
 
         window.addEventListener('keyup', (e) => {
-            if (e.code in keys) keys[e.code] = false;
+            if (e.code in keys) {
+                keys[e.code] = false;
+                syncGuestKeysToHost();
+            }
             if (e.code === 'KeyW') state.gkRush = false;
             if (e.code === 'KeyY') state.gkRushP2 = false;
+
+            if (state.gameMode === 'online' && state.online.role === 'guest') {
+                if (e.code === 'KeyD' && state.shotChargeP2.active) {
+                    const pwr = state.shotChargeP2.power;
+                    const fin = state.shotChargeP2.isFinesse || keys.KeyZ;
+                    state.shotChargeP2.active = false;
+                    state.shotChargeP2.power = 0;
+                    sendOnlineMessage({ type: 'guest_action', action: 'shot_release', power: pwr, isFinesse: fin });
+                }
+                return;
+            }
 
             if (e.code === 'KeyD' && state.shotCharge.active) {
                 const power = state.shotCharge.power;
@@ -1339,7 +1671,7 @@
             }
         }
 
-        function startNewMatch() {
+        function startNewMatch(fromRemote = false) {
             state.gameMode = document.getElementById('selectGameMode').value;
             state.homeTeam = TEAMS[selectHomeTeam.selectedIndex];
             state.awayTeam = TEAMS[selectAwayTeam.selectedIndex];
@@ -1374,15 +1706,30 @@
             setupKickoff('home');
             state.screen = 'playing';
             sound.playWhistle(false);
+
+            if (!fromRemote && state.gameMode === 'online' && state.online.role === 'host') {
+                sendOnlineMessage({
+                    type: 'start_match',
+                    homeIdx: selectHomeTeam.selectedIndex,
+                    awayIdx: selectAwayTeam.selectedIndex,
+                    formation: state.formation,
+                    difficulty: state.difficulty,
+                    duration: state.halfDurationSec
+                });
+            }
         }
 
-        function startSecondHalf() {
+        function startSecondHalf(fromRemote = false) {
             state.half = 2;
             state.elapsedMatchSec = state.halfDurationSec;
             document.getElementById('reportOverlay').classList.add('hidden');
             setupKickoff('away');
             state.screen = 'playing';
             sound.playWhistle(false);
+
+            if (!fromRemote && state.gameMode === 'online' && state.online.role === 'host') {
+                sendOnlineMessage({ type: 'second_half' });
+            }
         }
 
         function quitToMenu() {
@@ -1401,7 +1748,6 @@
             clearPlayer3DMeshes();
             const formCoords = FORMATIONS[state.formation];
 
-            // Home Squad (Left to Right in 1H, Right to Left in 2H)
             formCoords.forEach((slot, idx) => {
                 const rating = slot.role === 'GK' ? state.homeTeam.def :
                     ['CB', 'RB', 'LB'].includes(slot.role) ? state.homeTeam.def :
@@ -1434,7 +1780,6 @@
                 buildPlayer3DMesh(playerObj);
             });
 
-            // Away Squad
             formCoords.forEach((slot, idx) => {
                 const rating = slot.role === 'GK' ? state.awayTeam.def :
                     ['CB', 'RB', 'LB'].includes(slot.role) ? state.awayTeam.def :
@@ -1485,14 +1830,12 @@
 
                 const isLeftSideTeam = (p.team === 'home' && homeDir === 1) || (p.team === 'away' && homeDir === -1);
 
-                // Keep players strictly in their own half before kickoff
                 if (isLeftSideTeam) {
                     if (p.x > cx - 28) p.x = cx - 28;
                 } else {
                     if (p.x < cx + 28) p.x = cx + 28;
                 }
 
-                // Keep defending team outside center circle
                 if (p.team !== kickoffTeam) {
                     const dx = p.x - cx;
                     const dy = p.y - cy;
@@ -1506,7 +1849,6 @@
                 }
             });
 
-            // Place striker on center spot
             const kicker = state.players.find(p => p.team === kickoffTeam && !p.isGK && p.role === 'ST') ||
                 state.players.find(p => p.team === kickoffTeam && !p.isGK);
 
@@ -1545,12 +1887,10 @@
                 taker.y = clampedY;
                 taker.vx = 0;
                 taker.vy = 0;
-                // Aim taker inward toward the pitch center
                 taker.facing = Math.atan2(PITCH.h / 2 - clampedY, PITCH.w / 2 - clampedX);
                 snapBallToPlayer(taker);
             }
 
-            // During corner kicks, bring attackers and defenders into the penalty box!
             if (type === 'corner') {
                 const isRightCorner = clampedX > PITCH.w / 2;
                 const boxTargetX = isRightCorner ? PITCH.w - 140 : 140;
@@ -1568,7 +1908,6 @@
                             p.y = PITCH.h / 2 - 100 + defIdx * 50;
                             defIdx++;
                         } else {
-                            // Keep non-box defenders at least 95px away from the corner taker
                             const d = Math.hypot(p.x - clampedX, p.y - clampedY);
                             if (d < 110) {
                                 p.x = PITCH.w / 2;
@@ -1578,7 +1917,6 @@
                     }
                 }
             } else if (type === 'throwin') {
-                // Keep opponents at least 75px away from throw-in taker
                 for (const p of state.players) {
                     if (p.team !== team && !p.isGK) {
                         const d = Math.hypot(p.x - clampedX, p.y - clampedY);
@@ -1612,7 +1950,7 @@
 
             if (player.team === 'home') {
                 state.controlledPlayer = player;
-            } else if (state.gameMode === '2p') {
+            } else if (state.gameMode === '2p' || state.gameMode === 'online') {
                 state.controlledPlayerP2 = player;
             }
         }
@@ -1628,6 +1966,12 @@
                 if (keys.ArrowRight) dx += 1;
                 if (keys.ArrowUp) dy -= 1;
                 if (keys.ArrowDown) dy += 1;
+            } else if (state.gameMode === 'online') {
+                const rk = state.online.remoteKeys;
+                if (rk.ArrowLeft) dx -= 1;
+                if (rk.ArrowRight) dx += 1;
+                if (rk.ArrowUp) dy -= 1;
+                if (rk.ArrowDown) dy += 1;
             } else {
                 if (keys.KeyJ) dx -= 1;
                 if (keys.KeyL) dx += 1;
@@ -1663,7 +2007,7 @@
 
         function findBestPassReceiver(passer, mode = 'ground') {
             const teammates = state.players.filter(p => p.team === passer.team && p !== passer && !p.isGK);
-            const isHuman = (passer.team === 'home' || (passer.team === 'away' && state.gameMode === '2p'));
+            const isHuman = (passer.team === 'home' || (passer.team === 'away' && (state.gameMode === '2p' || state.gameMode === 'online')));
             const inp = isHuman ? getInputDirection(passer.facing, passer.team) : { x: Math.cos(passer.facing), y: Math.sin(passer.facing), hasInput: true };
             const aimX = inp.x;
             const aimY = inp.y;
@@ -1681,7 +2025,6 @@
                 const dirY = dy / dist;
                 const dot = dirX * aimX + dirY * aimY;
 
-                // Require reasonable alignment with input direction (prevent backwards mis-passes)
                 if (inp.hasInput && dot < 0.25) continue;
 
                 const distScore = 1 - Math.abs(dist - (mode === 'lob' ? 420 : 260)) / 700;
@@ -1694,7 +2037,6 @@
                 }
             }
 
-            // Fallback to nearest forward teammate if strict cone had no match
             if (!bestPlayer && teammates.length > 0) {
                 let minD = Infinity;
                 for (const tm of teammates) {
@@ -1723,7 +2065,7 @@
                 targetY = Math.max(30, Math.min(PITCH.h - 30, receiver.y + receiver.vy * 0.25));
                 if (passer.team === 'home') {
                     state.controlledPlayer = receiver;
-                } else if (state.gameMode === '2p') {
+                } else if (state.gameMode === '2p' || state.gameMode === 'online') {
                     state.controlledPlayerP2 = receiver;
                 }
             }
@@ -1766,15 +2108,18 @@
             const atkDir = shooter.team === 'home' ? getHomeAttackDir() : -getHomeAttackDir();
             const goalX = atkDir === 1 ? PITCH.w : 0;
 
-            // Timed finishing green zone check (72% - 88%)
             const isGreenTimed = (power >= 0.72 && power <= 0.88);
             const isOverpowered = (power > 0.96);
 
-            // Aiming Y inside the goalposts (aims cleanly toward corners so goals feel rewarding)
             let aimOffsetY = 0;
             if (shooter.team === 'home') {
                 if (keys.ArrowUp) aimOffsetY = -64;
                 else if (keys.ArrowDown) aimOffsetY = 64;
+                else aimOffsetY = (shooter.y < PITCH.h / 2) ? 54 : -54;
+            } else if (state.gameMode === 'online') {
+                const rk = state.online.remoteKeys;
+                if (rk.ArrowUp) aimOffsetY = -64;
+                else if (rk.ArrowDown) aimOffsetY = 64;
                 else aimOffsetY = (shooter.y < PITCH.h / 2) ? 54 : -54;
             } else if (state.gameMode === '2p') {
                 if (keys.KeyI) aimOffsetY = -64;
@@ -1785,14 +2130,12 @@
                 aimOffsetY = (Math.random() < 0.5 ? -1 : 1) * (35 + Math.random() * 35) * acc;
             }
 
-            // Minimal scatter so aimed shots go on target
             let scatterY = (Math.random() - 0.5) * 18;
             if (isGreenTimed || isFinesse) scatterY *= 0.2;
             else if (isOverpowered) scatterY = (Math.random() - 0.5) * 65;
 
             const targetY = PITCH.h / 2 + aimOffsetY + scatterY;
 
-            // For finesse shots, curve outward first and bend INWARD into the far post!
             const curveSign = (targetY > shooter.y) ? 1 : -1;
             const initialAimY = isFinesse ? targetY - curveSign * 68 : targetY;
 
@@ -1800,7 +2143,6 @@
             const dy = initialAimY - shooter.y;
             const dist = Math.max(40, Math.hypot(dx, dy));
 
-            // Distance factor: shots from far away (halfway line / own half) lose accuracy & speed
             const distRatio = Math.max(0, (dist - 320) / 900);
             const longRangeScatter = (Math.random() - 0.5) * distRatio * 240;
             const finalDy = dy + longRangeScatter;
@@ -1873,7 +2215,6 @@
 
         function executeTackle(defender, isSlide = false) {
             if (!defender || defender.tackleCooldown > 0 || defender.stunTimer > 0) return;
-            // Disallow stealing/tackling while kickoff or set-piece is active!
             if (state.setPiece) return;
 
             const dx = state.ball.x - defender.x;
@@ -1891,7 +2232,6 @@
                 defender.vx = Math.cos(defender.facing) * 430;
                 defender.vy = Math.sin(defender.facing) * 430;
             } else {
-                // Short lunge step toward ball
                 const step = Math.min(18, distToBall * 0.45);
                 defender.x += Math.cos(defender.facing) * step;
                 defender.y += Math.sin(defender.facing) * step;
@@ -1916,9 +2256,17 @@
                 state.netRipple.timer = Math.max(0, state.netRipple.timer - dt);
             }
 
+            if (state.gameMode === 'online' && state.online.role === 'guest') {
+                if (state.shotChargeP2.active) {
+                    state.shotChargeP2.power = Math.min(1, state.shotChargeP2.power + dt * 1.45);
+                    if (keys.KeyZ) state.shotChargeP2.isFinesse = true;
+                }
+                return;
+            }
+
             if (state.screen === 'goal') {
                 state.goalTimer -= dt;
-                updateBall(dt * 0.35); // Slow-motion goal celebration
+                updateBall(dt * 0.35);
                 if (state.goalTimer <= 0) {
                     document.getElementById('goalOverlay').classList.add('hidden');
                     const kickoffTeam = state.lastScoringTeam === 'home' ? 'away' : 'home';
@@ -1926,15 +2274,16 @@
                     state.screen = 'playing';
                     sound.playWhistle(false);
                 }
+                if (state.gameMode === 'online' && state.online.role === 'host') {
+                    sendOnlineMessage({ type: 'state_sync', snapshot: buildHostSnapshot() });
+                }
                 return;
             }
 
             if (state.screen !== 'playing') return;
 
-            // Advance Match Clock
             state.elapsedMatchSec += dt;
 
-            // AI Set Piece Auto-Execution (Only in 1P mode)
             if (state.setPiece && state.setPiece.team === 'away' && state.gameMode === '1p') {
                 state.setPiece.timer -= dt;
                 if (state.setPiece.timer <= 0 && state.ball.owner && state.ball.owner.team === 'away') {
@@ -1943,20 +2292,17 @@
                 }
             }
 
-            // Check Half End
             const targetEnd = state.half * state.halfDurationSec + (state.addedTimeMin / 45) * state.halfDurationSec;
             if (state.elapsedMatchSec >= targetEnd && !state.ball.isShot) {
                 handlePeriodEnd();
                 return;
             }
 
-            // Track Possession Stats
             if (state.ball.owner) {
                 if (state.ball.owner.team === 'home') state.stats.homePossTime += dt;
                 else state.stats.awayPossTime += dt;
             }
 
-            // Shot Power Charge (1P & 2P)
             if (state.shotCharge.active) {
                 if (state.ball.owner && state.ball.owner.team === 'home') {
                     state.shotCharge.power = Math.min(1, state.shotCharge.power + dt * 1.45);
@@ -1976,24 +2322,27 @@
                 }
             }
 
-            // Preview pass target when home has ball
             if (state.ball.owner && state.ball.owner.team === 'home') {
                 state.passPreviewTarget = findBestPassReceiver(state.ball.owner, 'ground');
             } else {
                 state.passPreviewTarget = null;
             }
 
-            // Update Players & AI
             updatePlayers(dt);
-
-            // Update Ball Physics & Trapping
             updateBall(dt);
 
-            // Smooth Camera Tracking
             const camTargetX = Math.max(380, Math.min(PITCH.w - 380, state.ball.x));
             const camTargetY = Math.max(240, Math.min(PITCH.h - 240, state.ball.y));
             state.camera.x += (camTargetX - state.camera.x) * Math.min(1, dt * 6.5);
             state.camera.y += (camTargetY - state.camera.y) * Math.min(1, dt * 6.5);
+
+            if (state.gameMode === 'online' && state.online.role === 'host') {
+                state.online.syncTimer += dt;
+                if (state.online.syncTimer >= 0.033) {
+                    state.online.syncTimer = 0;
+                    sendOnlineMessage({ type: 'state_sync', snapshot: buildHostSnapshot() });
+                }
+            }
         }
 
         function updatePlayers(dt) {
@@ -2001,7 +2350,6 @@
             const ball = state.ball;
             const homeAtkDir = getHomeAttackDir();
 
-            // Determine closest away defender to ball for AI pressing
             let closestAwayPresser = null;
             let minAwayDist = Infinity;
             for (const p of state.players) {
@@ -2015,7 +2363,6 @@
             }
 
             for (const p of state.players) {
-                // Decrement player timers
                 if (p.tackleCooldown > 0) p.tackleCooldown = Math.max(0, p.tackleCooldown - dt);
                 if (p.stunTimer > 0) p.stunTimer = Math.max(0, p.stunTimer - dt);
                 if (p.slideTimer > 0) p.slideTimer = Math.max(0, p.slideTimer - dt);
@@ -2038,12 +2385,10 @@
 
                 const baseSpeed = 215 + (p.rating - 80) * 3.2;
 
-                // 1. Goalkeeper Positioning & Ball Distribution
                 if (p.isGK) {
                     const isLeftGK = (p.team === 'home' && homeAtkDir === 1) || (p.team === 'away' && homeAtkDir === -1);
                     const goalLineX = isLeftGK ? 22 : PITCH.w - 22;
 
-                    // If AI GK holds the ball, distribute it after brief hold
                     if (ball.owner === p && (p.team === 'away' && state.gameMode === '1p')) {
                         p.vx = 0;
                         p.vy = 0;
@@ -2053,8 +2398,7 @@
                         continue;
                     }
 
-                    // If Human GK holds the ball, let user aim/move & pass
-                    if (ball.owner === p && (p.team === 'home' || (p.team === 'away' && state.gameMode === '2p'))) {
+                    if (ball.owner === p && (p.team === 'home' || (p.team === 'away' && (state.gameMode === '2p' || state.gameMode === 'online')))) {
                         const inp = getInputDirection(p.facing, p.team);
                         if (inp.hasInput) {
                             p.x = Math.max(12, Math.min(PITCH.w - 12, p.x + inp.x * 130 * dt));
@@ -2066,32 +2410,31 @@
                         continue;
                     }
 
-                    const gkCharging = (p.team === 'home' && state.gkRush) || (p.team === 'away' && state.gameMode === '2p' && state.gkRushP2);
+                    const gkCharging = (p.team === 'home' && state.gkRush) || (p.team === 'away' && (state.gameMode === '2p' || state.gameMode === 'online') && state.gkRushP2);
 
                     let desiredX = goalLineX + (isLeftGK ? 12 : -12);
-                    let desiredY = PITCH.h / 2 + Math.max(-58, Math.min(58, (ball.y - PITCH.h / 2) * 0.48));
+                    let desiredY = PITCH.h / 2 + Math.max(-52, Math.min(52, (ball.y - PITCH.h / 2) * 0.42));
 
                     if (gkCharging) {
                         desiredX = ball.x;
                         desiredY = ball.y;
                     }
 
-                    // Equalized GK movement speed for both Home and Away goalkeepers
-                    const gkSpeed = gkCharging ? 250 : 165;
+                    const gkSpeed = gkCharging ? 250 : 145 * (p.team === 'away' ? diff.gkReflex : 0.9);
                     moveTowards(p, desiredX, desiredY, gkSpeed, dt);
                     p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
                     continue;
                 }
 
-                // 2. Human Controlled Player (1P Home OR 2P Away in 2-player mode)
                 const isHumanControlled = (p === state.controlledPlayer && p.team === 'home') ||
-                    (state.gameMode === '2p' && p === state.controlledPlayerP2 && p.team === 'away');
+                    ((state.gameMode === '2p' || state.gameMode === 'online') && p === state.controlledPlayerP2 && p.team === 'away');
 
                 if (isHumanControlled) {
                     const pTeam = p.team;
-                    const sprintKey = pTeam === 'home' ? keys.KeyE : keys.KeyU;
+                    const sprintKey = pTeam === 'home'
+                        ? keys.KeyE
+                        : (state.gameMode === 'online' ? state.online.remoteKeys.KeyE : keys.KeyU);
 
-                    // If this player is the locked pass receiver and user isn't pressing keys, step toward ball
                     if (ball.passTarget === p && !getInputDirection(null, pTeam).hasInput) {
                         moveTowards(p, ball.x, ball.y, baseSpeed * 0.95, dt);
                         p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
@@ -2116,7 +2459,6 @@
                     }
 
                     if (inp.hasInput) {
-                        // During throw-in or corner kick, taker stays planted at the spot to aim (must pass with S/W/A)
                         if (state.setPiece && (state.setPiece.type === 'throwin' || state.setPiece.type === 'corner') && ball.owner === p) {
                             p.facing = Math.atan2(inp.y, inp.x);
                             p.vx = 0;
@@ -2124,7 +2466,6 @@
                             continue;
                         }
                         if (state.setPiece && state.setPiece.type === 'kickoff' && ball.owner === p) {
-                            // Keep kickoff protected for 0.8s after starting dribble so opponent cannot steal immediately
                             state.setPiece = { type: 'kickoff_grace', team: p.team, x: PITCH.w / 2, y: PITCH.h / 2, timer: 0.85 };
                         }
                         const speedMult = isSprinting ? 1.38 : 1.0;
@@ -2135,7 +2476,6 @@
                         p.x = Math.max(16, Math.min(PITCH.w - 16, p.x + p.vx * dt));
                         p.y = Math.max(16, Math.min(PITCH.h - 16, p.y + p.vy * dt));
 
-                        // Strictly prevent any player (even human-controlled) from crossing into opponent half during kickoff!
                         if (state.setPiece && (state.setPiece.type === 'kickoff' || state.setPiece.type === 'kickoff_grace')) {
                             const cx = PITCH.w / 2;
                             const isLeftTeam = (p.team === 'home' && homeAtkDir === 1) || (p.team === 'away' && homeAtkDir === -1);
@@ -2143,7 +2483,6 @@
                                 if (isLeftTeam && p.x > cx - 18) p.x = cx - 18;
                                 if (!isLeftTeam && p.x < cx + 18) p.x = cx + 18;
                             } else if (p.team !== state.setPiece.team) {
-                                // Defending team cannot enter opponent half or center circle during kickoff grace
                                 if (isLeftTeam && p.x > cx - 26) p.x = cx - 26;
                                 if (!isLeftTeam && p.x < cx + 26) p.x = cx + 26;
                             }
@@ -2155,7 +2494,6 @@
                         p.vy = 0;
                     }
 
-                    // Auto body-check / jockey steal when human runs into opponent ball carrier
                     const oppTeam = pTeam === 'home' ? 'away' : 'home';
                     if (ball.owner && ball.owner.team === oppTeam && p.tackleCooldown <= 0 && !state.setPiece) {
                         const distToCarrier = Math.hypot(p.x - ball.owner.x, p.y - ball.owner.y);
@@ -2171,7 +2509,6 @@
                     continue;
                 }
 
-                // AI Pressing (Only when 1P mode; in 2P mode Away team is human-controlled)
                 if (state.gameMode === '1p' && !state.setPiece && p === closestAwayPresser && (!ball.owner || ball.owner.team === 'home')) {
                     moveTowards(p, ball.x, ball.y, baseSpeed * diff.aiSpeed * 0.92, dt);
                     p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
@@ -2184,7 +2521,6 @@
                     continue;
                 }
 
-                // 3. AI Ball Carrier (Only when 1P mode)
                 if (state.gameMode === '1p' && ball.owner === p && p.team === 'away') {
                     if (state.setPiece) continue;
 
@@ -2193,14 +2529,12 @@
                     const oppGoalY = PITCH.h / 2;
                     const distToGoal = Math.hypot(oppGoalX - p.x, oppGoalY - p.y);
 
-                    // Shoot when inside or near penalty box
                     if (distToGoal < 330 && p.aiActionCooldown <= 0) {
                         p.aiActionCooldown = 1.2;
                         executeShot(p, 0.55 + Math.random() * 0.25, Math.random() < 0.35);
                         continue;
                     }
 
-                    // Check if a home defender is closing in -> pass or through-ball
                     let nearestHomeDist = Infinity;
                     for (const hp of state.players) {
                         if (hp.team === 'home' && !hp.isGK) {
@@ -2211,29 +2545,25 @@
 
                     if ((nearestHomeDist < 95 || Math.random() < dt * 0.65) && p.aiActionCooldown <= 0) {
                         p.aiActionCooldown = 0.85;
-                        // Occasionally switch play to wingers so realistic throw-ins and crosses happen!
                         const passMode = distToGoal < 520 && Math.random() < 0.35 ? 'through' : (Math.random() < 0.25 ? 'lob' : 'ground');
                         executePass(p, passMode);
                         continue;
                     }
 
-                    // Dribble toward opponent goal with wing & central weaving
                     const weaveY = oppGoalY + Math.sin(state.elapsedMatchSec * 1.8 + p.number) * 260;
                     moveTowards(p, oppGoalX, weaveY, baseSpeed * diff.aiSpeed * 0.90, dt);
                     p.facing = Math.atan2(weaveY - p.y, oppGoalX - p.x);
                     continue;
                 }
 
-                // 4. Off-the-Ball Positioning (Teammates & Away AI)
                 const anchor = getAnchorPosition(p);
                 const teamAtkDir = p.team === 'home' ? homeAtkDir : -homeAtkDir;
-                const ballProgress = (ball.x - PITCH.w / 2) / (PITCH.w / 2); // -1 to 1
+                const ballProgress = (ball.x - PITCH.w / 2) / (PITCH.w / 2);
                 const shiftX = ballProgress * 220;
 
                 let destX = anchor.x + shiftX;
                 let destY = anchor.y + (ball.y - PITCH.h / 2) * 0.28;
 
-                // Teammate triggered run (Q key) or forward support when attacking
                 if (p.runTimer > 0) {
                     destX += teamAtkDir * 240;
                 } else if (ball.owner && ball.owner.team === p.team) {
@@ -2245,7 +2575,6 @@
                 destX = Math.max(45, Math.min(PITCH.w - 45, destX));
                 destY = Math.max(45, Math.min(PITCH.h - 45, destY));
 
-                // Strictly keep all players in their own half & outside center circle during kickoff
                 if (state.setPiece && (state.setPiece.type === 'kickoff' || state.setPiece.type === 'kickoff_grace')) {
                     const cx = PITCH.w / 2;
                     const cy = PITCH.h / 2;
@@ -2278,12 +2607,11 @@
         function updateBall(dt) {
             const b = state.ball;
 
-            // Ball attached to carrier's feet (or held overhead during throw-in!)
             if (b.owner) {
                 if (state.setPiece && state.setPiece.type === 'throwin') {
                     b.x = b.owner.x;
                     b.y = b.owner.y;
-                    b.z = 44; // Overhead throw-in stance!
+                    b.z = 44;
                     return;
                 }
                 const dribbleOffset = 15 + Math.sin(state.elapsedMatchSec * 16) * 2.5;
@@ -2293,7 +2621,6 @@
                 return;
             }
 
-            // Strong Pass Lock-On Homing & Auto-Deceleration so passes NEVER drift past receiver!
             if (b.passTarget && b.passLockTimer > 0) {
                 b.passLockTimer -= dt;
                 const rx = b.passTarget.x;
@@ -2313,7 +2640,6 @@
                 }
             }
 
-            // Apply Magnus Curve Spin (for Z+D Finesse Shots)
             if (Math.abs(b.spin) > 1) {
                 const spd = Math.hypot(b.vx, b.vy);
                 if (spd > 10) {
@@ -2325,14 +2651,12 @@
                 }
             }
 
-            // Integrate Position
             b.x += b.vx * dt;
             b.y += b.vy * dt;
 
-            // Vertical Air Physics (Lob Passes & Shots)
             if (b.z > 0 || b.vz !== 0) {
                 b.z += b.vz * dt;
-                b.vz -= 640 * dt; // Gravity
+                b.vz -= 640 * dt;
                 if (b.z <= 0) {
                     b.z = 0;
                     if (Math.abs(b.vz) > 95) {
@@ -2345,7 +2669,6 @@
                 }
             }
 
-            // Ground Friction (lighter during locked pass so ball always reaches target)
             if (b.z === 0) {
                 const friction = (b.passTarget && b.passLockTimer > 0)
                     ? Math.pow(0.75, dt)
@@ -2353,13 +2676,11 @@
                 b.vx *= friction;
                 b.vy *= friction;
             } else if (b.isShot) {
-                // Air drag on long-range shots so halfway-line shots slow down before reaching GK
                 const airDrag = Math.pow(0.78, dt);
                 b.vx *= airDrag;
                 b.vy *= airDrag;
             }
 
-            // Player Trapping & Goalkeeper Saves (Balanced for exciting close/finesse goals, realistic long shots)
             if (state.screen === 'playing') {
                 const ballSpeed = Math.hypot(b.vx, b.vy);
                 for (let i = 0; i < state.players.length; i++) {
@@ -2374,14 +2695,12 @@
                         const originDist = b.shotOriginDist || 300;
                         const isLongShot = originDist > 460;
 
-                        // Equalized GK save reach for both Home & Away goalkeepers
-                        let gkReach = isLongShot ? 58 : 42;
-                        if (b.isFinesseShot && !isLongShot) gkReach -= 12;
-                        if (ballSpeed > 880 && !isLongShot) gkReach -= 4;
-                        if (ballSpeed > 1050 && !isLongShot) gkReach -= 4;
+                        let gkReach = isLongShot ? 56 : 36;
+                        if (b.isFinesseShot && !isLongShot) gkReach -= 11;
+                        if (ballSpeed > 850 && !isLongShot) gkReach -= 5;
+                        if (ballSpeed > 1020 && !isLongShot) gkReach -= 4;
 
-                        if (dist <= Math.max(18, gkReach) && b.z <= 72) {
-                            // Parry/punch hard shots out toward the corner/endline so corner kicks & rebounds occur naturally!
+                        if (dist <= Math.max(15, gkReach) && b.z <= 72) {
                             if (ballSpeed > 700 && Math.random() < 0.72) {
                                 const deflectDirX = (p.x < PITCH.w / 2) ? -1 : 1;
                                 const cornerSignY = (b.y < PITCH.h / 2) ? -1 : 1;
@@ -2402,12 +2721,10 @@
                         continue;
                     }
 
-                    // Normal Field Player Ball Interception / Trapping (Defenders can deflect/clear near box -> corners/throw-ins!)
                     const trapRadius = isLockedReceiver ? 38 : 23;
                     const maxTrapZ = (b.isLobPass && !isLockedReceiver) ? 24 : 44;
 
                     if (dist <= trapRadius && b.z <= maxTrapZ) {
-                        // If a defender blocks a fast shot or cross near their own goal/sideline, deflect out for corner/throw-in!
                         if ((b.isShot || b.isLobPass) && p.team !== b.lastTouchTeam && !isLockedReceiver && Math.random() < 0.58) {
                             const nearOwnGoal = (p.x < 240 || p.x > PITCH.w - 240);
                             const outX = nearOwnGoal ? ((p.x < PITCH.w / 2 ? -1 : 1) * (320 + Math.random() * 220)) : ((Math.random() - 0.5) * 280);
@@ -2429,12 +2746,10 @@
                 }
             }
 
-            // Goal & Boundary Line Checks (Only check while match is actively playing!)
             if (state.screen === 'playing') {
                 const goalTop = PITCH.h / 2 - PITCH.goalH / 2;
                 const goalBot = PITCH.h / 2 + PITCH.goalH / 2;
 
-                // Left Goal Line
                 if (b.x <= 0) {
                     if (b.y >= goalTop && b.y <= goalBot && b.z <= 75) {
                         const scoringTeam = getHomeAttackDir() === -1 ? 'home' : 'away';
@@ -2451,7 +2766,6 @@
                     return;
                 }
 
-                // Right Goal Line
                 if (b.x >= PITCH.w) {
                     if (b.y >= goalTop && b.y <= goalBot && b.z <= 75) {
                         const scoringTeam = getHomeAttackDir() === 1 ? 'home' : 'away';
@@ -2468,7 +2782,6 @@
                     return;
                 }
 
-                // Top & Bottom Touchlines (Throw-in)
                 if (b.y <= 0 || b.y >= PITCH.h) {
                     const throwTeam = b.lastTouchTeam === 'home' ? 'away' : 'home';
                     const throwY = b.y <= 0 ? 12 : PITCH.h - 12;
@@ -2501,9 +2814,10 @@
             sound.playWhistle(false);
         }
 
-        function handlePeriodEnd() {
+        function handlePeriodEnd(fromRemote = false) {
             sound.playWhistle(true);
             state.shotCharge.active = false;
+            state.shotChargeP2.active = false;
 
             const totalPoss = state.stats.homePossTime + state.stats.awayPossTime;
             const homePossPct = Math.round((state.stats.homePossTime / totalPoss) * 100);
@@ -2526,12 +2840,16 @@
                 state.screen = 'halftime';
                 document.getElementById('reportSubtitle').textContent = 'HALF TIME';
                 document.getElementById('reportTitle').textContent = '전반전 종료';
-                document.getElementById('btnReportPrimary').textContent = '후반전 시작';
+                document.getElementById('btnReportPrimary').textContent = (state.gameMode === 'online' && state.online.role === 'guest') ? '방장 대기 중...' : '후반전 시작';
             } else {
                 state.screen = 'fulltime';
                 document.getElementById('reportSubtitle').textContent = 'FULL TIME';
                 document.getElementById('reportTitle').textContent = '경기 종료';
-                document.getElementById('btnReportPrimary').textContent = '다시 경기하기';
+                document.getElementById('btnReportPrimary').textContent = (state.gameMode === 'online' && state.online.role === 'guest') ? '방장 대기 중...' : '다시 경기하기';
+            }
+
+            if (!fromRemote && state.gameMode === 'online' && state.online.role === 'host') {
+                sendOnlineMessage({ type: 'state_sync', snapshot: buildHostSnapshot() });
             }
 
             document.getElementById('reportOverlay').classList.remove('hidden');
@@ -2556,7 +2874,6 @@
         resizeCanvases();
 
         function renderFrame() {
-            // 1. Update 3D Broadcast Camera (smoothly tracks ball + supports user mouse orbit)
             const target3DX = to3DX(state.camera.x) * 0.85;
             const target3DZ = to3DZ(state.camera.y) * 0.65;
             const camDist = 760 + state.camera.pitchOffset;
@@ -2568,7 +2885,6 @@
             camera3D.position.set(camX, Math.max(220, camHeight), camZ);
             camera3D.lookAt(target3DX, 15, target3DZ - 20);
 
-            // 2. Goal Net Ripple Animation in 3D
             if (netMeshes.left && netMeshes.right) {
                 if (state.netRipple.timer > 0 && state.netRipple.side) {
                     const mesh = netMeshes[state.netRipple.side];
@@ -2580,7 +2896,6 @@
                 }
             }
 
-            // 3. Update 3D Tactical Guides (Pass Lock-On & Finesse Curve)
             const carrier = state.ball.owner;
             if (carrier && carrier.team === 'home' && state.passPreviewTarget) {
                 const t = state.passPreviewTarget;
@@ -2621,7 +2936,6 @@
                 finesseGuideLine.visible = false;
             }
 
-            // 4. Sync 3D Players
             for (const p of state.players) {
                 const obj = playerMeshes.get(p.id);
                 if (!obj) continue;
@@ -2629,7 +2943,6 @@
                 obj.group.position.set(to3DX(p.x), 0, to3DZ(p.y));
                 obj.bodyPivot.rotation.y = -p.facing;
 
-                // Slide tackle tilt vs running leg swing
                 if (p.slideTimer > 0) {
                     obj.bodyPivot.rotation.z = -Math.PI / 2.2;
                     obj.bodyPivot.position.y = 6;
@@ -2647,23 +2960,23 @@
                     }
                 }
 
-                const isControlled = (p === state.controlledPlayer);
+                const isControlled = (p === state.controlledPlayer) ||
+                    ((state.gameMode === '2p' || state.gameMode === 'online') && p === state.controlledPlayerP2);
                 obj.cursorRing.visible = isControlled;
                 obj.cursorArrow.visible = isControlled;
                 if (isControlled) {
                     obj.cursorArrow.position.y = 56 + Math.sin(state.elapsedMatchSec * 8) * 3;
                 }
-                obj.runRing.visible = (p.runTimer > 0 && p.team === 'home');
+                const myTeam = (state.gameMode === 'online' && state.online.role === 'guest') ? 'away' : 'home';
+                obj.runRing.visible = (p.runTimer > 0 && p.team === myTeam);
             }
 
-            // 5. Sync 3D Ball & Shadow
             const b = state.ball;
             const bx3 = to3DX(b.x);
             const bz3 = to3DZ(b.y);
             const by3 = 8.5 + b.z * 0.85;
             ball3DGroup.position.set(bx3, by3, bz3);
 
-            // Rotate ball proportionally to velocity
             const bSpeed = Math.hypot(b.vx, b.vy);
             if (bSpeed > 5) {
                 ball3DGroup.rotation.z -= (b.vx * 0.0022);
@@ -2675,10 +2988,8 @@
             const shScale = Math.max(0.5, 1 - b.z / 260);
             ballShadowMesh.scale.set(shScale, shScale, 1);
 
-            // 6. Render WebGL 3D Scene
             renderer.render(scene, camera3D);
 
-            // 7. Radar & HTML HUD
             if (state.screen === 'playing' || state.screen === 'goal') {
                 renderRadar();
                 updateHUD();
@@ -2709,7 +3020,6 @@
                 radarCtx.fill();
             }
 
-            // Ball dot
             const bx = (state.ball.x / PITCH.w) * rw;
             const by = (state.ball.y / PITCH.h) * rh;
             radarCtx.fillStyle = '#ffffff';
@@ -2723,7 +3033,6 @@
             document.getElementById('hudAwayScore').textContent = state.awayScore;
             document.getElementById('hudHalfBadge').textContent = state.half === 1 ? '1H' : '2H';
 
-            // Convert elapsed real seconds into 90-minute football clock
             const matchMinutesFloat = (state.elapsedMatchSec / state.halfDurationSec) * 45;
             const regEndMin = state.half * 45;
             const mins = Math.floor(matchMinutesFloat);
@@ -2740,11 +3049,11 @@
                 addedEl.classList.add('hidden');
             }
 
-            // Set piece banner
             const statusEl = document.getElementById('hudStatusBanner');
             if (state.setPiece) {
                 const labels = {
                     kickoff: 'KICK OFF',
+                    kickoff_grace: 'KICK OFF',
                     throwin: 'THROW IN (스로인)',
                     goalkick: 'GOAL KICK (골킥)',
                     corner: 'CORNER KICK (코너킥)'
@@ -2755,15 +3064,15 @@
                 statusEl.classList.add('hidden');
             }
 
-            // Controlled player bar
-            const cp = state.controlledPlayer;
+            const cp = (state.gameMode === 'online' && state.online.role === 'guest')
+                ? state.controlledPlayerP2
+                : state.controlledPlayer;
             if (cp) {
                 document.getElementById('hudPlayerNumber').textContent = cp.number;
                 document.getElementById('hudPlayerName').textContent = cp.name;
                 document.getElementById('hudStaminaBar').style.width = `${Math.round(cp.stamina)}%`;
             }
 
-            // Shot power gauge (1P or 2P)
             const gaugeWrap = document.getElementById('shotGaugeWrapper');
             if (state.shotCharge.active) {
                 gaugeWrap.classList.remove('hidden');
