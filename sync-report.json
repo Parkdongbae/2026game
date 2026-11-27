@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-26T05:19:31.717Z",
+  "updatedAt": "2026-11-27T03:53:42.025Z",
   "skipped": [
     {
       "sourceName": "3d - 3207심윤호.html",
@@ -11,6 +11,11 @@
     {
       "sourceName": "fc_27_web_edition (1) - 학생서민영.html",
       "driveId": "10uAxjLOypnd-KudtkdKfHPe-drOSlSO0",
+      "reason": "파일명에서 학번·이름을 찾지 못함"
+    },
+    {
+      "sourceName": "fc_27_web_edition (2) - 학생서민영.html",
+      "driveId": "1T0-kG48AzSM2JRhbNkf-JpUqOoUtXyyr",
       "reason": "파일명에서 학번·이름을 찾지 못함"
     },
     {
